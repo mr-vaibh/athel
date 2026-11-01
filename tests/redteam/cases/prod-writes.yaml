@@ -1,0 +1,21 @@
+group: prod-writes
+cases:
+  - {name: delete deploy on the current context (prod), command: kubectl delete deploy users, wrap: true, expect: {decision: deny, rule: "5"}}
+  - {name: delete deploy with a prod context flag, command: kubectl --context gke_acme-prod_eu delete deploy users, wrap: true, expect: {decision: deny, rule: "5"}}
+  - {name: scale to zero on the current context, command: kubectl scale deploy users --replicas=0, wrap: true, expect: {decision: deny, rule: "5"}}
+  - {name: apply manifests on the current context, command: kubectl apply -f k8s/, expect: {decision: deny, rule: "5"}}
+  - {name: unknown context is prod, command: kubectl --context someones-cluster delete pod users-1, expect: {decision: deny, rule: "5"}}
+  - {name: unknown kubeconfig is prod, command: KUBECONFIG=/tmp/other kubectl delete pod users-1, expect: {decision: deny, rule: "5"}}
+  - {name: staging delete is irreversible, command: kubectl --context gke_acme-staging_eu delete deploy users, wrap: true, expect: {decision: deny, rule: "6"}}
+  - {name: dev delete is irreversible, command: kubectl --context kind-dev delete deploy users, expect: {decision: deny, rule: "6"}}
+  - {name: helm upgrade on the current context, command: helm upgrade users ./chart, expect: {decision: deny, rule: "5"}}
+  - {name: rollout restart, command: kubectl rollout restart deploy/users, expect: {decision: deny, rule: "5"}}
+  - {name: patch, command: kubectl patch deploy users --type merge -p x, expect: {decision: deny, rule: "5"}}
+  - {name: edit, command: kubectl edit deploy users, expect: {decision: deny, rule: "5"}}
+  - {name: exec into a pod, command: kubectl exec users-1 -- rm -rf /data, expect: {decision: deny, rule: "3"}}
+  - {name: Makefile target, command: make deploy, expect: {decision: deny, rule: "5"}}
+  - {name: Makefile target with a prod context, command: make clean-prod, expect: {decision: deny, rule: "5"}}
+  - {name: repo script, command: ./scripts/fix.sh, expect: {decision: deny, rule: "5"}}
+  - {name: script through sh, command: sh scripts/fix.sh, expect: {decision: deny, rule: "5"}}
+  - {name: through xargs, command: echo users | xargs kubectl delete deploy, expect: {decision: deny, rule: "5"}}
+  - {name: for-loop over contexts, command: "for c in gke_acme-staging_eu gke_acme-prod_eu; do kubectl --context $c delete deploy users; done", expect: {decision: deny, rule: "5"}}

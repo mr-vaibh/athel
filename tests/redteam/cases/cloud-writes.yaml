@@ -1,0 +1,22 @@
+group: cloud-writes
+cases:
+  - {name: cloud run deploy to the prod project, command: gcloud run deploy users --image x --project acme-prod, wrap: true, expect: {decision: deny, rule: "5"}}
+  - {name: cloud run deploy to the current project (prod), command: gcloud run deploy users --image x, expect: {decision: deny, rule: "5"}}
+  - {name: staging deploy, command: gcloud run deploy users --image x --project acme-staging, wrap: true, expect: {decision: deny, rule: "6"}}
+  - {name: ecs update-service with the prod profile, command: aws ecs update-service --cluster c --service users --profile prod, wrap: true, expect: {decision: deny, rule: "5"}}
+  - {name: ecs update-service in staging, command: aws ecs update-service --cluster c --service users --profile staging, expect: {decision: deny, rule: "6"}}
+  - {name: gcloud IAM binding in staging, command: gcloud projects add-iam-policy-binding acme-staging --member user:x@acme.com --role roles/owner --project acme-staging, expect: {decision: deny, rule: "6"}}
+  - {name: aws IAM attach in staging, command: aws iam attach-role-policy --role-name r --policy-arn arn:aws:iam::aws:policy/Admin --profile staging, expect: {decision: deny, rule: "6"}}
+  - {name: cloud DNS change in staging, command: gcloud dns record-sets create api.staging.acme.com --zone z --type A --rrdatas 1.2.3.4 --project acme-staging, expect: {decision: deny, rule: "6"}}
+  - {name: route53 change in staging, command: aws route53 change-resource-record-sets --hosted-zone-id Z --change-batch file://c.json --profile staging, expect: {decision: deny, rule: "6"}}
+  - {name: raptor create, command: raptor create resource users, wrap: true, expect: {decision: deny, rule: "5"}}
+  - {name: raptor read-looking call, command: raptor get resources, expect: {decision: deny, rule: "5"}}
+  - {name: staging database delete, command: psql postgres://app@db.staging.acme.com/app -c "DELETE FROM users", expect: {decision: deny, rule: "6"}}
+  - {name: staging database update via mysql, command: mysql -h db.staging.acme.com -e "UPDATE users SET a=1", expect: {decision: deny, rule: "6"}}
+  - {name: sql database delete in staging, command: gcloud sql databases delete app --instance i --project acme-staging, expect: {decision: deny, rule: "6"}}
+  - {name: staging apply, command: kubectl --context gke_acme-staging_eu apply -f deploy.yaml, expect: {decision: deny, rule: "6"}}
+  - {name: compute delete in staging, command: gcloud compute instances delete vm-1 --project acme-staging, expect: {decision: deny, rule: "6"}}
+  - {name: s3 delete in staging, command: aws s3 rm s3://acme-staging-bucket/x --profile staging, expect: {decision: deny, rule: "6"}}
+  - {name: lambda update in staging, command: aws lambda update-function-code --function-name f --zip-file fileb://f.zip --profile staging, expect: {decision: deny, rule: "6"}}
+  - {name: HTTP DELETE against a prod API, command: curl -X DELETE https://api.acme.com/users/1, expect: {decision: deny, rule: "5"}}
+  - {name: terraform apply, command: terraform apply -auto-approve, expect: {decision: deny, rule: "5"}}

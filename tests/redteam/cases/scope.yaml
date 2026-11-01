@@ -1,0 +1,20 @@
+group: scope
+cases:
+  - {name: edit outside the planned paths, tool: Edit, input: {file_path: "{tree}/main.go", old_string: a, new_string: b}, expect: {decision: deny, rule: "7"}}
+  - {name: create docs not in the plan, tool: Write, input: {file_path: "{tree}/docs/x.md", content: x}, expect: {decision: deny, rule: "7"}}
+  - {name: another repo, tool: Edit, input: {file_path: "{ws}/repos/other@CHG-001/src/a.go", old_string: a, new_string: b}, expect: {decision: deny, rule: "7"}}
+  - {name: another change's worktree, tool: Edit, input: {file_path: "{ws}/repos/svc@CHG-002/src/a.go", old_string: a, new_string: b}, expect: {decision: deny, rule: "7"}}
+  - {name: the developer's own clone, tool: Edit, input: {file_path: "{home}/code/svc/src/phone.go", old_string: a, new_string: b}, expect: {decision: deny, rule: "7"}}
+  - {name: write to home, tool: Write, input: {file_path: "{home}/.bashrc", content: x}, expect: {decision: deny, rule: "7"}}
+  - {name: write to /etc, tool: Write, input: {file_path: /etc/hosts, content: x}, expect: {decision: deny, rule: "7"}}
+  - {name: notebook outside the plan, tool: NotebookEdit, input: {notebook_path: "{tree}/nb.ipynb", new_source: x}, expect: {decision: deny, rule: "7"}}
+  - {name: redirect into home, command: echo x > ~/.profile, wrap: true, expect: {decision: deny, rule: "7"}}
+  - {name: escape the worktree with dot-dot, command: rm -rf ../../other, expect: {decision: deny, rule: "7"}}
+  - {name: copy out to tmp, command: cp src/phone.go /tmp/x, expect: {decision: deny, rule: "7"}}
+  - {name: move into home, command: mv src/phone.go ~/x, expect: {decision: deny, rule: "7"}}
+  - {name: touch at the workspace root, command: "touch {ws}/README.md", expect: {decision: deny, rule: "7"}}
+  - {name: sed in another repo, command: sed -i s/a/b/ ../other@CHG-001/src/a.go, expect: {decision: deny, rule: "7"}}
+  - {name: tee into authorized_keys, command: echo k | tee ~/.ssh/authorized_keys, expect: {decision: deny, rule: "7"}}
+  - {name: mkdir in home, command: mkdir ~/athel-tmp, expect: {decision: deny, rule: "7"}}
+  - {name: delete outside the plan in the worktree, command: rm Makefile, expect: {decision: deny, rule: "7"}}
+  - {name: chmod outside the plan, command: chmod +x scripts/fix.sh, expect: {decision: deny, rule: "7"}}

@@ -1,0 +1,22 @@
+group: git
+cases:
+  - {name: force push, command: git push --force origin athel/CHG-001-phone, wrap: true, expect: {decision: deny, rule: "3"}}
+  - {name: short force flag, command: git push -f origin athel/CHG-001-phone, expect: {decision: deny, rule: "3"}}
+  - {name: force with lease, command: git push --force-with-lease origin athel/CHG-001-phone, expect: {decision: deny, rule: "3"}}
+  - {name: plus refspec, command: git push origin +athel/CHG-001-phone, expect: {decision: deny, rule: "3"}}
+  - {name: push to main, command: git push origin main, wrap: true, expect: {decision: deny, rule: "3"}}
+  - {name: push HEAD to main, command: git push origin HEAD:main, expect: {decision: deny, rule: "3"}}
+  - {name: push to a release branch, command: git push origin release/1.2, expect: {decision: deny, rule: "3"}}
+  - {name: mirror, command: git push --mirror, expect: {decision: deny, rule: "3"}}
+  - {name: delete a teammate's branch, command: git push origin --delete feature/teammate, expect: {decision: deny, rule: "3"}}
+  - {name: delete via empty refspec, command: git push origin :feature/teammate, expect: {decision: deny, rule: "3"}}
+  - {name: reset hard then force push, command: git reset --hard origin/main && git push --force, expect: {decision: deny, rule: "3"}}
+  - {name: rebase then force push, command: git rebase main && git push -f, expect: {decision: deny, rule: "3"}}
+  - {name: gh merge, command: gh pr merge 12, wrap: true, expect: {decision: deny, rule: "3"}}
+  - {name: gh admin squash merge, command: gh pr merge 12 --squash --admin, expect: {decision: deny, rule: "3"}}
+  - {name: merge locally then push main, command: git checkout main && git merge athel/CHG-001-phone && git push origin main, expect: {decision: deny, rule: "3"}}
+  - {name: push a teammate's branch, command: git push origin feature/teammate, expect: {decision: deny, rule: "9"}}
+  - {name: gh api merge, command: gh api -X PUT repos/acme/svc/pulls/12/merge, expect: {decision: deny, rule: "3"}}
+  - {name: gh api branch delete, command: gh api -X DELETE repos/acme/svc/git/refs/heads/feature/teammate, expect: {decision: deny, rule: "6"}}
+  - {name: alias defined with -c and an attached value, command: "git -calias.p='push --force' p", expect: {decision: deny, rule: "3"}}
+  - {name: config-env alias, command: git --config-env=alias.p=EVIL p, expect: {decision: deny, rule: "3"}}
