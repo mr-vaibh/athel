@@ -1,0 +1,100 @@
+package cli
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+
+	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+)
+
+func (h *harness) decide(tool string, input map[string]any, cwd string) map[string]any {
+	h.t.Helper()
+	raw, err := json.Marshal(input)
+	if err != nil {
+		h.t.Fatal(err)
+	}
+	return h.mustOK("policy", "decide", "--tool", tool, "--input", string(raw), "--cwd", cwd)
+}
+
+func TestPolicyDecideGuardMode(t *testing.T) {
+	h := newHarness(t)
+	h.userHome = t.TempDir()
+	h.mustOK("init")
+	edit := map[string]any{"file_path": filepath.Join(h.root, "a.go"), "old_string": "a", "new_string": "b"}
+	if v := h.decide("Edit", edit, h.root); v["decision"] != "none" || v["mode"] != "guard" {
+		t.Errorf("guard edit = %v", v)
+	}
+	if v := h.decide("Bash", map[string]any{"command": "kubectl delete pod x"}, h.root); v["decision"] != "deny" || v["code"] != string(aerr.PolicyProdWrite) {
+		t.Errorf("unknown cluster write = %v", v)
+	}
+	h.env["ATHEL_HEADLESS"] = "1"
+	if v := h.decide("Bash", map[string]any{"command": "cat $'x'"}, h.root); v["decision"] != "none" {
+		t.Errorf("guard read = %v", v)
+	}
+	outside := newHarness(t)
+	outside.userHome = t.TempDir()
+	if v := outside.decide("Read", map[string]any{"file_path": "/x/.env"}, outside.root); v["decision"] != "deny" || v["mode"] != "guard" {
+		t.Errorf("outside a workspace = %v", v)
+	}
+}
+
+func TestPolicyDecideChangeMode(t *testing.T) {
+	h := setup(t)
+	h.userHome = t.TempDir()
+	h.mustOK("state", "transition", "CHG-001", "--to", "investigating", "--by", "athel", "--reason", "start")
+	tree := filepath.Join(h.root, "repos", "r@CHG-001")
+	edit := map[string]any{"file_path": filepath.Join(tree, "src", "a.go"), "old_string": "a", "new_string": "b"}
+	if v := h.decide("Edit", edit, tree); v["decision"] != "deny" || v["code"] != string(aerr.PolicyScope) || v["mode"] != "change" {
+		t.Errorf("edit without a plan = %v", v)
+	}
+	for _, to := range []string{"specified", "awaiting_decisions", "planned"} {
+		h.mustOK("state", "transition", "CHG-001", "--to", to, "--by", "athel", "--reason", "r")
+	}
+	planPath := filepath.Join(t.TempDir(), "plan.yaml")
+	if err := os.WriteFile(planPath, []byte("schema: athel/plan@1\nchange: CHG-001\nhash: null\ntasks:\n  - {id: T-01, title: x, repo: r, paths: [src/**], verbs: [edit], covers: [AC-1], depends_on: [], size: S, gates: []}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	h.mustOK("plan", "set", "CHG-001", planPath)
+	h.mustOK("state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "ok")
+	if v := h.decide("Edit", edit, tree); v["decision"] != "allow" || v["rule"] != "10" {
+		t.Errorf("planned edit = %v", v)
+	}
+	h.env["ATHEL_SESSION_ID"] = "sess-B"
+	if v := h.decide("Edit", edit, tree); v["decision"] != "none" || v["mode"] != "guard" {
+		t.Errorf("another session = %v", v)
+	}
+}
+
+func TestPolicyDecideErrors(t *testing.T) {
+	h := newHarness(t)
+	h.mustOK("init")
+	if code, env := h.runJSON("policy", "decide", "--tool", "Read", "--input", "{"); code != aerr.ExitState || errCode(env) != string(aerr.StateInvalid) {
+		t.Errorf("bad json: %d %v", code, env)
+	}
+	for _, args := range [][]string{{"x"}, {"--tool", "Read"}, {"--input", "{}"}} {
+		if code, _ := h.runJSON(append([]string{"policy", "decide"}, args...)...); code != aerr.ExitUsage {
+			t.Errorf("usage %v: exit %d", args, code)
+		}
+	}
+	read := []string{"policy", "decide", "--tool", "Read", "--input", `{"file_path":"a"}`}
+	if code, env := h.runJSON(read...); code != aerr.ExitState || errCode(env) != string(aerr.StateIO) {
+		t.Errorf("no home: %d %v", code, env)
+	}
+	if err := os.WriteFile(filepath.Join(h.root, ".athel", "config", "tools.yaml"), []byte("nope"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	write := []string{"policy", "decide", "--tool", "Write", "--input", `{"file_path":"a","content":"x"}`}
+	code, env := h.runJSON(write...)
+	data, _ := env["data"].(map[string]any)
+	if code != 0 || data["decision"] != "deny" || data["code"] != string(aerr.PolicyConfigInvalid) {
+		t.Errorf("invalid policy: %d %v", code, env)
+	}
+	if err := os.WriteFile(filepath.Join(h.root, ".athel", "config", "athel.yaml"), []byte("nope"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, _ := h.runJSON(write...); code != aerr.ExitPolicy {
+		t.Errorf("invalid athel.yaml: exit %d", code)
+	}
+}

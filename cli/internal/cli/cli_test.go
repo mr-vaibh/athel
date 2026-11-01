@@ -21,6 +21,8 @@ type harness struct {
 	env   map[string]string
 	clock *clock.Fixed
 	stdin string
+	// userHome stands in for the user's home folder; empty makes UserHome fail.
+	userHome string
 }
 
 func newHarness(t *testing.T) *harness {
@@ -39,8 +41,13 @@ func (h *harness) run(args ...string) (int, string, string) {
 	code := Run(Env{
 		Args: args, Stdin: strings.NewReader(h.stdin), Stdout: &out, Stderr: &errOut,
 		Getenv: func(k string) string { return env[k] }, Cwd: h.root,
-		UserHome: func() (string, error) { return "", errors.New("tests never use the real home") },
-		Clock:    h.clock, Version: "1.2.3",
+		UserHome: func() (string, error) {
+			if h.userHome != "" {
+				return h.userHome, nil
+			}
+			return "", errors.New("tests never use the real home")
+		},
+		Clock: h.clock, Version: "1.2.3",
 	})
 	return code, out.String(), errOut.String()
 }
