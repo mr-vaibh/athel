@@ -1,6 +1,7 @@
 package state
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -243,4 +244,30 @@ func mustGet(t *testing.T, s *Store, id string) *Change {
 		t.Fatal(err)
 	}
 	return c
+}
+
+func TestHeldBy(t *testing.T) {
+	s, _ := newTestStore(t)
+	mustCreate(t, s, "free")
+	held := mustCreate(t, s, "held")
+	if _, err := s.AcquireLock(held.ID, "A", AcquireOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct{ session, want string }{{"A", held.ID}, {"B", ""}, {"", ""}}
+	for _, tc := range tests {
+		c, err := s.HeldBy(tc.session)
+		got := ""
+		if c != nil {
+			got = c.ID
+		}
+		if err != nil || got != tc.want {
+			t.Errorf("HeldBy(%q) = %q, %v; want %q", tc.session, got, err, tc.want)
+		}
+	}
+	if err := os.WriteFile(s.WS.ChangeFile(held.ID), []byte("bad"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.HeldBy("A"); !aerr.HasCode(err, aerr.StateSchema) {
+		t.Errorf("corrupt change: err = %v", err)
+	}
 }
