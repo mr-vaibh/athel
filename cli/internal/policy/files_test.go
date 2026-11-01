@@ -47,6 +47,9 @@ func TestBuiltinPoliciesValid(t *testing.T) {
 	if s.Git.BaseBranch != "main" || !slices.Contains(s.Git.Protected, "release/*") || !slices.Contains(s.Git.Forbidden, "force_push") {
 		t.Errorf("git = %+v", s.Git)
 	}
+	if len(s.Tools["kubectl"].ForbiddenRegexps()) != 3 || len(s.Tools["raptor"].ForbiddenRegexps()) != 0 {
+		t.Errorf("compiled patterns: %d", len(s.Tools["kubectl"].ForbiddenRegexps()))
+	}
 	if s.Tools["raptor"].Policy["prod"].Write != "deny" || len(s.Tools["kubectl"].forbidden) != 3 || !strings.HasPrefix(s.Hash, "sha256:") {
 		t.Errorf("tools = %+v", s.Tools["raptor"])
 	}

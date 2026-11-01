@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated: 2026-11-01, session 1, M1 Phase 1 (plan written, waiting for approval).
+Last updated: 2026-11-01, session 1, M1 Phase 3 (build) in progress.
 
 ## Where we are
 
@@ -14,9 +14,13 @@ Last updated: 2026-11-01, session 1, M1 Phase 1 (plan written, waiting for appro
   merge its branch head was verified to be contained in `main`. `scripts/check.sh` and the resume
   demo pass on `main` at c23c033. The task branches still exist on GitHub (all contained in
   `main`); delete them when convenient.
-- **M1 Guardrails** started on the owner's "go M1". Phase 1 is done: `docs/plans/M1-plan.md`
-  (branch `docs/m1-plan`, PR open) with 12 questions (Q1–Q12). **Stop: waiting for the owner's
-  approval and answers.** Nothing of M1 is built yet.
+- **M1 Guardrails**: plan approved ("approved!", all Q1–Q12 recommendations). Building in
+  stacked PRs from `docs/m1-plan` (#24): #25 audit log (`feat/m1-audit-log`), #26 scrubber
+  (`feat/m1-scrub`), #27 policy files (`feat/m1-policy-files`), #28 shell parser
+  (`feat/m1-shellparse`). Next: PR-05 `feat/m1-classify` (M1-plan §9), then envdetect,
+  plan-binding, policy engine, hook wiring, human-origin, integrity, red-team, scenarios,
+  report. Owner merges stacks (the agent may merge only when explicitly told; GitHub does not
+  retarget stacked PRs automatically: retarget each to main before merging, as done for M0).
 
 ## Merged PRs
 
@@ -49,15 +53,12 @@ Last updated: 2026-11-01, session 1, M1 Phase 1 (plan written, waiting for appro
 
 1. Start-of-session routine (CLAUDE.md), `source scripts/env.sh` (always: it selects the
    project owner's `gh` login), `gh pr list`.
-2. If the owner approved the M1 plan: log every answer to Q1–Q12 in
-   `docs/context/decisions-from-chat.md`, fold them into `docs/plans/M1-plan.md`, then build the
-   tasks in M1-plan §9 in order (PR-01 audit log first), one PR each, stacked like M0 unless the
-   owner merges as we go. Same loop: failing tests → code → `scripts/check.sh` (with pipefail) →
+2. Continue M1-plan §9 from the first task without an open PR (`gh pr list`), branching from
+   the last M1 branch, one PR each. Same loop: failing tests → code → `scripts/check.sh` (with pipefail) →
    self-review → commit → push → PR.
 
 ## Open questions waiting for the owner
 
-- Approve `docs/plans/M1-plan.md` and answer Q1–Q12 (§11 of the plan).
 - Whether to delete the 23 merged M0 task branches on GitHub.
 
 ## Owner instructions given in chat (all logged in docs/context/decisions-from-chat.md)

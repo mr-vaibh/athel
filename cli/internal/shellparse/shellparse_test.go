@@ -63,7 +63,7 @@ func TestSplitsListsPipesSubshells(t *testing.T) {
 		{src: "[[ $(whoami) == root ]] && echo", want: []string{"whoami", "echo"}},
 		{src: "time git push", want: []string{"git push"}},
 		{src: "! git push &", want: []string{"git push"}},
-		{src: "export K=v; declare -x Y=$(id)", want: []string{"id"}},
+		{src: "export K=v; declare -x Y=$(id); export -p", want: []string{"export K=v", "id", "declare -x ?", "export -p"}},
 	}, Options{})
 }
 
