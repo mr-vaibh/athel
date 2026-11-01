@@ -122,6 +122,17 @@ func TestBuiltinToolTiers(t *testing.T) {
 	if r := Classify(Call{Tool: "Bash", Input: json.RawMessage(`[1]`)}, pol, Options{}); r.Malformed == "" {
 		t.Error("non-object input must be malformed")
 	}
+	for _, tool := range []string{"Read", "Edit", "Write", "NotebookEdit"} {
+		if r := Classify(Call{Tool: tool, Input: json.RawMessage(`{"file_path":3}`)}, pol, Options{}); r.Malformed == "" {
+			t.Errorf("%s without a path must be malformed: %+v", tool, r)
+		}
+	}
+	for _, tool := range []string{"Write", "Edit"} {
+		in := json.RawMessage(`{"file_path":"/ws/.athel/changes/CHG-001/change.yaml"}`)
+		if a := Classify(Call{Tool: tool, Input: in}, pol, Options{}).Actions[0]; a.Tier != X {
+			t.Errorf("%s into .athel/ must be forbidden: %+v", tool, a)
+		}
+	}
 	if r := bash(t, pol, "x=1", Options{}); len(r.Actions) != 1 || r.Actions[0].Tier != R0 {
 		t.Errorf("assignment only: %+v", r)
 	}
