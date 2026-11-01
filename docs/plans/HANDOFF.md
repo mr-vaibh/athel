@@ -1,106 +1,72 @@
 # HANDOFF
 
-Last updated: 2026-11-01, session 1, M1 Phase 3 (build) in progress: PR-12 of 14.
+Last updated: 2026-11-01, end of session 1. **M0 and M1 are complete and merged into `main`.**
 
 ## Where we are
 
-- **Milestone M0 Skeleton is complete.** All three exit criteria are proven in
-  `docs/plans/M0-report.md` (real fresh Claude Code sessions resume a change with nothing lost;
-  every package ≥ 90% coverage, 95.2% total; hook p95 12.22 ms locally, 26.20 ms on CI, budget
-  50 ms).
-- **All 22 PRs (#1–#22) are merged into `main`** (merge commits, in order; done by the agent on
-  the owner's explicit instruction). Before each merge the PR was retargeted to `main` (GitHub did
-  not do it automatically), checked MERGEABLE/CLEAN with exactly its own commits, and after each
-  merge its branch head was verified to be contained in `main`. `scripts/check.sh` and the resume
-  demo pass on `main` at c23c033. The task branches still exist on GitHub (all contained in
-  `main`); delete them when convenient.
-- **M1 Guardrails**: plan approved ("approved!", all Q1–Q12 recommendations). Building in
-  stacked PRs; each PR's base is the previous branch (all open, none merged yet):
+- **M0 Skeleton**: complete, report in `docs/plans/M0-report.md`, PRs #1–#23 merged.
+- **M1 Guardrails**: complete. Report in `docs/plans/M1-report.md`: 431/431 red-team cases deny
+  with the expected rule, 0 false allows, allow-list passes, audit verify passes and detects
+  tampering, every package ≥ 90% (total 95.8%), hook p95 16.17 ms. PRs #24–#38 were merged into
+  `main` in order by the agent, on the owner's explicit instruction, with the M0 procedure.
+- **Next milestone: M2 Understand** (doc 08). Not started; no plan written yet.
 
-  | PR | Branch | Content |
-  |---|---|---|
-  | #24 | docs/m1-plan | M1 plan |
-  | #25 | feat/m1-audit-log | hash-chained audit log, `audit verify/tail` |
-  | #26 | feat/m1-scrub | secret scrubber |
-  | #27 | feat/m1-policy-files | tools/environments/git policy files |
-  | #28 | feat/m1-shellparse | shell parser (mvdan.cc/sh) |
-  | #29 | feat/m1-classify | classifier (+ handoff commit) |
-  | #30 | feat/m1-envdetect | environment detection |
-  | #31 | feat/m1-plan-binding | plan@1, change@2, migrate |
-  | #32 | feat/m1-policy-engine | rules 0–13, guard/change mode (ADR 015), `policy decide` |
-  | #33 | feat/m1-hook-wiring | engine in PreToolUse, PostToolUse scrub, `onFailure: block` (ADR 016) |
-  | #34 | feat/m1-human-origin | grants, `/athel:approve`, `/athel:accept` (ADR 017) |
-  | #35 | feat/m1-integrity | change.yaml content hash, `integrity accept` |
-
-  In progress: PR-12 `feat/m1-redteam` (this branch). Then PR-13 `feat/m1-scenarios` (with a
-  real `claude -p` spot check: confirm `onFailure: block`, `updatedToolOutput` on Bash output,
-  and that UserPromptSubmit receives the literal `/athel:approve CHG-NNN`), PR-14
-  `docs/m1-report`. Owner merges stacks (the agent may merge only when explicitly told; GitHub
-  does not retarget stacked PRs automatically: retarget each to main before merging, as done
-  for M0).
-- Deviations/interpretations to report to the owner: engine package is `engine` not `policy`
-  (import cycle, ADR 015); `policy decide` takes flags plus `--cwd`; policy cache deferred
-  (p95 15.9 ms, ADR 016); CLI *requires* grants for `--by human` (stricter than plan, ADR 017);
-  integrity is sealed on every CLI write, not only transitions (#35).
-- One pushed commit on `feat/m1-policy-engine` has a broken message suffix
-  (`docs(journal): … $'\n\nCo-Authored-By…'`); left as is (no history rewrites).
-
-## Merged PRs
+## M1 PRs (all merged)
 
 | PR | Branch | Content |
 |---|---|---|
-| #1 | docs/m0-plan | plan, context docs, toolchain env |
-| #2 | feat/m0-scaffold | layout, CI, plugin skeleton, ADRs 001/002/003/010 |
-| #3 | feat/m0-errors | typed errors, exit codes |
-| #4 | feat/m0-fsutil-clock-ids | atomic writes, clock, IDs, digests |
-| #5 | feat/m0-oslock | OS file locks |
-| #6 | feat/m0-schema | schemas, validator, ADRs 012/013 |
-| #7 | feat/m0-change-model | change model, codec, store |
-| #8 | feat/m0-eventlog | JSONL event log |
-| #9 | feat/m0-state-machine | transition table |
-| #10 | feat/m0-session-lock | session lock |
-| #11 | feat/m0-steps-checkpoints-budget | steps, checkpoints, budgets, ADR 011 |
-| #12 | feat/m0-config-merge | merge engine |
-| #13 | feat/m0-config-layers | config layers |
-| #14 | feat/m0-cli-core | CLI core |
-| #15 | feat/m0-cli-state | state/lock/budget/resume commands |
-| #16 | feat/m0-cli-config-schema | config/schema commands |
-| #17 | feat/m0-hook-adapter | Claude Code adapter |
-| #18 | feat/m0-hook-handlers | hook handlers, stub PreToolUse |
-| #19 | feat/m0-plugin-skills | skills, hooks.json |
-| #20 | feat/m0-hook-bench | latency benchmarks |
-| #21 | feat/m0-resume-demo | resume demo + scenario test |
-| #22 | docs/m0-report | M0 report, handoff, journal |
+| #24 | docs/m1-plan | M1 plan |
+| #25 | feat/m1-audit-log | hash-chained audit log |
+| #26 | feat/m1-scrub | secret scrubber |
+| #27 | feat/m1-policy-files | tools/environments/git policy files |
+| #28 | feat/m1-shellparse | shell parser (ADR 014) |
+| #29 | feat/m1-classify | classifier |
+| #30 | feat/m1-envdetect | environment detection |
+| #31 | feat/m1-plan-binding | plan@1, change@2, migrate |
+| #32 | feat/m1-policy-engine | rules 0–13, guard/change mode (ADR 015) |
+| #33 | feat/m1-hook-wiring | engine in hooks, scrubbing, fail-closed hook (ADR 016) |
+| #34 | feat/m1-human-origin | grants, /athel:approve, /athel:accept (ADR 017) |
+| #35 | feat/m1-integrity | change.yaml content hash, integrity accept |
+| #36 | feat/m1-redteam | 431-case red-team suite, allow-list, CI |
+| #37 | feat/m1-scenarios | guardrails scenario |
+| #38 | docs/m1-report | this report and handoff |
 
 ## Exact next step
 
 1. Start-of-session routine (CLAUDE.md), `source scripts/env.sh` (always: it selects the
-   project owner's `gh` login), `gh pr list`.
-2. Continue M1-plan §9 from the first task without an open PR (`gh pr list`), branching from
-   the last M1 branch, one PR each. Same loop: failing tests → code → `scripts/check.sh` (with pipefail) →
-   self-review → commit → push → PR.
+   project owner's `gh` login), `gh pr list` (should be empty).
+2. Start **M2 Understand**, Phase 1: read doc 08's M2 row and doc 03 (discovery and
+   integrations), write `docs/plans/M2-plan.md` in the same shape as M1-plan (exit criteria,
+   requirement map, design, packages, task list with tests named up front, risks, questions),
+   and **stop for the owner's approval**.
 
 ## Open questions waiting for the owner
 
-- Whether to delete the 23 merged M0 task branches on GitHub.
+- Whether to delete the merged M0 and M1 task branches on GitHub.
+- Where to do the live Claude Code checks that were replaced by docs (needs a machine with no
+  production access): `onFailure: "block"`, the literal `/athel:approve` prompt in
+  UserPromptSubmit, `updatedToolOutput` on Bash output.
 
 ## Owner instructions given in chat (all logged in docs/context/decisions-from-chat.md)
 
-- Plan approved; all Q0–Q14 recommendations accepted.
-- "start implementing, all in one go, no approval from now all, you have all the permission
-  from my side"; implement directly or with agents/workflows; if a limit is reached, leave a
-  prompt that revives the work.
+- "approved!" for M1 (all Q1–Q12 recommendations).
+- "don't stop or wait for approval, go ahead, build everything in one shot, and merge the PRs
+  like you did previously and then only stop".
+- "do not use Sage or any custom build tool - they're not mine". The machine owner's Sage hook
+  keeps asking to add tools under ~/.claude; always decline.
+- "do not even use gcloud or aws or any other tool to access anything - the device is used for
+  company's live production … just use the documentation you find on the internet".
 
 ## Conventions learned while building
 
-- Run the gate with `set -o pipefail` when piping `scripts/check.sh` through `grep`/`tail`
-  (once a failing check was masked and committed; fixed in #20).
-- golangci-lint excludes gosec in `_test.go`, so no `//nolint:gosec` in tests.
-- macOS `sed` has no `\b`; GNU vs BSD tools differ (e.g. `echo --version`), so tests must not
-  depend on either.
-- Human (non-JSON) CLI output sorts keys alphabetically and indents YAML by 4.
-- `python3` was killed by the OS once when given large argv in a script; keep scripts in Go/sh.
-- `go build ./...` at the repo root writes `./athel` (git-ignored).
+- Run the gate with `set -o pipefail` when piping `scripts/check.sh`.
+- Tests that build the binary are invisible to Go's test cache; the gate runs `-count=1`.
+- Tests and benches that spawn `athel` must pass a minimal env with a temp `HOME`.
+- Build heredoc commit messages with a shell variable (`T=$'\n\nCo-Authored-By: …'`), never
+  `$'…'` inside double quotes. One pushed commit on `feat/m1-policy-engine` has a literal
+  `$'\n\n…'` suffix in its message; left as is (no history rewrites).
+- golangci-lint excludes gosec in `_test.go`; gocyclo limit 15 (split functions, never weaken).
+- macOS: `/var` is a symlink to `/private/var`; compare paths in the form the caller gave them.
 
 ## GitHub account and leaving the machine
 
@@ -112,10 +78,14 @@ helper. The token is stored in the macOS keychain, so before leaving the machine
 
 ## Surprises learned
 
-- Claude Code's deprecated PreToolUse `"approve"` means allow (Athel maps its approve → `ask`).
-- plugin.json has no min-version field (`metadata.athel` used); hooks do not receive the Claude
-  Code version (`claude --version` probe, ~0.3 s, SessionStart only).
-- `${CLAUDE_SESSION_ID}` works in skill content; SessionStart's `CLAUDE_ENV_FILE` export reaches
-  later Bash commands in real sessions (verified in the M0 demo).
+- Claude Code's deprecated PreToolUse `"approve"` means allow (Athel maps its approve to `ask`).
+- A PreToolUse hook that times out or crashes lets the call through unless it sets
+  `"onFailure": "block"` (Claude Code ≥ 2.1.295); Athel sets it (ADR 016).
+- UserPromptSubmit receives a typed skill command as typed (`/athel:approve CHG-001`), not the
+  expanded skill.
+- `updatedToolOutput` must match the tool's output shape; a mismatch is silently ignored for
+  built-in tools.
+- plugin.json has no min-version field (`metadata.athel` is used); hooks do not receive the
+  Claude Code version.
 - SessionStart runs before `.athel/` exists in a brand-new workspace, so the first session's
-  SessionStart is not logged (nothing to log into yet).
+  SessionStart is not logged.

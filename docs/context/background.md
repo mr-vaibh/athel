@@ -70,7 +70,7 @@ M6 Verify and learn. Safety (M1) ships before any capability that can write.
 | Specification (source of truth, 8 PDFs) | `docs/specs/01-master-prd.pdf` … `08-implementation-plan.pdf` |
 | Standing rules for every session | `CLAUDE.md` |
 | Original kickoff instructions | `KICKOFF-PROMPT.md` |
-| Current milestone plan | `docs/plans/M0-plan.md` |
+| Milestone plans and reports | `docs/plans/M0-plan.md`, `M0-report.md`, `M1-plan.md`, `M1-report.md` |
 | Handoff for the next session | `docs/plans/HANDOFF.md` |
 | Out-of-scope ideas | `docs/plans/backlog.md` |
 | Architecture decision records | `docs/adr/` |
@@ -78,3 +78,5 @@ M6 Verify and learn. Safety (M1) ships before any capability that can write.
 | Owner decisions made in chat | `docs/context/decisions-from-chat.md` |
 | Tools, versions, machine setup | `docs/context/environment.md` |
 | Plugin / CLI / schemas / tests | `plugin/`, `cli/`, `schemas/`, `tests/` (from Phase 2 of M0) |
+| Red-team and allow-list suites (M1) | `tests/redteam/cases/*.yaml` |
+| Guardrail scenario (M1) | `tests/scenarios/m1-guardrails/` |
