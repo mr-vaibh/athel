@@ -17,46 +17,58 @@ Chat history from the borrowed machine does not come along, and nothing depends 
 
 ## Moving to the personal machine: steps for the owner
 
-1. Install Claude Code, git and the GitHub CLI (`gh`) the usual way for your machine.
-2. Clone and enter the repo:
+1. Install Claude Code, then run:
    ```sh
-   git clone https://github.com/mr-vaibh/athel.git && cd athel
+   git clone https://github.com/mr-vaibh/athel.git && cd athel && claude
    ```
-3. Start Claude Code in that folder (`claude`) and paste the prompt from the next section.
-   Claude reads the docs, sets up Go and golangci-lint in `./.tools/` (CLAUDE.md, "Installing
-   missing tools"), checks `gh`, and reports where things stand.
-4. When it asks for GitHub access, log in to `gh` with your own account. On your own machine a
-   normal `gh auth login` is fine. While the "borrowed machine" section of CLAUDE.md still
-   exists, `scripts/env.sh` points `gh` at `./.tools/gh-config`, so run
-   `source scripts/env.sh && gh auth login` once.
-5. Approve the small first PR it proposes (see "First tasks on the personal machine"), then
-   the M2 plan when it stops for approval.
+2. Paste the prompt below. Approve Claude's commands as it asks. When it asks for the GitHub
+   login, type `! gh auth login` in the Claude prompt and log in as `mr-vaibh`.
 
 ## Prompt to paste into the first session on the new machine
 
 ```
-This is Athel, my spec-driven agentic development framework (Claude Code plugin + Go CLI).
-We are now on my personal machine; the work so far was done on a borrowed machine.
+This is Athel, my spec-driven agentic development framework (a Claude Code plugin plus a Go
+helper CLI named athel). M0 and M1 are done and merged. We were on a borrowed machine; this is
+now my own PC.
+
 1. Read CLAUDE.md, docs/context/background.md, docs/plans/HANDOFF.md, docs/plans/ROADMAP.md,
    docs/plans/M1-report.md, the latest file in docs/journal/, docs/context/decisions-from-chat.md
-   and docs/context/environment.md.
-2. Run the start-of-session routine from CLAUDE.md (tool check; install Go and golangci-lint
-   into ./.tools with checksum verification if missing; source scripts/env.sh; gh auth status
-   must show mr-vaibh; gh pr list).
-3. Run `set -o pipefail; scripts/check.sh` and the red-team suite to confirm main is green here.
-4. Tell me in 5 lines where we are and what you will do next, then do the "First tasks on the
-   personal machine" from HANDOFF.md, and then start M2 Phase 1 (write docs/plans/M2-plan.md and
-   stop for my approval).
+   and docs/context/environment.md. They hold the full context; there is no other chat history.
+2. This is my own machine. Ignore the "Environment: borrowed machine" section of CLAUDE.md and
+   do NOT source scripts/env.sh or use ./.tools. Install the tools system-wide with Homebrew
+   (ask me before running): `brew install go golangci-lint gh`. Go must be the latest stable
+   release; golangci-lint must be v2 (CI pins v2.15.0). Then ask me to run `! gh auth login`
+   and check that `gh auth status` shows mr-vaibh. Set the repo's git identity to mr-vaibh /
+   shuklavaibhav336@gmail.com (repo-local, not --global).
+3. Run `set -o pipefail; scripts/check.sh` and the red-team suite
+   (`go test -count=1 ./tests/redteam/`) to confirm main is green on this machine.
+4. First PR (branch docs/personal-machine):
+   - delete the borrowed-machine section from CLAUDE.md;
+   - delete scripts/env.sh and the .tools/ entry in .gitignore;
+   - rewrite docs/context/environment.md for a normal setup (Homebrew tools, plain go/gh);
+   - update every doc that says to source scripts/env.sh (HANDOFF.md, README.md, ROADMAP.md,
+     M0/M1 docs only where they give instructions).
+   Gate it and open the PR.
+5. Then do the remaining "First tasks on the personal machine" in HANDOFF.md:
+   - live-check onFailure:block, the literal /athel:approve prompt and updatedToolOutput, using
+     fixtures only;
+   - ask me about deleting the old merged branches.
+6. Then start M2 Phase 1: read doc 08 (M2 row and fixture system) and doc 03 in full, write
+   docs/plans/M2-plan.md in the same shape as M1-plan.md, and stop for my approval.
+
+Follow CLAUDE.md's engineering standards and git conventions throughout (feature branches,
+stacked PRs, conventional commits, journal and decision log kept current).
+Tell me in 5 lines where we are before you start step 4.
 ```
 
 ## First tasks on the personal machine (in this order)
 
-1. **Remove the borrowed-machine rules.** CLAUDE.md says to delete its whole "Environment:
-   borrowed machine" section once the project moves. Do that in a small PR
-   (`docs/personal-machine`). Keep the `./.tools/` toolchain approach and `scripts/env.sh`: they
-   work on any machine. Keep or drop the `GH_CONFIG_DIR` line in `scripts/env.sh` as the owner
-   prefers (dropping it makes `gh` use the normal login), and update
-   `docs/context/environment.md` to match.
+1. **Remove the borrowed-machine setup** (the owner chose a normal system-wide setup on the
+   personal machine). In one PR (`docs/personal-machine`):
+   - delete CLAUDE.md's "Environment: borrowed machine" section;
+   - delete `scripts/env.sh` and the `.tools/` entry in `.gitignore`;
+   - rewrite `docs/context/environment.md` for Homebrew-installed tools;
+   - update the docs that say to source `scripts/env.sh`.
 2. **Live-check three Claude Code behaviours** that M1 verified only from the docs. Use only the
    fixture workspace and harmless commands; never point anything at real systems.
    - With `claude --plugin-dir ./plugin` (never install the plugin into user settings), confirm
@@ -115,10 +127,13 @@ We are now on my personal machine; the work so far was done on a borrowed machin
 ## Open questions for the owner
 
 - Delete the merged M0/M1 task branches on GitHub?
-- On the personal machine, keep the repo-local `gh` login (`GH_CONFIG_DIR`) or use the normal
-  one?
 
 ## Owner instructions given in chat (all also in docs/context/decisions-from-chat.md)
+
+- 2026-11-02: On the personal PC, no `./.tools` or `scripts/env.sh`; Claude installs the tools
+  with Homebrew. The handoff prompt was rewritten and committed straight to `main` on the
+  owner's explicit instruction ("just fucking commit on main"). The borrowed machine was then
+  cleaned up: the gh login was removed and the local clone deleted.
 
 - 2026-11-02: "next phases of implementation i'll do on my personal PC … wrap up the work here,
   and write proper documentation … proper handoff … how to continue … commit and push
