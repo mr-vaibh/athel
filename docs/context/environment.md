@@ -80,7 +80,13 @@ claude plugin validate ./plugin                 # validate the plugin manifest a
 claude --plugin-dir ./plugin                    # try the plugin for one session (never installs it)
 ```
 
-The hook latency benchmark is added in M0 task PR-17; its command is documented there.
+Hook latency (M0 exit criterion: p95 < 50 ms):
+
+```sh
+scripts/build-plugin.sh
+go run ./tests/bench/hooklatency -binary plugin/bin/athel -n 1000          # end to end, real process spawns
+go test -run=NONE -bench=BenchmarkPreToolUseInProcess -benchmem ./cli/internal/cli/   # in-process path
+```
 
 ## Removing everything
 

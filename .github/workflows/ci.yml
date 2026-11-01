@@ -26,3 +26,7 @@ jobs:
           version: v2.15.0
       - name: test (race) with per-package coverage gate 90%
         run: scripts/coverage-gate.sh 90
+      - name: hook latency (p95 < 50 ms over 1,000 spawns)
+        run: |
+          go build -o bin/athel ./cli/cmd/athel
+          go run ./tests/bench/hooklatency -binary bin/athel -n 1000 -max-p95 50ms
