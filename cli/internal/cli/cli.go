@@ -28,6 +28,8 @@ type Env struct {
 	UserHome func() (string, error)
 	Clock    clock.Clock
 	Version  string
+	// ClaudeVersion reports the running Claude Code version (SessionStart compatibility check).
+	ClaudeVersion func() (string, error)
 }
 
 // usageError is a wrong invocation: exit 2, never an Athel error code.
@@ -64,6 +66,7 @@ func commands() map[string]command {
 		"config validate":  cmdConfigValidate,
 		"config show":      cmdConfigShow,
 		"schema validate":  cmdSchemaValidate,
+		"hook":             cmdHook,
 	}
 }
 
@@ -130,6 +133,9 @@ type usageJSON struct {
 }
 
 func report(env Env, asJSON bool, data any, err error) int {
+	if raw, ok := data.(rawOutput); ok && err == nil {
+		return writeOrInternal(env.Stdout, string(raw)+"\n", aerr.ExitOK)
+	}
 	code := exitCode(err)
 	if asJSON {
 		out := envelope{OK: err == nil, Data: data}

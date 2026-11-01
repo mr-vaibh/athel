@@ -3,7 +3,11 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/exec"
+	"strings"
+	"time"
 
 	"github.com/mr-vaibh/athel/cli/internal/cli"
 	"github.com/mr-vaibh/athel/cli/internal/clock"
@@ -29,5 +33,20 @@ func environment(getwd func() (string, error)) cli.Env {
 	return cli.Env{
 		Args: os.Args[1:], Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
 		Getenv: os.Getenv, Cwd: cwd, UserHome: os.UserHomeDir, Clock: clock.System{}, Version: version,
+		ClaudeVersion: versionOf("claude"),
+	}
+}
+
+// versionOf returns a probe that runs `<binary> --version` (local process, no network),
+// because Claude Code does not pass its version to hooks. Bounded so SessionStart never hangs.
+func versionOf(binary string) func() (string, error) {
+	return func() (string, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		out, err := exec.CommandContext(ctx, binary, "--version").Output()
+		if err != nil {
+			return "", err
+		}
+		return strings.TrimSpace(string(out)), nil
 	}
 }
