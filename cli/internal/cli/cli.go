@@ -61,6 +61,9 @@ func commands() map[string]command {
 		"budget add":       cmdBudgetAdd,
 		"budget show":      cmdBudgetShow,
 		"resume":           cmdResume,
+		"config validate":  cmdConfigValidate,
+		"config show":      cmdConfigShow,
+		"schema validate":  cmdSchemaValidate,
 	}
 }
 
