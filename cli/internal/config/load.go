@@ -33,8 +33,8 @@ var AthelRules = Rules{
 	"features.*":                     {Kind: Free},
 }
 
-// reservedFiles are policy files later milestones define; M0 does not read them.
-var reservedFiles = []string{"tools.yaml", "git.yaml", "gates.yaml", "environments.yaml", "services.yaml"}
+// reservedFiles are policy files later milestones define; they are not read yet.
+var reservedFiles = []string{"gates.yaml", "services.yaml"}
 
 // Paths locates the on-disk layers. Home is ATHEL_HOME (normally ~/.athel); tests always pass
 // a temporary directory so the real home folder is never read.
@@ -63,32 +63,55 @@ type Result struct {
 	Notes     []string // informational, e.g. reserved files present but not read in M0
 }
 
-// Load reads every present layer, validates each against athel/config@1 and merges them.
-func Load(p Paths, reg *schema.Registry) (*Result, error) {
-	builtin, err := readLayer(reg, LayerBuiltin, "builtin:plugin/policies/defaults/athel.yaml",
-		func() ([]byte, error) { return fs.ReadFile(athel.Defaults, "plugin/policies/defaults/athel.yaml") })
+// FileSpec describes one layered policy or config file.
+type FileSpec struct {
+	Name      string // file name in the org and project layers, e.g. "tools.yaml"
+	Schema    string
+	Rules     Rules
+	UserFile  string // file in ATHEL_HOME for the user layer; "" when the file has no user layer
+	Normalize func(map[string]any) (map[string]any, error)
+}
+
+// AthelSpec is athel.yaml.
+var AthelSpec = FileSpec{Name: "athel.yaml", Schema: schema.Config, Rules: AthelRules, UserFile: "user.yaml"}
+
+// LoadFile reads every present layer of one file (built-in from the binary, then org, user,
+// project), validates each against its schema, normalises it and merges them tighten-only.
+func LoadFile(p Paths, reg *schema.Registry, spec FileSpec) (*Effective, []Layer, error) {
+	builtinPath := "plugin/policies/defaults/" + spec.Name
+	builtin, err := readLayer(reg, spec, LayerBuiltin, "builtin:"+builtinPath,
+		func() ([]byte, error) { return fs.ReadFile(athel.Defaults, builtinPath) })
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	layers := []Layer{*builtin}
-	candidates := []struct{ name, path string }{
-		{LayerOrg, filepath.Join(p.Home, "org", "athel.yaml")},
-		{LayerUser, filepath.Join(p.Home, "user.yaml")},
+	candidates := []struct{ name, path string }{{LayerOrg, filepath.Join(p.Home, "org", spec.Name)}}
+	if spec.UserFile != "" {
+		candidates = append(candidates, struct{ name, path string }{LayerUser, filepath.Join(p.Home, spec.UserFile)})
 	}
 	if p.ProjectDir != "" {
-		candidates = append(candidates, struct{ name, path string }{LayerProject, filepath.Join(p.ProjectDir, "athel.yaml")})
+		candidates = append(candidates, struct{ name, path string }{LayerProject, filepath.Join(p.ProjectDir, spec.Name)})
 	}
 	for _, c := range candidates {
-		l, err := readLayer(reg, c.name, c.path, func() ([]byte, error) { return os.ReadFile(c.path) })
+		l, err := readLayer(reg, spec, c.name, c.path, func() ([]byte, error) { return os.ReadFile(c.path) })
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		layers = append(layers, *l)
 	}
-	eff, err := Merge(layers, AthelRules)
+	eff, err := Merge(layers, spec.Rules)
+	if err != nil {
+		return nil, nil, err
+	}
+	return eff, layers, nil
+}
+
+// Load reads athel.yaml from every present layer and computes the effective hash.
+func Load(p Paths, reg *schema.Registry) (*Result, error) {
+	eff, layers, err := LoadFile(p, reg, AthelSpec)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +122,7 @@ func Load(p Paths, reg *schema.Registry) (*Result, error) {
 	return &Result{Effective: eff, Layers: layers, Hash: hash, Notes: reservedNotes(p.ProjectDir)}, nil
 }
 
-func readLayer(reg *schema.Registry, name, path string, read func() ([]byte, error)) (*Layer, error) {
+func readLayer(reg *schema.Registry, spec FileSpec, name, path string, read func() ([]byte, error)) (*Layer, error) {
 	data, err := read()
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, err
@@ -109,12 +132,17 @@ func readLayer(reg *schema.Registry, name, path string, read func() ([]byte, err
 	}
 	doc, err := schema.DecodeYAML(data)
 	if err != nil {
-		return nil, aerr.Wrap(aerr.PolicyConfigInvalid, name+" config "+path+" is not valid YAML", err)
+		return nil, aerr.Wrap(aerr.PolicyConfigInvalid, name+" "+spec.Name+" "+path+" is not valid YAML", err)
 	}
-	if err := reg.Validate(schema.Config, doc); err != nil {
-		return nil, aerr.Wrap(aerr.PolicyConfigInvalid, name+" config "+path+" does not match "+schema.Config, err)
+	if err := reg.Validate(spec.Schema, doc); err != nil {
+		return nil, aerr.Wrap(aerr.PolicyConfigInvalid, name+" "+spec.Name+" "+path+" does not match "+spec.Schema, err)
 	}
 	m, _ := doc.(map[string]any) // the schema guarantees an object
+	if spec.Normalize != nil {
+		if m, err = spec.Normalize(m); err != nil {
+			return nil, aerr.Wrap(aerr.PolicyConfigInvalid, name+" "+spec.Name+" "+path, err)
+		}
+	}
 	return &Layer{Name: name, Path: path, Doc: m}, nil
 }
 
@@ -125,7 +153,7 @@ func reservedNotes(projectDir string) []string {
 	}
 	for _, f := range reservedFiles {
 		if _, err := os.Stat(filepath.Join(projectDir, f)); err == nil {
-			notes = append(notes, f+" is reserved for a later milestone and is not read in M0")
+			notes = append(notes, f+" is reserved for a later milestone and is not read yet")
 		}
 	}
 	return notes
