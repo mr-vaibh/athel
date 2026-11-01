@@ -1,7 +1,7 @@
 # Athel — standing rules for every session
 
 Athel is a spec-driven agentic development framework shipped as a Claude Code plugin,
-with a Go helper CLI named `athel`. The specification in docs/spec/ (8 PDF files,
+with a Go helper CLI named `athel`. The specification in docs/specs/ (8 PDF files,
 01-master-prd.pdf to 08-implementation-plan.pdf) is the source of truth. Read the relevant spec
 sections before changing anything.
 
