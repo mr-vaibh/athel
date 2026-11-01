@@ -88,6 +88,19 @@ go run ./tests/bench/hooklatency -binary plugin/bin/athel -n 1000          # end
 go test -run=NONE -bench=BenchmarkPreToolUseInProcess -benchmem ./cli/internal/cli/   # in-process path
 ```
 
+Red-team and allow-list suites, guardrail scenario (M1 exit criteria):
+
+```sh
+go test -count=1 -v -run 'TestRedTeamSuite|TestAllowListSuite|TestCoveragePerGroup' ./tests/redteam/
+go test -count=1 ./tests/scenarios/...
+```
+
+**Never run cloud CLIs on this machine.** It is used for the company's live production (owner,
+2026-11-01). Athel's tests only *classify* commands such as `kubectl delete` or `gcloud run
+deploy`; nothing executes them. Every test and bench that spawns `athel` passes a minimal
+environment with a temporary `HOME`, so not even the real kube, gcloud or aws config files are
+read. Keep it that way in new tests.
+
 ## Removing everything
 
 ```sh
