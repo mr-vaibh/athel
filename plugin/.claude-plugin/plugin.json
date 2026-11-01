@@ -1,0 +1,13 @@
+{
+  "name": "athel",
+  "version": "0.1.0",
+  "description": "Spec-driven agentic development framework: durable change state, hooks and a deterministic helper CLI.",
+  "author": { "name": "mr-vaibh" },
+  "repository": "https://github.com/mr-vaibh/athel",
+  "license": "UNLICENSED",
+  "metadata": {
+    "athel": {
+      "min_claude_code_version": "2.1.308"
+    }
+  }
+}
