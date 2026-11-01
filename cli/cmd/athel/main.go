@@ -3,9 +3,10 @@
 package main
 
 import (
-	"fmt"
-	"io"
 	"os"
+
+	"github.com/mr-vaibh/athel/cli/internal/cli"
+	"github.com/mr-vaibh/athel/cli/internal/clock"
 )
 
 // version is overridden at build time with -ldflags "-X main.version=...".
@@ -15,19 +16,18 @@ var version = "0.0.0-dev"
 var exit = os.Exit
 
 func main() {
-	exit(run(os.Args[1:], os.Stdout, os.Stderr))
+	exit(cli.Run(environment(os.Getwd)))
 }
 
-// run is separated from main so the whole entry point is testable without exiting the process.
-func run(args []string, stdout, stderr io.Writer) int {
-	if len(args) == 1 && args[0] == "version" {
-		if _, err := fmt.Fprintf(stdout, "athel %s\n", version); err != nil {
-			return 1
-		}
-		return 0
+// environment wires the real process environment into the CLI. If the working directory is
+// unreadable, "." still lets commands that name --workspace run.
+func environment(getwd func() (string, error)) cli.Env {
+	cwd, err := getwd()
+	if err != nil {
+		cwd = "."
 	}
-	if _, err := fmt.Fprintln(stderr, "usage: athel version"); err != nil {
-		return 1
+	return cli.Env{
+		Args: os.Args[1:], Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
+		Getenv: os.Getenv, Cwd: cwd, UserHome: os.UserHomeDir, Clock: clock.System{}, Version: version,
 	}
-	return 2
 }
