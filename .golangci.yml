@@ -1,0 +1,50 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - errorlint      # wrapped errors compared with errors.Is/As
+    - gosec          # file permissions, path handling
+    - godox          # no TODO/FIXME in commits (CLAUDE.md)
+    - misspell
+    - revive
+    - unparam
+    - nolintlint     # every //nolint must be specific and justified
+    - gocyclo
+    - errname
+    - forbidigo      # no debug prints outside the CLI output layer
+    - copyloopvar
+    - usestdlibvars
+  settings:
+    gocyclo:
+      min-complexity: 15
+    godox:
+      keywords: [TODO, FIXME, XXX, HACK]
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    forbidigo:
+      forbid:
+        - pattern: ^print(ln)?$
+        - pattern: ^fmt\.Print(f|ln)?$
+          msg: write to an injected io.Writer instead
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+        - name: var-naming
+        - name: error-strings
+        - name: error-naming
+        - name: unused-parameter
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [gosec]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
