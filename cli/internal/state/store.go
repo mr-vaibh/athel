@@ -30,6 +30,8 @@ type Store struct {
 	// TTLMin and HeartbeatEvery tune the session lock; zero means the defaults.
 	TTLMin         int
 	HeartbeatEvery time.Duration
+	// WarnRatio is the budget warning threshold; zero means DefaultWarnRatio.
+	WarnRatio float64
 }
 
 // NewStore returns a store with the default lock timeout.
