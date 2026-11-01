@@ -191,7 +191,10 @@ func TestConcurrentAppendsChainIntact(t *testing.T) {
 
 func TestActionTruncatedAndNullFields(t *testing.T) {
 	l, _ := newLog(t)
-	r, err := l.Append(Record{Kind: KindToolDecision, Action: Str(strings.Repeat("x", MaxAction+10)), Result: ResultOK})
+	r, err := l.Append(Record{Kind: KindToolDecision, Action: Str(strings.Repeat("x", MaxAction+10)), Reason: Str(strings.Repeat("y", MaxReason+1)), Result: ResultOK})
+	if err == nil && (len(*r.Reason) > MaxReason+20 || !strings.HasSuffix(*r.Reason, "[truncated]")) {
+		t.Errorf("reason not truncated: %d", len(*r.Reason))
+	}
 	if err != nil || len(*r.Action) > MaxAction+20 || !strings.HasSuffix(*r.Action, "[truncated]") {
 		t.Errorf("action = %d bytes, %v", len(*r.Action), err)
 	}
