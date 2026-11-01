@@ -168,7 +168,13 @@ func fileTool(c Call, tier Tier, key string) Result {
 	if p == "" && key == "path" {
 		p = "."
 	}
+	if p == "" {
+		return Result{Malformed: c.Tool + " tool_input has no " + key}
+	}
 	a := Action{Tool: c.Tool, Tier: tier, Text: c.Tool + " " + p, Paths: []string{absolute(c.Cwd, p)}}
+	if IsWrite(tier) {
+		a = stateFileGuard(a)
+	}
 	if c.Tool != "Write" && c.Tool != "Glob" && IsSecretPath(p) {
 		a.Tier, a.Forbidden = X, "reads a secret file ("+p+")"
 	}

@@ -210,3 +210,22 @@ func (s *Store) ReleaseAllMine(session string) ([]string, error) {
 	}
 	return released, nil
 }
+
+// HeldBy returns the change whose session lock session holds, or nil when it holds none. A
+// stale lock still counts: the session has not handed the change over, so change-mode policy
+// keeps applying until it releases the lock or another session takes over.
+func (s *Store) HeldBy(session string) (*Change, error) {
+	if session == "" {
+		return nil, nil
+	}
+	changes, err := s.List()
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range changes {
+		if c.Lock != nil && c.Lock.Session == session {
+			return c, nil
+		}
+	}
+	return nil, nil
+}

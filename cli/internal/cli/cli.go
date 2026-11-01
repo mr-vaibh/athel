@@ -71,6 +71,7 @@ func commands() map[string]command {
 		"audit tail":       cmdAuditTail,
 		"policy validate":  cmdPolicyValidate,
 		"policy show":      cmdPolicyShow,
+		"policy decide":    cmdPolicyDecide,
 		"plan set":         cmdPlanSet,
 		"plan show":        cmdPlanShow,
 		"migrate":          cmdMigrate,
