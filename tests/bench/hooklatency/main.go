@@ -100,7 +100,7 @@ func ms(d time.Duration) float64 { return float64(d.Microseconds()) / 1000 }
 // execSpawner runs the binary like an exec-form command hook.
 func execSpawner(binary string, env []string) Spawner {
 	return func(payload []byte) ([]byte, error) {
-		cmd := exec.Command(binary, "hook", "pre-tool-use") //nolint:gosec // the binary under test is chosen by the operator
+		cmd := exec.Command(binary, "hook", "pre-tool-use")
 		cmd.Stdin, cmd.Env = bytes.NewReader(payload), env
 		return cmd.Output()
 	}
@@ -115,7 +115,7 @@ func prepare(binary, dir, session string, env []string) error {
 		{"--session", session, "lock", "acquire", "CHG-001"},
 	}
 	for _, args := range steps {
-		cmd := exec.Command(binary, append([]string{"--json", "--workspace", dir}, args...)...) //nolint:gosec // see execSpawner
+		cmd := exec.Command(binary, append([]string{"--json", "--workspace", dir}, args...)...) //nolint:gosec // the binary under test is chosen by the operator
 		cmd.Env = env
 		if out, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("athel %v: %w: %s", args, err, out)
