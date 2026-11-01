@@ -141,13 +141,26 @@ func As(err error) (*Error, bool) {
 	return e, ok
 }
 
-// HasCode reports whether any *Error in err's chain has the given code.
+// HasCode reports whether any *Error in err's tree has the given code. It follows both
+// single wrapping and errors.Join, so a joined failure (for example a rejected transition
+// plus a failed audit write) still reports every code it contains.
 func HasCode(err error, code Code) bool {
-	for err != nil {
-		if e, ok := err.(*Error); ok && e.Code == code { //nolint:errorlint // walking the chain manually to check every link
-			return true
+	if err == nil {
+		return false
+	}
+	if e, ok := err.(*Error); ok && e.Code == code { //nolint:errorlint // walking the tree manually to check every node
+		return true
+	}
+	switch u := err.(type) { //nolint:errorlint // inspecting the node's own Unwrap, not its chain
+	case interface{ Unwrap() []error }:
+		for _, inner := range u.Unwrap() {
+			if HasCode(inner, code) {
+				return true
+			}
 		}
-		err = stderrors.Unwrap(err)
+		return false
+	case interface{ Unwrap() error }:
+		return HasCode(u.Unwrap(), code)
 	}
 	return false
 }

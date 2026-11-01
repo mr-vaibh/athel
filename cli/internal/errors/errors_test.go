@@ -104,6 +104,21 @@ func TestWrapKeepsCodeAndCause(t *testing.T) {
 	}
 }
 
+func TestHasCodeFollowsJoin(t *testing.T) {
+	joined := stderrors.Join(New(StateIllegalTransition, "a"), fmt.Errorf("audit: %w", New(StateIO, "b")))
+	for _, code := range []Code{StateIllegalTransition, StateIO} {
+		if !HasCode(joined, code) {
+			t.Errorf("HasCode(joined, %s) = false", code)
+		}
+	}
+	if HasCode(joined, StateSchema) {
+		t.Error("HasCode found a code that is not in the tree")
+	}
+	if ExitCode(joined) != ExitState {
+		t.Errorf("ExitCode(joined) = %d", ExitCode(joined))
+	}
+}
+
 func TestWithStepAndNextAction(t *testing.T) {
 	e := New(StateIllegalTransition, "x")
 	if e.NextAction != defaultNextAction[FamilyState] {
