@@ -24,7 +24,7 @@ var Events = []Event{SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Po
 	SubagentStop, Stop, PreCompact, SessionEnd}
 
 // Request is one hook invocation. Raw tool input is kept as bytes so it can be hashed without
-// being interpreted (M0 never logs it: there is no secret scrubber before M1).
+// being interpreted; only its scrubbed, classified form is ever logged.
 type Request struct {
 	Event          Event
 	SessionID      string
@@ -36,6 +36,7 @@ type Request struct {
 	AgentType      string
 	ToolName       string
 	ToolInput      []byte
+	ToolResponse   []byte // PostToolUse: the tool's output, scrubbed before Claude sees it
 	ToolUseID      string
 	Prompt         string // UserPromptSubmit only; hashed, never stored
 	Source         string // SessionStart: startup | resume | clear | compact | fork
@@ -56,10 +57,11 @@ const (
 
 // Response is what Athel wants Claude Code to do.
 type Response struct {
-	Decision          Decision // PreToolUse only
+	Decision          Decision // PreToolUse only; empty leaves the call to Claude Code's own rules
 	Reason            string   // shown to the model (deny) or the human (approve)
 	AdditionalContext string   // SessionStart / UserPromptSubmit
 	SystemMessage     string   // shown to the user
 	BlockStop         bool     // Stop / SubagentStop: keep working
 	BlockReason       string
+	UpdatedToolOutput []byte // PostToolUse: replaces the tool output Claude sees (same JSON shape)
 }

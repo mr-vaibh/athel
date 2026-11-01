@@ -62,6 +62,7 @@ type input struct {
 	AgentType      string          `json:"agent_type"`
 	ToolName       string          `json:"tool_name"`
 	ToolInput      json.RawMessage `json:"tool_input"`
+	ToolResponse   json.RawMessage `json:"tool_response"`
 	ToolUseID      string          `json:"tool_use_id"`
 	Prompt         string          `json:"prompt"`
 	Source         string          `json:"source"`
@@ -104,15 +105,18 @@ func ParseInput(event hookio.Event, data []byte) (*hookio.Request, error) {
 		Event: event, SessionID: in.SessionID, PromptID: in.PromptID, Cwd: in.Cwd,
 		TranscriptPath: in.TranscriptPath, PermissionMode: in.PermissionMode,
 		AgentID: in.AgentID, AgentType: in.AgentType, ToolName: in.ToolName,
-		ToolInput: []byte(in.ToolInput), ToolUseID: in.ToolUseID, Prompt: in.Prompt,
+		ToolInput: []byte(in.ToolInput), ToolResponse: []byte(in.ToolResponse), ToolUseID: in.ToolUseID, Prompt: in.Prompt,
 		Source: in.Source, Trigger: in.Trigger, Reason: in.Reason, StopHookActive: in.StopHookActive,
 	}, nil
 }
 
 // permissionDecision maps doc 04's vocabulary to Claude Code's. Athel's "approve" means ask the
-// human; Claude Code's deprecated "approve" means ALLOW, so it must never be sent.
+// human; Claude Code's deprecated "approve" means ALLOW, so it must never be sent. No decision
+// maps to no field, which leaves the call to Claude Code's own permission rules.
 func permissionDecision(d hookio.Decision) (string, error) {
 	switch d {
+	case "":
+		return "", nil
 	case hookio.Allow:
 		return "allow", nil
 	case hookio.Deny:
@@ -124,10 +128,11 @@ func permissionDecision(d hookio.Decision) (string, error) {
 }
 
 type specific struct {
-	HookEventName            string `json:"hookEventName"`
-	PermissionDecision       string `json:"permissionDecision,omitempty"`
-	PermissionDecisionReason string `json:"permissionDecisionReason,omitempty"`
-	AdditionalContext        string `json:"additionalContext,omitempty"`
+	HookEventName            string          `json:"hookEventName"`
+	PermissionDecision       string          `json:"permissionDecision,omitempty"`
+	PermissionDecisionReason string          `json:"permissionDecisionReason,omitempty"`
+	AdditionalContext        string          `json:"additionalContext,omitempty"`
+	UpdatedToolOutput        json.RawMessage `json:"updatedToolOutput,omitempty"`
 }
 
 type output struct {
@@ -146,7 +151,13 @@ func FormatOutput(event hookio.Event, resp hookio.Response) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		out.HookSpecificOutput = &specific{HookEventName: string(event), PermissionDecision: d, PermissionDecisionReason: resp.Reason}
+		if d != "" {
+			out.HookSpecificOutput = &specific{HookEventName: string(event), PermissionDecision: d, PermissionDecisionReason: resp.Reason}
+		}
+	case hookio.PostToolUse:
+		if len(resp.UpdatedToolOutput) > 0 {
+			out.HookSpecificOutput = &specific{HookEventName: string(event), UpdatedToolOutput: resp.UpdatedToolOutput}
+		}
 	case hookio.SessionStart, hookio.UserPromptSubmit:
 		if resp.AdditionalContext != "" {
 			out.HookSpecificOutput = &specific{HookEventName: string(event), AdditionalContext: capContext(resp.AdditionalContext)}
