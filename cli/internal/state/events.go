@@ -2,52 +2,49 @@ package state
 
 import (
 	stderrors "errors"
-	"path/filepath"
 
+	"github.com/mr-vaibh/athel/cli/internal/audit"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
-	"github.com/mr-vaibh/athel/cli/internal/eventlog"
 )
 
-// EventSchemaID is the schema of one line of audit/state-events.jsonl.
-const EventSchemaID = "athel/state-event@1"
-
-// Kinds of state events.
+// Event kinds this package writes to the audit log.
 const (
-	EventTransition        = "transition"
-	EventIllegalTransition = "illegal_transition"
-	EventHumanRequired     = "human_required"
-	EventStepEnter         = "step_enter"
-	EventStepExit          = "step_exit"
-	EventLockTakeover      = "lock_takeover"
+	EventTransition        = audit.KindTransition
+	EventIllegalTransition = audit.KindIllegalTransition
+	EventHumanRequired     = audit.KindHumanRequired
+	EventStepEnter         = audit.KindStepEnter
+	EventStepExit          = audit.KindStepExit
+	EventLockTakeover      = audit.KindLockTakeover
 )
 
-// Event is one line of audit/state-events.jsonl. Field names follow the doc 04 audit
-// record where they overlap.
+// Event is a state event before it is stamped and chained into the audit log.
 type Event struct {
-	Schema    string  `json:"schema"`
-	Seq       int     `json:"seq"`
-	TS        string  `json:"ts"`
-	Kind      string  `json:"kind"`
-	Change    string  `json:"change"`
-	Session   *string `json:"session"`
-	Step      *string `json:"step"`
-	From      *string `json:"from"`
-	To        *string `json:"to"`
-	By        *string `json:"by"`
-	Reason    *string `json:"reason"`
-	ErrorCode *string `json:"error_code"`
+	Kind      string
+	Change    string
+	Session   *string
+	Step      *string
+	From      *string
+	To        *string
+	By        *string
+	Reason    *string
+	ErrorCode *string
 }
 
-// Stamp sets the sequence number and timestamp (eventlog.Record).
-func (e *Event) Stamp(seq int, ts string) { e.Seq, e.TS = seq, ts }
-
-// StateEventsFile is the M0 log of state events.
-func (w Workspace) StateEventsFile() string { return filepath.Join(w.AuditDir(), "state-events.jsonl") }
+// AuditLog is the workspace's hash-chained audit log.
+func (s *Store) AuditLog() *audit.Log {
+	return &audit.Log{Dir: s.WS.AuditDir(), Clock: s.Clock, LockTimeout: s.LockTimeout}
+}
 
 func (s *Store) logEvent(e *Event) error {
-	e.Schema = EventSchemaID
-	l := &eventlog.Log{Path: s.WS.StateEventsFile(), Clock: s.Clock, LockTimeout: s.LockTimeout}
-	return l.Append(e)
+	result := audit.ResultOK
+	if e.ErrorCode != nil {
+		result = audit.ResultError
+	}
+	_, err := s.AuditLog().Append(audit.Record{
+		Kind: e.Kind, Change: audit.Str(e.Change), Session: e.Session, Step: e.Step,
+		From: e.From, To: e.To, By: e.By, Reason: e.Reason, Code: e.ErrorCode, Result: result,
+	})
+	return err
 }
 
 func mustCode(err error) aerr.Code {

@@ -1,16 +1,13 @@
 package state
 
 import (
-	"bufio"
-	"encoding/json"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/mr-vaibh/athel/cli/internal/audit"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
-	"github.com/mr-vaibh/athel/cli/internal/schema"
 )
 
 // specEdges is docs/plans/M0-plan.md §6.3 written out independently of the code, edge by edge.
@@ -181,7 +178,7 @@ func TestHumanRequiredForApprovalAndDone(t *testing.T) {
 	}
 	events := readStateEvents(t, s)
 	last := events[len(events)-1]
-	if last.Kind != EventHumanRequired || last.ErrorCode == nil || *last.ErrorCode != string(aerr.PolicyHumanRequired) {
+	if last.Kind != EventHumanRequired || last.Code == nil || *last.Code != string(aerr.PolicyHumanRequired) {
 		t.Errorf("last event = %+v", last)
 	}
 }
@@ -197,18 +194,11 @@ func TestIllegalTransitionAudited(t *testing.T) {
 		t.Errorf("error does not list allowed states: %v", err)
 	}
 	events := readStateEvents(t, s)
-	if len(events) != 1 || events[0].Kind != EventIllegalTransition || *events[0].From != "draft" || *events[0].To != "building" {
+	if len(events) != 1 || events[0].Kind != EventIllegalTransition || *events[0].From != "draft" || *events[0].To != "building" || events[0].Result != audit.ResultError {
 		t.Fatalf("events = %+v", events)
 	}
-	reg := schema.NewRegistry()
-	for _, line := range readStateEventLines(t, s) {
-		var doc any
-		if err := json.Unmarshal([]byte(line), &doc); err != nil {
-			t.Fatal(err)
-		}
-		if err := reg.Validate(EventSchemaID, doc); err != nil {
-			t.Errorf("event does not match schema: %v", err)
-		}
+	if rep, err := s.AuditLog().Verify(); err != nil || !rep.OK {
+		t.Errorf("audit chain broken: %+v %v", rep, err)
 	}
 }
 
@@ -277,30 +267,11 @@ func TestNextStates(t *testing.T) {
 	}
 }
 
-func readStateEventLines(t *testing.T, s *Store) []string {
+func readStateEvents(t *testing.T, s *Store) []audit.Record {
 	t.Helper()
-	f, err := os.Open(filepath.Clean(s.WS.StateEventsFile()))
+	recs, err := s.AuditLog().All()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = f.Close() }()
-	var lines []string
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		lines = append(lines, sc.Text())
-	}
-	return lines
-}
-
-func readStateEvents(t *testing.T, s *Store) []Event {
-	t.Helper()
-	var out []Event
-	for _, line := range readStateEventLines(t, s) {
-		var e Event
-		if err := json.Unmarshal([]byte(line), &e); err != nil {
-			t.Fatal(err)
-		}
-		out = append(out, e)
-	}
-	return out
+	return recs
 }

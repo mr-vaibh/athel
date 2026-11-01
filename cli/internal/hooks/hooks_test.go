@@ -1,15 +1,14 @@
 package hooks
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/mr-vaibh/athel/cli/internal/audit"
 	"github.com/mr-vaibh/athel/cli/internal/clock"
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
 	"github.com/mr-vaibh/athel/cli/internal/schema"
@@ -212,7 +211,7 @@ func TestPostToolUseLogsOnly(t *testing.T) {
 	}
 }
 
-func TestOneEventLinePerInvocation(t *testing.T) {
+func TestOneAuditRecordPerInvocation(t *testing.T) {
 	d, clk := newDeps(t)
 	c := newChange(t, d, "x")
 	lockFor(t, d, c.ID, sess)
@@ -223,74 +222,79 @@ func TestOneEventLinePerInvocation(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	before, _ := d.Store.AuditLog().All()
 	reqs := []*hookio.Request{
 		{Event: hookio.PreToolUse, SessionID: sess, PromptID: "p1", ToolName: "Bash", ToolUseID: "toolu_1", ToolInput: []byte(`{"command":"ls"}`), AgentType: "athel:scout"},
 		{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p2", Prompt: "approve the plan"},
+		{Event: hookio.PostToolUse, SessionID: sess, ToolName: "Read", ToolInput: []byte(`{}`)},
 		{Event: hookio.Stop, SessionID: sess},
 	}
 	for _, r := range reqs {
-		o := Handle(r, d)
-		if err := Record(d.Store, NewHookEvent(r.Event, r, o, d.ConfigHash, 812*time.Microsecond)); err != nil {
+		if err := Record(d.Store, NewAuditRecord(r.Event, r, Handle(r, d), d.ConfigHash, 812*time.Microsecond)); err != nil {
 			t.Fatal(err)
 		}
 		clk.Advance(time.Second)
 	}
-	if err := Record(d.Store, NewHookEvent(hookio.PreToolUse, nil, Malformed(hookio.PreToolUse, errors.New("x")), "", 0)); err != nil {
+	if err := Record(d.Store, NewAuditRecord(hookio.PreToolUse, nil, Malformed(hookio.PreToolUse, errors.New("x")), "", 0)); err != nil {
 		t.Fatal(err)
 	}
-	lines := readLines(t, HookEventsFile(d.Store.WS))
-	if len(lines) != 4 {
-		t.Fatalf("%d lines, want 4", len(lines))
-	}
-	reg := schema.NewRegistry()
-	for i, line := range lines {
-		var doc any
-		if err := json.Unmarshal([]byte(line), &doc); err != nil {
-			t.Fatal(err)
-		}
-		if err := reg.Validate(schema.HookEvent, doc); err != nil {
-			t.Errorf("line %d does not match the schema: %v\n%s", i+1, err, line)
-		}
-	}
-	checkToolEvent(t, lines[0])
-	checkPromptEvent(t, lines[1])
-}
-
-func checkToolEvent(t *testing.T, line string) {
-	t.Helper()
-	var e HookEvent
-	if err := json.Unmarshal([]byte(line), &e); err != nil {
-		t.Fatal(err)
-	}
-	ok := e.Seq == 1 && *e.Change == "CHG-001" && *e.Step == "start" && *e.Task == "T-01" && *e.Agent == "athel:scout"
-	ok = ok && *e.Tool == "Bash" && e.InputSHA256 != nil && *e.Decision == hookio.Allow && e.DurationUS == 812
-	if !ok {
-		t.Errorf("tool event = %s", line)
-	}
-}
-
-func checkPromptEvent(t *testing.T, line string) {
-	t.Helper()
-	var e HookEvent
-	if err := json.Unmarshal([]byte(line), &e); err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(line, "approve the plan") || e.InputSHA256 == nil || *e.PromptID != "p2" || *e.Agent != "main" {
-		t.Errorf("prompt event leaks text or misses hash: %s", line)
-	}
-}
-
-func readLines(t *testing.T, path string) []string {
-	t.Helper()
-	f, err := os.Open(filepath.Clean(path))
+	all, err := d.Store.AuditLog().All()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = f.Close() }()
-	var out []string
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		out = append(out, sc.Text())
+	recs := all[len(before):]
+	if len(recs) != 5 {
+		t.Fatalf("%d records, want 5", len(recs))
 	}
-	return out
+	validateRecords(t, recs)
+	checkRecords(t, recs)
+	if rep, err := d.Store.AuditLog().Verify(); err != nil || !rep.OK {
+		t.Errorf("chain: %+v %v", rep, err)
+	}
+}
+
+func validateRecords(t *testing.T, recs []audit.Record) {
+	t.Helper()
+	reg := schema.NewRegistry()
+	for i, r := range recs {
+		b, _ := json.Marshal(r)
+		var doc any
+		_ = json.Unmarshal(b, &doc)
+		if err := reg.Validate(schema.Audit, doc); err != nil {
+			t.Errorf("record %d does not match the schema: %v\n%s", i, err, b)
+		}
+	}
+}
+
+func checkRecords(t *testing.T, recs []audit.Record) {
+	t.Helper()
+	checkToolRecord(t, recs[0])
+	checkPromptRecord(t, recs[1])
+	post, stop, bad := recs[2], recs[3], recs[4]
+	if post.Kind != "tool_completed" || stop.Kind != "hook" || bad.Result != "error" || *bad.Decision != "deny" {
+		t.Errorf("kinds: %s %s %s %v", post.Kind, stop.Kind, bad.Result, bad.Decision)
+	}
+	if kindOf(hookio.PostToolUseFailure) != "tool_failed" {
+		t.Error("PostToolUseFailure kind")
+	}
+}
+
+func checkToolRecord(t *testing.T, r audit.Record) {
+	t.Helper()
+	got := []string{r.Kind, *r.Change, *r.Step, *r.Task, *r.Agent, *r.Tool, *r.Decision}
+	want := []string{"tool_decision", "CHG-001", "start", "T-01", "athel:scout", "Bash", "allow"}
+	if strings.Join(got, ",") != strings.Join(want, ",") || r.InputSHA256 == nil || *r.DurationUS != 812 {
+		t.Errorf("tool record = %+v", r)
+	}
+}
+
+func checkPromptRecord(t *testing.T, r audit.Record) {
+	t.Helper()
+	b, _ := json.Marshal(r)
+	if strings.Contains(string(b), "approve the plan") {
+		t.Errorf("prompt text stored: %s", b)
+	}
+	if r.InputSHA256 == nil || *r.PromptID != "p2" || *r.Agent != "main" || *r.Action != "UserPromptSubmit" {
+		t.Errorf("prompt record = %s", b)
+	}
 }

@@ -23,7 +23,8 @@ import (
 const (
 	Change    = "athel/change@1"
 	Config    = "athel/config@1"
-	HookEvent = "athel/hook-event@1"
+	HookEvent = "athel/hook-event@1" // M0 log format, kept to read old files
+	Audit     = "athel/audit@1"
 )
 
 var idRe = regexp.MustCompile(`^athel/([a-z][a-z0-9-]*@[1-9][0-9]*)$`)

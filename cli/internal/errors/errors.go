@@ -41,6 +41,7 @@ const (
 	PolicyHumanRequired    Code = "E-POLICY-HUMAN-REQUIRED"
 	PolicyConfigLoosens    Code = "E-POLICY-CONFIG-LOOSENS"
 	PolicyConfigInvalid    Code = "E-POLICY-CONFIG-INVALID"
+	IntegrityAudit         Code = "E-INTEGRITY-AUDIT"
 )
 
 // families is ordered so the longest prefix that could be ambiguous is irrelevant: no family

@@ -1,5 +1,5 @@
-// Package hooks decides what Athel does on each Claude Code hook event in M0 and records one
-// line per invocation in .athel/audit/hook-events.jsonl.
+// Package hooks decides what Athel does on each Claude Code hook event and records one audit
+// record per invocation in the hash-chained audit log (.athel/audit/YYYY-MM-DD.jsonl).
 //
 // M0 STUB WARNING: PreToolUse allows every well-formed tool call. It enforces NO policy. The
 // real policy engine (tiers, environments, plan scope, forbidden patterns) is milestone M1.
@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mr-vaibh/athel/cli/internal/audit"
 	"github.com/mr-vaibh/athel/cli/internal/clock"
 	"github.com/mr-vaibh/athel/cli/internal/digest"
-	"github.com/mr-vaibh/athel/cli/internal/eventlog"
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
@@ -183,74 +183,57 @@ func orUnknown(s string) string {
 	return s
 }
 
-// HookEvent is one line of audit/hook-events.jsonl (schema athel/hook-event@1). Field names
-// follow the doc 04 audit record; tool input is stored only as a hash (no scrubber in M0).
-type HookEvent struct {
-	Schema      string           `json:"schema"`
-	Seq         int              `json:"seq"`
-	TS          string           `json:"ts"`
-	Event       hookio.Event     `json:"event"`
-	Session     *string          `json:"session"`
-	PromptID    *string          `json:"prompt_id"`
-	Agent       *string          `json:"agent"`
-	Change      *string          `json:"change"`
-	Step        *string          `json:"step"`
-	Task        *string          `json:"task"`
-	Tool        *string          `json:"tool"`
-	ToolUseID   *string          `json:"tool_use_id"`
-	InputSHA256 *string          `json:"input_sha256"`
-	Tier        *string          `json:"tier"`
-	Env         *string          `json:"env"`
-	Decision    *hookio.Decision `json:"decision"`
-	Rule        *string          `json:"rule"`
-	PolicyHash  *string          `json:"policy_hash"`
-	Result      string           `json:"result"`
-	PrevHash    *string          `json:"prev_hash"`
-	DurationUS  int64            `json:"duration_us"`
-}
-
-// Stamp sets the sequence number and timestamp (eventlog.Record).
-func (e *HookEvent) Stamp(seq int, ts string) { e.Seq, e.TS = seq, ts }
-
-func opt(s string) *string {
-	if s == "" {
-		return nil
+// kindOf maps a hook event to its audit record kind.
+func kindOf(event hookio.Event) string {
+	switch event {
+	case hookio.PreToolUse:
+		return audit.KindToolDecision
+	case hookio.PostToolUse:
+		return audit.KindToolCompleted
+	case hookio.PostToolUseFailure:
+		return audit.KindToolFailed
 	}
-	return &s
+	return audit.KindHook
 }
 
-// NewHookEvent builds the audit line for one invocation. Event is the parsed event or, for a
-// malformed payload, the event named on the command line.
-func NewHookEvent(event hookio.Event, req *hookio.Request, o Outcome, policyHash string, took time.Duration) *HookEvent {
-	e := &HookEvent{Schema: "athel/hook-event@1", Event: event, Decision: o.Decision, Rule: opt(o.Rule),
-		PolicyHash: opt(policyHash), Result: o.Result, DurationUS: took.Microseconds()}
+// NewAuditRecord builds the audit record for one hook invocation. Event is the parsed event
+// or, for a malformed payload, the event named on the command line. Raw tool input and prompt
+// text are never stored, only their SHA-256.
+func NewAuditRecord(event hookio.Event, req *hookio.Request, o Outcome, policyHash string, took time.Duration) audit.Record {
+	us := took.Microseconds()
+	r := audit.Record{Kind: kindOf(event), Rule: audit.Str(o.Rule), PolicyHash: audit.Str(policyHash),
+		Result: o.Result, DurationUS: &us}
+	if r.Kind == audit.KindHook {
+		r.Action = audit.Str(string(event))
+	}
+	if o.Decision != nil {
+		r.Decision = audit.Str(string(*o.Decision))
+	}
 	if req != nil {
-		e.Session, e.PromptID, e.Tool, e.ToolUseID = opt(req.SessionID), opt(req.PromptID), opt(req.ToolName), opt(req.ToolUseID)
-		e.Agent = opt(req.AgentType)
-		if e.Agent == nil {
-			e.Agent = opt("main")
+		r.Session, r.PromptID = audit.Str(req.SessionID), audit.Str(req.PromptID)
+		r.Tool, r.ToolUseID = audit.Str(req.ToolName), audit.Str(req.ToolUseID)
+		r.Agent = audit.Str(req.AgentType)
+		if r.Agent == nil {
+			r.Agent = audit.Str("main")
 		}
 		switch {
 		case len(req.ToolInput) > 0:
-			e.InputSHA256 = opt(digest.Bytes(req.ToolInput))
+			r.InputSHA256 = audit.Str(digest.Bytes(req.ToolInput))
 		case req.Prompt != "":
-			e.InputSHA256 = opt(digest.Bytes([]byte(req.Prompt)))
+			r.InputSHA256 = audit.Str(digest.Bytes([]byte(req.Prompt)))
 		}
 	}
 	if c := o.Change; c != nil {
-		e.Change = opt(c.ID)
+		r.Change = audit.Str(c.ID)
 		if c.Step != nil {
-			e.Step, e.Task = opt(c.Step.Name), c.Step.Task
+			r.Step, r.Task = audit.Str(c.Step.Name), c.Step.Task
 		}
 	}
-	return e
+	return r
 }
 
-// Record appends the hook event to the workspace's hook log.
-func Record(store *state.Store, e *HookEvent) error {
-	l := &eventlog.Log{Path: HookEventsFile(store.WS), Clock: store.Clock, LockTimeout: store.LockTimeout}
-	return l.Append(e)
+// Record appends the hook's audit record to the workspace's audit log.
+func Record(store *state.Store, r audit.Record) error {
+	_, err := store.AuditLog().Append(r)
+	return err
 }
-
-// HookEventsFile is .athel/audit/hook-events.jsonl.
-func HookEventsFile(ws state.Workspace) string { return ws.AuditDir() + "/hook-events.jsonl" }

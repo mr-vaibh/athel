@@ -48,7 +48,7 @@ func cmdHook(r *runCtx, args []string) (any, error) {
 		outcome = hooks.Handle(req, deps)
 	}
 	if deps.Store != nil {
-		rec := hooks.NewHookEvent(event, req, outcome, deps.ConfigHash, time.Since(start))
+		rec := hooks.NewAuditRecord(event, req, outcome, deps.ConfigHash, time.Since(start))
 		if err := hooks.Record(deps.Store, rec); err != nil {
 			_, _ = io.WriteString(r.env.Stderr, "athel hook: audit write failed: "+err.Error()+"\n") // stderr is the only channel left
 		}
