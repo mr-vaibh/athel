@@ -97,7 +97,7 @@ func readSkill(t *testing.T, name string) skill {
 var mutatingCommands = regexp.MustCompile(`athel [^\n` + "`" + `]*\b(change new|state (transition|enter|exit)|checkpoint set|lock (acquire|release|refresh)|budget add|resume)\b`)
 
 func TestSkillsCallOnlyCLI(t *testing.T) {
-	for _, name := range []string{"start", "status", "resume"} {
+	for _, name := range []string{"start", "status", "resume", "approve", "accept"} {
 		t.Run(name, func(t *testing.T) {
 			s := readSkill(t, name)
 			if d, _ := s.frontmatter["description"].(string); len(d) < 20 {
@@ -126,5 +126,19 @@ func TestSkillsCallOnlyCLI(t *testing.T) {
 	}
 	if readSkill(t, "start").frontmatter["disable-model-invocation"] != true {
 		t.Error("/athel:start creates changes and must only run when the user asks")
+	}
+}
+
+// TestHumanSkillsAreHumanOnly: the model must not invoke the approval skills itself (the grant
+// would not exist anyway, because only the human's own prompt creates one).
+func TestHumanSkillsAreHumanOnly(t *testing.T) {
+	for name, target := range map[string]string{"approve": "plan_approved", "accept": "done"} {
+		s := readSkill(t, name)
+		if s.frontmatter["disable-model-invocation"] != true {
+			t.Errorf("%s: disable-model-invocation must be true", name)
+		}
+		if !strings.Contains(s.body, "--to "+target+" --by human") || !strings.Contains(s.body, "E-POLICY-HUMAN-ORIGIN") {
+			t.Errorf("%s: body must run the human transition to %s and explain its denial", name, target)
+		}
 	}
 }
