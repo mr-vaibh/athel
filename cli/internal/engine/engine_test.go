@@ -387,6 +387,7 @@ func TestHumanOriginRule(t *testing.T) {
 	_, in := bash(transition)
 	_, other := bash("athel state transition CHG-002 --to plan_approved --by human --reason ok")
 	_, byAthel := bash("athel state transition CHG-001 --to investigating --by athel --reason ok")
+	_, acceptEdit := bash("athel integrity accept CHG-001 --reason fine")
 	run(t, []ruleCase{
 		{"no grant", "Bash", in, nil, Deny, "H", aerr.PolicyHumanOrigin},
 		{"grant for this change", "Bash", in, granted, Allow, "7x", ""},
@@ -394,5 +395,6 @@ func TestHumanOriginRule(t *testing.T) {
 		{"subagent with a grant", "Bash", in, func(c *Context) { granted(c); c.Subagent, c.Agent = true, "athel:developer" }, Deny, "H", aerr.PolicyHumanOrigin},
 		{"guard mode with a grant", "Bash", in, func(c *Context) { granted(c); c.Mode = Guard }, None, "-", ""},
 		{"by athel needs no grant", "Bash", byAthel, nil, Allow, "7x", ""},
+		{"integrity accept is the developer's", "Bash", acceptEdit, nil, Deny, "H", aerr.PolicyHumanOrigin},
 	})
 }

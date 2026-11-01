@@ -57,11 +57,17 @@ func build(t *testing.T) string {
 	return bin
 }
 
-// stable drops the only fields a resume may change: the lock holder and updated_at.
+// stable drops the only fields a resume may change: the lock holder, updated_at and the time the
+// integrity seal was written. The seal's hash must stay the same: the content did not change.
 func stable(c map[string]any) map[string]any {
 	out := map[string]any{}
 	for k, v := range c {
-		if k != "lock" && k != "updated_at" {
+		switch k {
+		case "lock", "updated_at":
+		case "integrity":
+			seal, _ := v.(map[string]any)
+			out[k] = seal["hash"]
+		default:
 			out[k] = v
 		}
 	}
@@ -73,7 +79,9 @@ func TestScenarioCreatePauseResume(t *testing.T) {
 		t.Skip("builds and runs the athel binary")
 	}
 	ws := t.TempDir()
-	a := &athel{t: t, bin: build(t), ws: ws, env: append(os.Environ(), "ATHEL_HOME="+filepath.Join(ws, ".home"))}
+	// A minimal environment: hooks read kube, gcloud and aws settings from HOME, and a test must
+	// never read this machine's real ones.
+	a := &athel{t: t, bin: build(t), ws: ws, env: []string{"HOME=" + filepath.Join(ws, ".user"), "ATHEL_HOME=" + filepath.Join(ws, ".home")}}
 	payload := func(session, extra string) string {
 		return `{"session_id":"` + session + `","cwd":"` + ws + `"` + extra + `}`
 	}

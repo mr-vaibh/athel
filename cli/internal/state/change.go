@@ -56,6 +56,8 @@ type Change struct {
 	Flags        []any          `yaml:"flags" json:"flags"`
 	History      []Transition   `yaml:"history" json:"history"`
 	Integrity    *Integrity     `yaml:"integrity" json:"integrity"`
+
+	tampered bool // set on load when the stored hash does not match (integrity.go)
 }
 
 // Integrity is the hash of change.yaml as the CLI last wrote it (E-INTEGRITY, M1).

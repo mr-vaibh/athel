@@ -75,12 +75,22 @@ func Load(reg *schema.Registry, path string) (*Change, error) {
 	if err != nil {
 		return nil, aerr.Wrap(aerr.StateSchema, path+" is invalid", err)
 	}
+	if err := verify(c, data, IsLegacy(data)); err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 
 // Save validates c and atomically replaces the file at path.
 func Save(reg *schema.Registry, path string, c *Change) error {
 	data, err := Encode(reg, c)
+	if err != nil {
+		return err
+	}
+	if err := seal(c, data); err != nil {
+		return err
+	}
+	data, err = Encode(reg, c)
 	if err != nil {
 		return err
 	}

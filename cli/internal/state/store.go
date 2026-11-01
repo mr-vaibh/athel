@@ -83,8 +83,13 @@ func (s *Store) List() ([]*Change, error) {
 }
 
 // Update runs fn on the change under its OS lock and saves the result with a fresh
-// updated_at. If fn returns an error nothing is written.
+// updated_at. If fn returns an error nothing is written. A change edited outside the CLI is
+// frozen: Update fails with E-INTEGRITY-STATE until the edit is accepted.
 func (s *Store) Update(id string, fn func(*Change) error) (*Change, error) {
+	return s.update(id, false, fn)
+}
+
+func (s *Store) update(id string, acceptTampered bool, fn func(*Change) error) (*Change, error) {
 	cid, err := ids.ParseChange(id)
 	if err != nil {
 		return nil, err
@@ -101,6 +106,9 @@ func (s *Store) Update(id string, fn func(*Change) error) (*Change, error) {
 	c, err := Load(s.Reg, s.WS.ChangeFile(id))
 	if err != nil {
 		return nil, err
+	}
+	if c.tampered && !acceptTampered {
+		return nil, tamperedError(c)
 	}
 	if err := fn(c); err != nil {
 		return nil, err

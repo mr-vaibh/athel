@@ -75,6 +75,7 @@ func commands() map[string]command {
 		"plan set":         cmdPlanSet,
 		"plan show":        cmdPlanShow,
 		"migrate":          cmdMigrate,
+		"integrity accept": cmdIntegrityAccept,
 	}
 }
 

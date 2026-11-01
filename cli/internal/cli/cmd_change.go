@@ -130,6 +130,7 @@ type stateView struct {
 	Budget         budgetView        `json:"budget"`
 	Lock           state.LockStatus  `json:"lock"`
 	AllowedNext    []string          `json:"allowed_next"`
+	Integrity      string            `json:"integrity"` // ok | edited (frozen until `athel integrity accept`)
 }
 
 type budgetView struct {
@@ -144,7 +145,10 @@ type budgetView struct {
 
 func viewOf(c *state.Change, now time.Time) stateView {
 	v := stateView{ID: c.ID, Title: c.Title, State: string(c.State), Step: c.Step,
-		LastCheckpoint: state.LastCheckpoint(c), Lock: state.Status(c, now), AllowedNext: []string{}}
+		LastCheckpoint: state.LastCheckpoint(c), Lock: state.Status(c, now), AllowedNext: []string{}, Integrity: "ok"}
+	if c.Tampered() {
+		v.Integrity = "edited"
+	}
 	if c.BlockedFrom != nil {
 		bf := string(*c.BlockedFrom)
 		v.BlockedFrom = &bf
