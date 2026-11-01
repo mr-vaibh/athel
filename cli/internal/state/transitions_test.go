@@ -69,6 +69,13 @@ func TestHumanOnlyTargets(t *testing.T) {
 func walk(t *testing.T, s *Store, id string, states ...State) {
 	t.Helper()
 	for _, to := range states {
+		if to == PlanApproved {
+			if _, err := s.LoadPlan(id); err != nil {
+				if _, err := s.SetPlan(id, testSession, testPlan(id)); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
 		if _, err := s.Transition(id, TransitionRequest{Session: ptr(testSession), To: to, By: ByHuman, Reason: "move to " + string(to)}); err != nil {
 			t.Fatalf("→ %s: %v", to, err)
 		}

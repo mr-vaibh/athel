@@ -13,10 +13,19 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/schema"
 )
 
-// Decode validates data against change@1 and decodes it. Validation runs on the generic
-// document first, so a file that does not match the schema never reaches the typed model.
+// Decode validates data against its change schema and decodes it. Validation runs on the
+// generic document first, so a file that does not match its schema never reaches the typed
+// model. A change@1 file is validated as @1 and upgraded in memory to @2.
 func Decode(reg *schema.Registry, data []byte) (*Change, error) {
-	if err := reg.ValidateYAML(SchemaID, data); err != nil {
+	doc, err := schema.DecodeYAML(data)
+	if err != nil {
+		return nil, err
+	}
+	id := SchemaID
+	if m, ok := doc.(map[string]any); ok && m["schema"] == LegacySchemaID {
+		id = LegacySchemaID
+	}
+	if err := reg.Validate(id, doc); err != nil {
 		return nil, err
 	}
 	dec := yaml.NewDecoder(bytes.NewReader(data))
@@ -25,7 +34,15 @@ func Decode(reg *schema.Registry, data []byte) (*Change, error) {
 	if err := dec.Decode(&c); err != nil {
 		return nil, aerr.Wrap(aerr.StateSchema, "decode change", err)
 	}
+	c.Schema = SchemaID
 	return &c, nil
+}
+
+// IsLegacy reports whether data is an older change schema that `athel migrate` would rewrite.
+func IsLegacy(data []byte) bool {
+	doc, err := schema.DecodeYAML(data)
+	m, ok := doc.(map[string]any)
+	return err == nil && ok && m["schema"] == LegacySchemaID
 }
 
 // Encode renders c as YAML and validates the result, so an invalid change is never written.

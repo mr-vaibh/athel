@@ -111,6 +111,12 @@ func (s *Store) Transition(id string, req TransitionRequest) (*Change, error) {
 		if err := s.claim(c, *req.Session, s.Clock.Now()); err != nil {
 			return err
 		}
+		if req.To == PlanApproved {
+			if err := s.approvePlan(c, req); err != nil {
+				return err
+			}
+			req.Evidence = appendMissing(req.Evidence, planFile)
+		}
 		evidence, err := s.hashEvidence(c.ID, req.Evidence)
 		if err != nil {
 			return err
@@ -194,6 +200,13 @@ func (s *Store) hashEvidence(id string, paths []string) ([]Evidence, error) {
 		out = append(out, Evidence{Path: filepath.ToSlash(clean), SHA256: sum})
 	}
 	return out, nil
+}
+
+func appendMissing(list []string, v string) []string {
+	if slices.Contains(list, v) {
+		return list
+	}
+	return append(list, v)
 }
 
 func joinStates(states []State) string {
