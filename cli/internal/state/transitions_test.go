@@ -37,6 +37,8 @@ func specAllowed(from, to State, blockedFrom State) bool {
 	return specEdges[[2]State{from, to}]
 }
 
+const testSession = "sess-1"
+
 func TestTransitionTableExhaustive(t *testing.T) {
 	if len(AllStates) != 14 {
 		t.Fatalf("AllStates has %d states, want 14", len(AllStates))
@@ -70,7 +72,7 @@ func TestHumanOnlyTargets(t *testing.T) {
 func walk(t *testing.T, s *Store, id string, states ...State) {
 	t.Helper()
 	for _, to := range states {
-		if _, err := s.Transition(id, TransitionRequest{To: to, By: ByHuman, Reason: "move to " + string(to)}); err != nil {
+		if _, err := s.Transition(id, TransitionRequest{Session: ptr(testSession), To: to, By: ByHuman, Reason: "move to " + string(to)}); err != nil {
 			t.Fatalf("→ %s: %v", to, err)
 		}
 	}
@@ -79,7 +81,7 @@ func walk(t *testing.T, s *Store, id string, states ...State) {
 func TestTransitionHappyPathRecordsHistory(t *testing.T) {
 	s, _ := newTestStore(t)
 	c := mustCreate(t, s, "x")
-	session, prompt := "sess-1", "prompt-1"
+	session, prompt := testSession, "prompt-1"
 	got, err := s.Transition(c.ID, TransitionRequest{
 		To: Investigating, By: ByAthel, Reason: "start", Evidence: []string{"prd/v1.md"},
 		Session: &session, PromptID: &prompt,
@@ -135,7 +137,7 @@ func TestBlockedReturnsOnlyToOrigin(t *testing.T) {
 	if got.State != Blocked || got.BlockedFrom == nil || *got.BlockedFrom != Investigating {
 		t.Fatalf("blocked state = %s from %v", got.State, got.BlockedFrom)
 	}
-	if _, err := s.Transition(c.ID, TransitionRequest{To: Specified, By: ByHuman, Reason: "skip"}); !aerr.HasCode(err, aerr.StateIllegalTransition) {
+	if _, err := s.Transition(c.ID, TransitionRequest{Session: ptr(testSession), To: Specified, By: ByHuman, Reason: "skip"}); !aerr.HasCode(err, aerr.StateIllegalTransition) {
 		t.Errorf("blocked → other state: err = %v", err)
 	}
 	walk(t, s, c.ID, Investigating)
@@ -151,16 +153,16 @@ func TestCancelledFromAnyNonTerminal(t *testing.T) {
 	s, _ := newTestStore(t)
 	blocked := mustCreate(t, s, "x")
 	walk(t, s, blocked.ID, Blocked, Cancelled)
-	if _, err := s.Transition(blocked.ID, TransitionRequest{To: Cancelled, By: ByHuman, Reason: "again"}); !aerr.HasCode(err, aerr.StateIllegalTransition) {
+	if _, err := s.Transition(blocked.ID, TransitionRequest{Session: ptr(testSession), To: Cancelled, By: ByHuman, Reason: "again"}); !aerr.HasCode(err, aerr.StateIllegalTransition) {
 		t.Errorf("cancelled → cancelled: err = %v", err)
 	}
-	if _, err := s.Transition(blocked.ID, TransitionRequest{To: Draft, By: ByHuman, Reason: "revive"}); !aerr.HasCode(err, aerr.StateIllegalTransition) {
+	if _, err := s.Transition(blocked.ID, TransitionRequest{Session: ptr(testSession), To: Draft, By: ByHuman, Reason: "revive"}); !aerr.HasCode(err, aerr.StateIllegalTransition) {
 		t.Errorf("cancelled is not terminal: err = %v", err)
 	}
 	done := mustCreate(t, s, "y")
 	walk(t, s, done.ID, Investigating, Specified, AwaitingDecisions, Planned, PlanApproved, Building,
 		ReadyForPR, InReview, Verifying, UAT, Done)
-	if _, err := s.Transition(done.ID, TransitionRequest{To: Cancelled, By: ByHuman, Reason: "late"}); !aerr.HasCode(err, aerr.StateIllegalTransition) {
+	if _, err := s.Transition(done.ID, TransitionRequest{Session: ptr(testSession), To: Cancelled, By: ByHuman, Reason: "late"}); !aerr.HasCode(err, aerr.StateIllegalTransition) {
 		t.Errorf("done → cancelled: err = %v", err)
 	}
 }
@@ -169,7 +171,7 @@ func TestHumanRequiredForApprovalAndDone(t *testing.T) {
 	s, _ := newTestStore(t)
 	c := mustCreate(t, s, "x")
 	walk(t, s, c.ID, Investigating, Specified, AwaitingDecisions, Planned)
-	_, err := s.Transition(c.ID, TransitionRequest{To: PlanApproved, By: ByAthel, Reason: "approve myself"})
+	_, err := s.Transition(c.ID, TransitionRequest{Session: ptr(testSession), To: PlanApproved, By: ByAthel, Reason: "approve myself"})
 	if !aerr.HasCode(err, aerr.PolicyHumanRequired) || aerr.ExitCode(err) != aerr.ExitPolicy {
 		t.Fatalf("err = %v (exit %d), want E-POLICY-HUMAN-REQUIRED", err, aerr.ExitCode(err))
 	}
@@ -187,7 +189,7 @@ func TestHumanRequiredForApprovalAndDone(t *testing.T) {
 func TestIllegalTransitionAudited(t *testing.T) {
 	s, _ := newTestStore(t)
 	c := mustCreate(t, s, "x")
-	_, err := s.Transition(c.ID, TransitionRequest{To: Building, By: ByHuman, Reason: "skip ahead"})
+	_, err := s.Transition(c.ID, TransitionRequest{Session: ptr(testSession), To: Building, By: ByHuman, Reason: "skip ahead"})
 	if !aerr.HasCode(err, aerr.StateIllegalTransition) || aerr.ExitCode(err) != aerr.ExitState {
 		t.Fatalf("err = %v", err)
 	}
@@ -218,14 +220,14 @@ func TestTransitionRequestValidation(t *testing.T) {
 		req  TransitionRequest
 		code aerr.Code
 	}{
-		{"bad actor", TransitionRequest{To: Investigating, By: "bot", Reason: "r"}, aerr.StateInvalid},
-		{"empty reason", TransitionRequest{To: Investigating, By: ByHuman, Reason: "  "}, aerr.StateInvalid},
-		{"unknown state", TransitionRequest{To: "shipped", By: ByHuman, Reason: "r"}, aerr.StateInvalid},
-		{"self transition", TransitionRequest{To: Draft, By: ByHuman, Reason: "r"}, aerr.StateIllegalTransition},
-		{"absolute evidence", TransitionRequest{To: Investigating, By: ByHuman, Reason: "r", Evidence: []string{"/etc/hosts"}}, aerr.StateInvalid},
-		{"escaping evidence", TransitionRequest{To: Investigating, By: ByHuman, Reason: "r", Evidence: []string{"../CHG-002/change.yaml"}}, aerr.StateInvalid},
-		{"dot evidence", TransitionRequest{To: Investigating, By: ByHuman, Reason: "r", Evidence: []string{"."}}, aerr.StateInvalid},
-		{"missing evidence", TransitionRequest{To: Investigating, By: ByHuman, Reason: "r", Evidence: []string{"prd/v9.md"}}, aerr.StateIO},
+		{"bad actor", TransitionRequest{Session: ptr(testSession), To: Investigating, By: "bot", Reason: "r"}, aerr.StateInvalid},
+		{"empty reason", TransitionRequest{Session: ptr(testSession), To: Investigating, By: ByHuman, Reason: "  "}, aerr.StateInvalid},
+		{"unknown state", TransitionRequest{Session: ptr(testSession), To: "shipped", By: ByHuman, Reason: "r"}, aerr.StateInvalid},
+		{"self transition", TransitionRequest{Session: ptr(testSession), To: Draft, By: ByHuman, Reason: "r"}, aerr.StateIllegalTransition},
+		{"absolute evidence", TransitionRequest{Session: ptr(testSession), To: Investigating, By: ByHuman, Reason: "r", Evidence: []string{"/etc/hosts"}}, aerr.StateInvalid},
+		{"escaping evidence", TransitionRequest{Session: ptr(testSession), To: Investigating, By: ByHuman, Reason: "r", Evidence: []string{"../CHG-002/change.yaml"}}, aerr.StateInvalid},
+		{"dot evidence", TransitionRequest{Session: ptr(testSession), To: Investigating, By: ByHuman, Reason: "r", Evidence: []string{"."}}, aerr.StateInvalid},
+		{"missing evidence", TransitionRequest{Session: ptr(testSession), To: Investigating, By: ByHuman, Reason: "r", Evidence: []string{"prd/v9.md"}}, aerr.StateIO},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -237,7 +239,7 @@ func TestTransitionRequestValidation(t *testing.T) {
 	if got, _ := s.Get(c.ID); got.State != Draft || len(got.History) != 0 {
 		t.Errorf("rejected requests changed the change: %s, %d history", got.State, len(got.History))
 	}
-	if _, err := s.Transition("CHG-404", TransitionRequest{To: Investigating, By: ByHuman, Reason: "r"}); !aerr.HasCode(err, aerr.StateNotFound) {
+	if _, err := s.Transition("CHG-404", TransitionRequest{Session: ptr(testSession), To: Investigating, By: ByHuman, Reason: "r"}); !aerr.HasCode(err, aerr.StateNotFound) {
 		t.Errorf("missing change: err = %v", err)
 	}
 }
@@ -251,7 +253,7 @@ func TestTransitionFailsWhenAuditUnwritable(t *testing.T) {
 	if err := os.WriteFile(s.WS.AuditDir(), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := s.Transition(c.ID, TransitionRequest{To: Building, By: ByHuman, Reason: "r"})
+	_, err := s.Transition(c.ID, TransitionRequest{Session: ptr(testSession), To: Building, By: ByHuman, Reason: "r"})
 	if !aerr.HasCode(err, aerr.StateIllegalTransition) || !aerr.HasCode(err, aerr.StateIO) {
 		t.Errorf("err = %v, want both the transition and the audit failure", err)
 	}
