@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated: 2026-11-01, end of session 1 (after merging the M0 stack).
+Last updated: 2026-11-01, session 1, M1 Phase 1 (plan written, waiting for approval).
 
 ## Where we are
 
@@ -14,8 +14,9 @@ Last updated: 2026-11-01, end of session 1 (after merging the M0 stack).
   merge its branch head was verified to be contained in `main`. `scripts/check.sh` and the resume
   demo pass on `main` at c23c033. The task branches still exist on GitHub (all contained in
   `main`); delete them when convenient.
-- The next milestone is **M1 Guardrails** (doc 08). Do not start it before the owner has merged
-  M0 and said to begin.
+- **M1 Guardrails** started on the owner's "go M1". Phase 1 is done: `docs/plans/M1-plan.md`
+  (branch `docs/m1-plan`, PR open) with 12 questions (Q1–Q12). **Stop: waiting for the owner's
+  approval and answers.** Nothing of M1 is built yet.
 
 ## Merged PRs
 
@@ -48,15 +49,16 @@ Last updated: 2026-11-01, end of session 1 (after merging the M0 stack).
 
 1. Start-of-session routine (CLAUDE.md), `source scripts/env.sh` (always: it selects the
    project owner's `gh` login), `gh pr list`.
-2. `git checkout main && git pull`, run `scripts/check.sh`.
-3. When the owner says to start M1: read docs 02 and 04 again, then write
-   `docs/plans/M1-plan.md` the same way as M0 (Phase 1, stop for approval). Report §5 lists
-   what M1 needs first.
+2. If the owner approved the M1 plan: log every answer to Q1–Q12 in
+   `docs/context/decisions-from-chat.md`, fold them into `docs/plans/M1-plan.md`, then build the
+   tasks in M1-plan §9 in order (PR-01 audit log first), one PR each, stacked like M0 unless the
+   owner merges as we go. Same loop: failing tests → code → `scripts/check.sh` (with pipefail) →
+   self-review → commit → push → PR.
 
 ## Open questions waiting for the owner
 
-- Confirm M0 is accepted and when to begin M1.
-- Whether to delete the 22 merged task branches on GitHub.
+- Approve `docs/plans/M1-plan.md` and answer Q1–Q12 (§11 of the plan).
+- Whether to delete the 23 merged M0 task branches on GitHub.
 
 ## Owner instructions given in chat (all logged in docs/context/decisions-from-chat.md)
 
