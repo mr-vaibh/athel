@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/mr-vaibh/athel/cli/internal/audit"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 )
 
@@ -33,13 +35,22 @@ func hookOut(t *testing.T, h *harness, event string) map[string]any {
 	return m
 }
 
+// hookLines returns the audit records written by hooks, as JSON lines.
 func hookLines(t *testing.T, h *harness) []string {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join(h.root, ".athel", "audit", "hook-events.jsonl"))
+	l := &audit.Log{Dir: filepath.Join(h.root, ".athel", "audit"), Clock: h.clock, LockTimeout: time.Second}
+	recs, err := l.All()
 	if err != nil {
 		t.Fatal(err)
 	}
-	return strings.Split(strings.TrimSpace(string(b)), "\n")
+	var out []string
+	for _, r := range recs {
+		if r.Kind == audit.KindToolDecision || r.Kind == audit.KindToolCompleted || r.Kind == audit.KindToolFailed || r.Kind == audit.KindHook {
+			b, _ := json.Marshal(r)
+			out = append(out, string(b))
+		}
+	}
+	return out
 }
 
 func TestHookPreToolUseThroughCLI(t *testing.T) {

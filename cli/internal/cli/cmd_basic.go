@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	athel "github.com/mr-vaibh/athel"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
@@ -112,3 +113,5 @@ func readPRD(r *runCtx, file, text string, stdin bool) ([]byte, string, error) {
 	}
 	return b, "stdin", nil
 }
+
+func itoa(n int) string { return strconv.Itoa(n) }
