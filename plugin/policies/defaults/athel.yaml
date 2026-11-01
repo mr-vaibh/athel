@@ -1,0 +1,14 @@
+# Built-in defaults (layer 1 of 4, doc 02 §Configuration and policy files).
+# Org, user and project layers may only tighten these unless a higher layer lists a key under
+# `overridable:`. Budgets are per change; at 100% the change is blocked (enforced from a later
+# milestone; M0 records and reports only).
+schema: athel/config@1
+budgets:
+  default:
+    max_cost_usd: 40
+    max_hours: 8
+    max_tool_calls: 2000
+  warn_ratio: 0.8
+locks:
+  ttl_min: 30
+  heartbeat_min: 5
