@@ -1,11 +1,11 @@
 // Package hooks decides what Athel does on each Claude Code hook event and records one audit
 // record per invocation in the hash-chained audit log (.athel/audit/YYYY-MM-DD.jsonl).
-//
-// M0 STUB WARNING: PreToolUse allows every well-formed tool call. It enforces NO policy. The
-// real policy engine (tiers, environments, plan scope, forbidden patterns) is milestone M1.
+// PreToolUse asks the policy engine (doc 04, ADR 015); PostToolUse scrubs secrets from the
+// tool output before Claude sees it (FR-SAFE-008).
 package hooks
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -13,18 +13,17 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/audit"
 	"github.com/mr-vaibh/athel/cli/internal/clock"
 	"github.com/mr-vaibh/athel/cli/internal/digest"
+	"github.com/mr-vaibh/athel/cli/internal/engine"
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
+	"github.com/mr-vaibh/athel/cli/internal/scrub"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
 
-// StubReason is returned with every M0 PreToolUse allow so nobody mistakes it for a policy.
-const StubReason = "ATHEL M0 STUB: no policy enforcement (real policy engine is M1)"
-
-// Rule names recorded in hook events.
+// Rule names recorded in hook events that the policy engine does not decide.
 const (
-	RuleStub      = "m0-stub"
-	RuleMalformed = "m0-malformed-payload"
-	RuleLogOnly   = "m0-log-only"
+	RuleMalformed = "1"
+	RuleLogOnly   = "log-only"
+	RuleScrub     = "scrub"
 )
 
 // StopBlockLimit is doc 02's limit: after 3 blocked stops the step moves to blocked.
@@ -41,6 +40,10 @@ type Deps struct {
 	MinClaudeCode string
 	ClaudeVersion func() (string, error)
 	AppendEnv     func(path, line string) error
+	// Decide is the policy decision for a PreToolUse call. It never fails: a policy or state
+	// problem must come back as rule 0 (deny writes), never as "no decision".
+	Decide func(req *hookio.Request) engine.Result
+	Scrub  *scrub.Scrubber
 }
 
 // Outcome is a handler's answer plus what the audit line should say about it.
@@ -51,6 +54,9 @@ type Outcome struct {
 	Rule     string
 	Result   string // ok | error
 	Notes    []string
+	Policy   *engine.Result // PreToolUse: the engine's full decision
+	Action   string         // scrubbed description of what was decided or scrubbed
+	Reason   string         // scrubbed reason recorded in the audit log
 }
 
 // Handle runs the M0 behaviour for one parsed request.
@@ -68,6 +74,8 @@ func Handle(req *hookio.Request, d Deps) Outcome {
 		return sessionEnd(req, d)
 	case hookio.Stop, hookio.SubagentStop:
 		return stop(req, d)
+	case hookio.PostToolUse:
+		return postToolUse(req, d)
 	}
 	return Outcome{Rule: RuleLogOnly, Result: "ok", Change: activeChange(d, req.SessionID)}
 }
@@ -79,21 +87,61 @@ func Malformed(event hookio.Event, err error) Outcome {
 	if event == hookio.PreToolUse {
 		deny := hookio.Deny
 		o.Decision = &deny
-		o.Response = hookio.Response{Decision: deny, Reason: "Athel: malformed hook payload, denied: " + err.Error()}
+		o.Response = hookio.Response{Decision: deny, Reason: "Athel: malformed hook payload, denied: " + err.Error() + " [E-POLICY-MALFORMED, rule 1]"}
 	}
 	return o
 }
 
+// hookDecisions maps the engine's decisions to the hook's; none has no entry (no output).
+var hookDecisions = map[engine.Decision]hookio.Decision{
+	engine.Allow: hookio.Allow, engine.Approve: hookio.Approve, engine.Deny: hookio.Deny,
+}
+
 func preToolUse(req *hookio.Request, d Deps) Outcome {
-	allow := hookio.Allow
-	o := Outcome{Decision: &allow, Rule: RuleStub, Result: "ok",
-		Response: hookio.Response{Decision: allow, Reason: StubReason}}
-	o.Change = activeChange(d, req.SessionID)
+	o := Outcome{Result: "ok", Change: activeChange(d, req.SessionID)}
 	if o.Change != nil {
 		if _, err := d.Store.RefreshLock(o.Change.ID, req.SessionID, false); err != nil {
 			o.Result, o.Notes = "error", append(o.Notes, "heartbeat: "+err.Error())
 		}
 	}
+	res := d.Decide(req)
+	o.Policy, o.Rule = &res, res.Rule
+	texts := make([]string, 0, len(res.Actions))
+	for _, a := range res.Actions {
+		texts = append(texts, a.Action.Text)
+	}
+	o.Action, _ = d.Scrub.String(strings.Join(texts, " ; "))
+	if dec, ok := hookDecisions[res.Decision]; ok {
+		o.Decision = &dec
+		o.Response = hookio.Response{Decision: dec, Reason: res.Reason}
+		o.Reason, _ = d.Scrub.String(res.Reason)
+	}
+	return o
+}
+
+// postToolUse scrubs secrets from the tool output before Claude sees it (FR-SAFE-008). Only
+// string leaves change, so the output keeps the shape Claude Code expects.
+func postToolUse(req *hookio.Request, d Deps) Outcome {
+	o := Outcome{Rule: RuleLogOnly, Result: "ok", Change: activeChange(d, req.SessionID)}
+	if len(req.ToolResponse) == 0 {
+		return o
+	}
+	var v any
+	if err := json.Unmarshal(req.ToolResponse, &v); err != nil {
+		o.Result, o.Notes = "error", append(o.Notes, "tool_response is not JSON: "+err.Error())
+		return o
+	}
+	clean, found := d.Scrub.Value(v)
+	if len(found) == 0 {
+		return o
+	}
+	out, _ := json.Marshal(clean) // values decoded from JSON always encode
+	kinds := make([]string, 0, len(found))
+	for _, f := range found {
+		kinds = append(kinds, fmt.Sprintf("%s×%d", f.Kind, f.Count))
+	}
+	o.Rule, o.Response.UpdatedToolOutput = RuleScrub, out
+	o.Reason = "scrubbed from the tool output: " + strings.Join(kinds, ", ")
 	return o
 }
 
@@ -209,6 +257,13 @@ func NewAuditRecord(event hookio.Event, req *hookio.Request, o Outcome, policyHa
 	if o.Decision != nil {
 		r.Decision = audit.Str(string(*o.Decision))
 	}
+	if p := o.Policy; p != nil {
+		r.Decision, r.Tier, r.Env, r.Code = audit.Str(string(p.Decision)), audit.Str(string(p.Tier)), audit.Str(p.Env), audit.Str(string(p.Code))
+	}
+	if o.Action != "" {
+		r.Action = audit.Str(o.Action)
+	}
+	r.Reason = audit.Str(o.Reason)
 	if req != nil {
 		r.Session, r.PromptID = audit.Str(req.SessionID), audit.Str(req.PromptID)
 		r.Tool, r.ToolUseID = audit.Str(req.ToolName), audit.Str(req.ToolUseID)

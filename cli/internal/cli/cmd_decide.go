@@ -7,6 +7,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/engine"
 	"github.com/mr-vaibh/athel/cli/internal/envdetect"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/hookio"
 )
 
 // cmdPolicyDecide prints the decision the PreToolUse hook would make for one tool call
@@ -29,18 +30,29 @@ func cmdPolicyDecide(r *runCtx, args []string) (any, error) {
 	if *cwd == "" {
 		*cwd = r.env.Cwd
 	}
-	return r.decide(classify.Call{Tool: *tool, Input: json.RawMessage(*input), Cwd: *cwd}, r.session, *agent)
+	return r.decide(classify.Call{Tool: *tool, Input: json.RawMessage(*input), Cwd: *cwd}, r.session, *agent), nil
 }
 
 // decide classifies a tool call and applies the policy rules (doc 04 §Decision order). The
-// mode follows the session's change lock (ADR 015).
-func (r *runCtx) decide(call classify.Call, session, agent string) (engine.Result, error) {
+// mode follows the session's change lock (ADR 015). It never fails: when the config, the
+// policy files or the state cannot be read, that error becomes rule 0 and every write is
+// denied (FR-SAFE-012), because "no decision" would let the call through.
+func (r *runCtx) decide(call classify.Call, session, agent string) engine.Result {
 	ctx, err := r.engineContext(session, agent)
-	if err != nil {
-		return engine.Result{}, err
+	if err != nil && ctx.PolicyErr == nil {
+		ctx.PolicyErr = err
 	}
 	cr := classify.Classify(call, ctx.Policy, classify.Options{ReadFile: readFile})
-	return engine.Decide(call, cr, ctx), nil
+	return engine.Decide(call, cr, ctx)
+}
+
+// hookDecide adapts decide to the PreToolUse request.
+func (r *runCtx) hookDecide(req *hookio.Request) engine.Result {
+	call := classify.Call{Tool: req.ToolName, Input: json.RawMessage(req.ToolInput), Cwd: req.Cwd}
+	if call.Cwd == "" {
+		call.Cwd = r.env.Cwd
+	}
+	return r.decide(call, req.SessionID, req.AgentType)
 }
 
 func (r *runCtx) engineContext(session, agent string) (engine.Context, error) {

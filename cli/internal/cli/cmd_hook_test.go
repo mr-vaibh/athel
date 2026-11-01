@@ -53,26 +53,68 @@ func hookLines(t *testing.T, h *harness) []string {
 	return out
 }
 
-func TestHookPreToolUseThroughCLI(t *testing.T) {
+func decisionOf(out map[string]any) any {
+	if hso, ok := out["hookSpecificOutput"].(map[string]any); ok {
+		return hso["permissionDecision"]
+	}
+	return nil
+}
+
+func TestPreToolUseDecisions(t *testing.T) {
 	h := setup(t)
-	payload(t, h, map[string]any{"session_id": "sess-A", "hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": map[string]any{"command": "ls"}})
-	out := hookOut(t, h, "pre-tool-use")
-	hso := out["hookSpecificOutput"].(map[string]any)
-	if hso["permissionDecision"] != "allow" || !strings.Contains(hso["permissionDecisionReason"].(string), "M0 STUB") {
-		t.Errorf("output = %v", out)
+	h.userHome = t.TempDir()
+	bash := func(cmd string) map[string]any {
+		payload(t, h, map[string]any{"session_id": "sess-A", "hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": map[string]any{"command": cmd}})
+		return hookOut(t, h, "pre-tool-use")
+	}
+	if out := bash("ls"); len(out) != 0 {
+		t.Errorf("guard-mode read must leave the call to Claude Code: %v", out)
+	}
+	out := bash("kubectl delete pod x")
+	if decisionOf(out) != "deny" || !strings.Contains(out["hookSpecificOutput"].(map[string]any)["permissionDecisionReason"].(string), string(aerr.PolicyProdWrite)) {
+		t.Errorf("prod write = %v", out)
+	}
+	h.mustOK("lock", "acquire", "CHG-001")
+	if d := decisionOf(bash("cat /usr/share/dict/words")); d != "ask" {
+		t.Errorf("change-mode read outside the workspace = %v", d)
+	}
+	if d := decisionOf(bash("echo x > " + filepath.Join(h.root, "README.md"))); d != "deny" {
+		t.Errorf("change-mode write without a plan = %v", d)
 	}
 	h.stdin = "not json"
-	out = hookOut(t, h, "pre-tool-use")
-	if out["hookSpecificOutput"].(map[string]any)["permissionDecision"] != "deny" {
-		t.Errorf("malformed = %v", out)
+	if decisionOf(hookOut(t, h, "pre-tool-use")) != "deny" {
+		t.Error("malformed payload was not denied")
 	}
-	if h.stdin = strings.Repeat(" ", maxHookInput+1); hookOut(t, h, "pre-tool-use")["hookSpecificOutput"].(map[string]any)["permissionDecision"] != "deny" {
+	if h.stdin = strings.Repeat(" ", maxHookInput+1); decisionOf(hookOut(t, h, "pre-tool-use")) != "deny" {
 		t.Error("oversized payload was not denied")
 	}
 	lines := hookLines(t, h)
-	if len(lines) != 3 || !strings.Contains(lines[0], `"decision":"allow"`) || !strings.Contains(lines[1], `"decision":"deny"`) ||
-		!strings.Contains(lines[2], `"rule":"m0-malformed-payload"`) {
-		t.Errorf("hook events = %v", lines)
+	want := []string{`"decision":"none"`, `"decision":"deny"`, `"decision":"approve"`, `"decision":"deny"`, `"rule":"1"`, `"rule":"1"`}
+	if len(lines) != len(want) {
+		t.Fatalf("hook events = %v", lines)
+	}
+	for i, w := range want {
+		if !strings.Contains(lines[i], w) {
+			t.Errorf("record %d lacks %s: %s", i, w, lines[i])
+		}
+	}
+	if !strings.Contains(lines[1], `"action":"kubectl delete pod x"`) || !strings.Contains(lines[1], `"env":"prod"`) || !strings.Contains(lines[1], `"tier":"W2"`) && !strings.Contains(lines[1], `"tier":"W3"`) {
+		t.Errorf("decision record = %s", lines[1])
+	}
+}
+
+func TestPostToolUseScrubsThroughCLI(t *testing.T) {
+	h := setup(t)
+	token := "ghp_" + strings.Repeat("C", 36)
+	payload(t, h, map[string]any{"session_id": "sess-A", "tool_name": "Bash", "tool_input": map[string]any{"command": "env"},
+		"tool_response": map[string]any{"stdout": "GITHUB_TOKEN=" + token, "stderr": "", "interrupted": false}})
+	code, raw, _ := h.run("hook", "post-tool-use")
+	if code != 0 || strings.Contains(raw, token) || !strings.Contains(raw, `"updatedToolOutput":{`) || !strings.Contains(raw, "[REDACTED:") {
+		t.Errorf("exit %d output %s", code, raw)
+	}
+	lines := hookLines(t, h)
+	if len(lines) != 1 || strings.Contains(lines[0], token) || !strings.Contains(lines[0], `"rule":"scrub"`) {
+		t.Errorf("audit = %v", lines)
 	}
 }
 
@@ -114,9 +156,13 @@ func TestHookSessionLifecycleThroughCLI(t *testing.T) {
 
 func TestHookOutsideWorkspaceAndBadConfig(t *testing.T) {
 	h := newHarness(t)
-	payload(t, h, map[string]any{"session_id": "s", "tool_name": "Bash", "tool_input": map[string]any{}})
-	if d := hookOut(t, h, "pre-tool-use")["hookSpecificOutput"].(map[string]any)["permissionDecision"]; d != "allow" {
-		t.Errorf("no workspace: %v", d)
+	payload(t, h, map[string]any{"session_id": "s", "tool_name": "Bash", "tool_input": map[string]any{"command": "ls"}})
+	if out := hookOut(t, h, "pre-tool-use"); len(out) != 0 {
+		t.Errorf("read outside a workspace: %v", out)
+	}
+	payload(t, h, map[string]any{"session_id": "s", "tool_name": "Write", "tool_input": map[string]any{"file_path": "/x/a", "content": "x"}})
+	if d := decisionOf(hookOut(t, h, "pre-tool-use")); d != "deny" {
+		t.Errorf("write with an unreadable home folder must fail closed: %v", d)
 	}
 	h.mustOK("init")
 	if err := os.WriteFile(filepath.Join(h.home, "user.yaml"), []byte("nope"), 0o600); err != nil {
@@ -138,9 +184,10 @@ func TestHookAuditFailureDoesNotChangeAnswer(t *testing.T) {
 	if err := os.WriteFile(audit, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	payload(t, h, map[string]any{"session_id": "s", "tool_name": "Bash", "tool_input": map[string]any{}})
+	h.userHome = t.TempDir()
+	payload(t, h, map[string]any{"session_id": "s", "tool_name": "Bash", "tool_input": map[string]any{"command": "kubectl delete pod x"}})
 	code, out, errOut := h.run("hook", "pre-tool-use")
-	if code != 0 || !strings.Contains(out, `"allow"`) || !strings.Contains(errOut, "audit write failed") {
+	if code != 0 || !strings.Contains(out, `"deny"`) || !strings.Contains(errOut, "audit write failed") {
 		t.Errorf("exit %d out %q err %q", code, out, errOut)
 	}
 }
