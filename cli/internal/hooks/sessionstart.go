@@ -77,6 +77,9 @@ func summaryLine(c *state.Change, session string) string {
 	if c.Lock != nil && c.Lock.Session != session {
 		parts = append(parts, "locked by another session ("+c.Lock.Session+")")
 	}
+	if c.Tampered() {
+		parts = append(parts, "EDITED OUTSIDE ATHEL, frozen until the developer runs `athel integrity accept "+c.ID+"`")
+	}
 	return strings.Join(parts, ", ")
 }
 

@@ -40,6 +40,21 @@ func TestSessionStartSummaries(t *testing.T) {
 	}
 }
 
+func TestSessionStartFlagsHandEdits(t *testing.T) {
+	d, _ := newDeps(t)
+	c := newChange(t, d, "Phone update")
+	b, err := os.ReadFile(d.Store.WS.ChangeFile(c.ID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(d.Store.WS.ChangeFile(c.ID), []byte(strings.Replace(string(b), "Phone update", "Phone", 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if ctx := start(d).Response.AdditionalContext; !strings.Contains(ctx, "EDITED OUTSIDE ATHEL") || !strings.Contains(ctx, "integrity accept CHG-001") {
+		t.Errorf("context = %q", ctx)
+	}
+}
+
 func TestSessionStartCapsSummaries(t *testing.T) {
 	d, _ := newDeps(t)
 	for range maxSummaries + 2 {
