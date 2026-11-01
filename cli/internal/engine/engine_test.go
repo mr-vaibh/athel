@@ -378,3 +378,21 @@ func TestDefaultRuleAndNoDecisionReason(t *testing.T) {
 		t.Fatalf("none reason: %q", r)
 	}
 }
+
+func TestHumanOriginRule(t *testing.T) {
+	transition := "athel state transition CHG-001 --to plan_approved --by human --reason ok"
+	granted := func(c *Context) {
+		c.HumanGrant = func(change, target string) bool { return change == "CHG-001" && target == "plan_approved" }
+	}
+	_, in := bash(transition)
+	_, other := bash("athel state transition CHG-002 --to plan_approved --by human --reason ok")
+	_, byAthel := bash("athel state transition CHG-001 --to investigating --by athel --reason ok")
+	run(t, []ruleCase{
+		{"no grant", "Bash", in, nil, Deny, "H", aerr.PolicyHumanOrigin},
+		{"grant for this change", "Bash", in, granted, Allow, "7x", ""},
+		{"grant for another change", "Bash", other, granted, Deny, "H", aerr.PolicyHumanOrigin},
+		{"subagent with a grant", "Bash", in, func(c *Context) { granted(c); c.Subagent, c.Agent = true, "athel:developer" }, Deny, "H", aerr.PolicyHumanOrigin},
+		{"guard mode with a grant", "Bash", in, func(c *Context) { granted(c); c.Mode = Guard }, None, "-", ""},
+		{"by athel needs no grant", "Bash", byAthel, nil, Allow, "7x", ""},
+	})
+}
