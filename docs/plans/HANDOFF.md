@@ -1,91 +1,126 @@
 # HANDOFF
 
-Last updated: 2026-11-01, end of session 1. **M0 and M1 are complete and merged into `main`.**
+Last updated: 2026-11-02, end of work on the borrowed machine. **The project moves to the
+owner's personal machine.** Everything needed to continue is in this repository on `main`.
+Chat history from the borrowed machine does not come along, and nothing depends on it.
 
 ## Where we are
 
-- **M0 Skeleton**: complete, report in `docs/plans/M0-report.md`, PRs #1–#23 merged.
-- **M1 Guardrails**: complete. Report in `docs/plans/M1-report.md`: 431/431 red-team cases deny
-  with the expected rule, 0 false allows, allow-list passes, audit verify passes and detects
-  tampering, every package ≥ 90% (total 95.8%), hook p95 16.17 ms. PRs #24–#38 were merged into
-  `main` in order by the agent, on the owner's explicit instruction, with the M0 procedure.
-- **Next milestone: M2 Understand** (doc 08). Not started; no plan written yet.
+- **M0 Skeleton: done.** PRs #1–#23 merged. Report: `docs/plans/M0-report.md`.
+- **M1 Guardrails: done.** PRs #24–#38 merged. Report: `docs/plans/M1-report.md`.
+  - 431/431 red-team cases denied with the expected rule; 0 false allows.
+  - The allow-list suite passes.
+  - Audit verify passes, and tampering is detected.
+  - Every package ≥ 90% coverage (95.8% total); hook p95 16.12 ms.
+- **Next: M2 Understand, Phase 1 (plan).** Nothing started; no open PRs; `main` is green.
+- What is left overall, milestone by milestone: **`docs/plans/ROADMAP.md`**.
 
-## M1 PRs (all merged)
+## Moving to the personal machine: steps for the owner
 
-| PR | Branch | Content |
-|---|---|---|
-| #24 | docs/m1-plan | M1 plan |
-| #25 | feat/m1-audit-log | hash-chained audit log |
-| #26 | feat/m1-scrub | secret scrubber |
-| #27 | feat/m1-policy-files | tools/environments/git policy files |
-| #28 | feat/m1-shellparse | shell parser (ADR 014) |
-| #29 | feat/m1-classify | classifier |
-| #30 | feat/m1-envdetect | environment detection |
-| #31 | feat/m1-plan-binding | plan@1, change@2, migrate |
-| #32 | feat/m1-policy-engine | rules 0–13, guard/change mode (ADR 015) |
-| #33 | feat/m1-hook-wiring | engine in hooks, scrubbing, fail-closed hook (ADR 016) |
-| #34 | feat/m1-human-origin | grants, /athel:approve, /athel:accept (ADR 017) |
-| #35 | feat/m1-integrity | change.yaml content hash, integrity accept |
-| #36 | feat/m1-redteam | 431-case red-team suite, allow-list, CI |
-| #37 | feat/m1-scenarios | guardrails scenario |
-| #38 | docs/m1-report | this report and handoff |
+1. Install Claude Code, git and the GitHub CLI (`gh`) the usual way for your machine.
+2. Clone and enter the repo:
+   ```sh
+   git clone https://github.com/mr-vaibh/athel.git && cd athel
+   ```
+3. Start Claude Code in that folder (`claude`) and paste the prompt from the next section.
+   Claude reads the docs, sets up Go and golangci-lint in `./.tools/` (CLAUDE.md, "Installing
+   missing tools"), checks `gh`, and reports where things stand.
+4. When it asks for GitHub access, log in to `gh` with your own account. On your own machine a
+   normal `gh auth login` is fine. While the "borrowed machine" section of CLAUDE.md still
+   exists, `scripts/env.sh` points `gh` at `./.tools/gh-config`, so run
+   `source scripts/env.sh && gh auth login` once.
+5. Approve the small first PR it proposes (see "First tasks on the personal machine"), then
+   the M2 plan when it stops for approval.
 
-## Exact next step
+## Prompt to paste into the first session on the new machine
 
-1. Start-of-session routine (CLAUDE.md), `source scripts/env.sh` (always: it selects the
-   project owner's `gh` login), `gh pr list` (should be empty).
-2. Start **M2 Understand**, Phase 1: read doc 08's M2 row and doc 03 (discovery and
-   integrations), write `docs/plans/M2-plan.md` in the same shape as M1-plan (exit criteria,
-   requirement map, design, packages, task list with tests named up front, risks, questions),
-   and **stop for the owner's approval**.
+```
+This is Athel, my spec-driven agentic development framework (Claude Code plugin + Go CLI).
+We are now on my personal machine; the work so far was done on a borrowed machine.
+1. Read CLAUDE.md, docs/context/background.md, docs/plans/HANDOFF.md, docs/plans/ROADMAP.md,
+   docs/plans/M1-report.md, the latest file in docs/journal/, docs/context/decisions-from-chat.md
+   and docs/context/environment.md.
+2. Run the start-of-session routine from CLAUDE.md (tool check; install Go and golangci-lint
+   into ./.tools with checksum verification if missing; source scripts/env.sh; gh auth status
+   must show mr-vaibh; gh pr list).
+3. Run `set -o pipefail; scripts/check.sh` and the red-team suite to confirm main is green here.
+4. Tell me in 5 lines where we are and what you will do next, then do the "First tasks on the
+   personal machine" from HANDOFF.md, and then start M2 Phase 1 (write docs/plans/M2-plan.md and
+   stop for my approval).
+```
 
-## Open questions waiting for the owner
+## First tasks on the personal machine (in this order)
 
-- Whether to delete the merged M0 and M1 task branches on GitHub.
-- Where to do the live Claude Code checks that were replaced by docs (needs a machine with no
-  production access): `onFailure: "block"`, the literal `/athel:approve` prompt in
-  UserPromptSubmit, `updatedToolOutput` on Bash output.
+1. **Remove the borrowed-machine rules.** CLAUDE.md says to delete its whole "Environment:
+   borrowed machine" section once the project moves. Do that in a small PR
+   (`docs/personal-machine`). Keep the `./.tools/` toolchain approach and `scripts/env.sh`: they
+   work on any machine. Keep or drop the `GH_CONFIG_DIR` line in `scripts/env.sh` as the owner
+   prefers (dropping it makes `gh` use the normal login), and update
+   `docs/context/environment.md` to match.
+2. **Live-check three Claude Code behaviours** that M1 verified only from the docs. Use only the
+   fixture workspace and harmless commands; never point anything at real systems.
+   - With `claude --plugin-dir ./plugin` (never install the plugin into user settings), confirm
+     the PreToolUse `onFailure: "block"` behaviour: a hook that fails or times out blocks the
+     call.
+   - Confirm that UserPromptSubmit receives a typed `/athel:approve CHG-001` literally.
+   - Confirm that the scrubbed `updatedToolOutput` replaces Bash output.
 
-## Owner instructions given in chat (all logged in docs/context/decisions-from-chat.md)
+   Record the results in a journal entry, in ADR 016/017 follow-up notes if anything differs,
+   and in the M1 report.
+3. Ask the owner whether to delete the merged M0/M1 task branches on GitHub.
+4. **Start M2 Phase 1**: read doc 08 (M2 row, fixture system) and doc 03 in full, write
+   `docs/plans/M2-plan.md` in the same shape as `M1-plan.md`, and stop for approval. M2 needs
+   the `tests/fixtures/shop` fixture system (doc 08 §Fixture system).
 
-- "approved!" for M1 (all Q1–Q12 recommendations).
-- "don't stop or wait for approval, go ahead, build everything in one shot, and merge the PRs
-  like you did previously and then only stop".
-- "do not use Sage or any custom build tool - they're not mine". The machine owner's Sage hook
-  keeps asking to add tools under ~/.claude; always decline.
-- "do not even use gcloud or aws or any other tool to access anything - the device is used for
-  company's live production … just use the documentation you find on the internet".
+## How the work is run (the owner's standing instructions)
 
-## Conventions learned while building
+- Four phases per milestone: plan (stop for approval) → scaffold → build task by task (one PR
+  each) → prove the exit criteria in `Mn-report.md`.
+- Ask questions in batches, each with options and a recommendation; log every owner decision in
+  `docs/context/decisions-from-chat.md`.
+- After a plan is approved the owner has said "build everything in one shot" without stopping.
+  The agent merged the M0 and M1 stacks into `main` only when the owner explicitly asked. Ask
+  again for each new milestone.
+- Stacked PRs: each task branch is cut from the previous one, and each PR targets the previous
+  branch. **GitHub does not retarget stacked PRs automatically.** To merge, take the PRs in
+  order, and for each one:
+  - retarget it to `main`;
+  - wait for MERGEABLE/CLEAN;
+  - check that the commits new to `main` equal the PR's own commit count;
+  - merge with a merge commit;
+  - verify the branch head is now in `main`.
+- Never run cloud CLIs (gcloud, aws, kubectl against real clusters) for testing. Athel's tests
+  only *classify* commands, and every test that spawns `athel` uses a temporary HOME.
+- Commits: conventional (`feat|fix|refactor|test|docs|chore(scope): summary`), ending with the
+  Claude co-author trailer. PR bodies: what and why, spec/requirement IDs, how tested, deferred.
 
-- Run the gate with `set -o pipefail` when piping `scripts/check.sh`.
-- Tests that build the binary are invisible to Go's test cache; the gate runs `-count=1`.
-- Tests and benches that spawn `athel` must pass a minimal env with a temp `HOME`.
-- Build heredoc commit messages with a shell variable (`T=$'\n\nCo-Authored-By: …'`), never
-  `$'…'` inside double quotes. One pushed commit on `feat/m1-policy-engine` has a literal
-  `$'\n\n…'` suffix in its message; left as is (no history rewrites).
-- golangci-lint excludes gosec in `_test.go`; gocyclo limit 15 (split functions, never weaken).
+## Conventions and lessons learned
+
+- Run the gate as `set -o pipefail; scripts/check.sh` when piping it; it runs with `-count=1`,
+  because tests that build the binary are invisible to Go's test cache.
+- Tests and benches that spawn `athel` pass a minimal env with a temp `HOME`.
+- gocyclo limit 15: split functions, never weaken a lint.
+- Build commit messages with a variable (`T=$'\n\nCo-Authored-By: …'`); `$'…'` inside double
+  quotes does not expand. One pushed commit on `feat/m1-policy-engine` has that literal suffix;
+  left as is (no history rewrites).
 - macOS: `/var` is a symlink to `/private/var`; compare paths in the form the caller gave them.
+- Claude Code facts used by Athel:
+  - Deprecated PreToolUse `"approve"` means allow, so Athel's approve maps to `ask`.
+  - `onFailure: "block"` makes a failing PreToolUse hook block the call.
+  - UserPromptSubmit gets a typed skill command as typed.
+  - `updatedToolOutput` must match the tool's output shape.
+  - plugin.json has no min-version field.
+  - `--bare` skips plugin hooks.
 
-## GitHub account and leaving the machine
+## Open questions for the owner
 
-The machine's default `gh` login is the machine owner's. `scripts/env.sh` sets
-`GH_CONFIG_DIR=.tools/gh-config` (logged in as `mr-vaibh`); pushes use a repo-local credential
-helper. The token is stored in the macOS keychain, so before leaving the machine run:
-`source scripts/env.sh && gh auth logout --hostname github.com --user mr-vaibh`, then
-`rm -rf .tools` if the toolchain should go too.
+- Delete the merged M0/M1 task branches on GitHub?
+- On the personal machine, keep the repo-local `gh` login (`GH_CONFIG_DIR`) or use the normal
+  one?
 
-## Surprises learned
+## Owner instructions given in chat (all also in docs/context/decisions-from-chat.md)
 
-- Claude Code's deprecated PreToolUse `"approve"` means allow (Athel maps its approve to `ask`).
-- A PreToolUse hook that times out or crashes lets the call through unless it sets
-  `"onFailure": "block"` (Claude Code ≥ 2.1.295); Athel sets it (ADR 016).
-- UserPromptSubmit receives a typed skill command as typed (`/athel:approve CHG-001`), not the
-  expanded skill.
-- `updatedToolOutput` must match the tool's output shape; a mismatch is silently ignored for
-  built-in tools.
-- plugin.json has no min-version field (`metadata.athel` is used); hooks do not receive the
-  Claude Code version.
-- SessionStart runs before `.athel/` exists in a brand-new workspace, so the first session's
-  SessionStart is not logged.
+- 2026-11-02: "next phases of implementation i'll do on my personal PC … wrap up the work here,
+  and write proper documentation … proper handoff … how to continue … commit and push
+  everything on this machine and then destroy everything of mine - gh account linked on this,
+  the repo, but not before my confirmation".
