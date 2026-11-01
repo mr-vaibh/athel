@@ -30,7 +30,9 @@ func TestEnvironment(t *testing.T) {
 }
 
 func TestVersionOf(t *testing.T) {
-	if got, err := versionOf("echo")(); err != nil || got != "--version" {
+	// echo exists everywhere; its --version output differs between BSD and GNU, so only
+	// success and a non-empty answer are checked.
+	if got, err := versionOf("echo")(); err != nil || got == "" {
 		t.Errorf("echo probe = %q, %v", got, err)
 	}
 	if _, err := versionOf("athel-no-such-binary")(); err == nil {
