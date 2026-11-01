@@ -12,7 +12,7 @@ Last updated: 2026-11-01, end of session 1 (Phase 1 stop).
 
 | Task | Status |
 |---|---|
-| Phase 1 plan + context docs | Done, committed locally on `docs/m0-plan`, **not pushed** |
+| Phase 1 plan + context docs | Done, pushed on `docs/m0-plan`, plan PR open, awaiting approval |
 | PR-00 scaffold | Not started (Phase 2, needs approval) |
 | PR-01 … PR-19 | Not started |
 
@@ -26,25 +26,19 @@ Last updated: 2026-11-01, end of session 1 (Phase 1 stop).
   `docs/plans/backlog.md`, `docs/journal/2026-11-01-session-1.md`, this file.
 - Commit: see `git log docs/m0-plan` (local only).
 
-## BLOCKER: GitHub account
+## GitHub account (resolved in session 1)
 
-`gh auth status` on this machine shows the **machine owner's** account, not `mr-vaibh`.
-Per CLAUDE.md nothing was pushed and no `gh` command was used. To unblock (recommended, Q0):
-
-```sh
-source scripts/env.sh        # sets GH_CONFIG_DIR=./.tools/gh-config
-gh auth login                # log in as mr-vaibh; stored inside the repo folder only
-git config --local credential.helper ""        # ignore the machine's global helper
-git config --local --add credential.helper "!gh auth git-credential"
-gh auth status               # must show mr-vaibh
-git push -u origin docs/m0-plan
-```
+The machine's default `gh` login is the machine owner's account. The owner logged in as
+`mr-vaibh` into the repo-local `GH_CONFIG_DIR` (`.tools/gh-config`); git pushes use a
+repo-local credential helper bound to it (see `docs/context/environment.md`). The token sits in
+the macOS keychain: run `gh auth logout --user mr-vaibh` (after `source scripts/env.sh`) before
+leaving the machine. Always `source scripts/env.sh` before any `gh` command, or `gh` will act
+as the machine owner.
 
 ## Exact next step
 
 1. Run the start-of-session routine (CLAUDE.md), then `source scripts/env.sh`.
-2. If the owner has logged in as `mr-vaibh`: push `docs/m0-plan`, open a PR with
-   `gh pr create`.
+2. `gh pr list` (after sourcing env.sh) to see the plan PR's state.
 3. Apply the owner's answers to Q0–Q14: log each in `docs/context/decisions-from-chat.md`,
    update `docs/plans/M0-plan.md`.
 4. Once the plan is approved, start Phase 2: branch `feat/m0-scaffold` from `main` (after the

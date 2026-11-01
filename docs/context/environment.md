@@ -45,6 +45,20 @@ source scripts/env.sh && gh auth login
 Git identity is set per repository only (`git config user.name` / `user.email` without
 `--global`).
 
+Git pushes use only that login, through a repo-local credential helper (the empty first
+entry disables any helper from the machine's global config):
+
+```sh
+git config --local credential.helper ""
+git config --local --add credential.helper \
+  '!GH_CONFIG_DIR="$(git rev-parse --show-toplevel)/.tools/gh-config" gh auth git-credential'
+```
+
+**Caveat (session 1):** `gh` stored the token in the macOS **login keychain** (`gh auth status`
+shows "(keyring)"), not inside `.tools/gh-config`. Deleting `.tools/` therefore does **not**
+remove it. Before leaving a borrowed machine, run
+`source scripts/env.sh && gh auth logout --hostname github.com --user mr-vaibh`.
+
 ## Setting up a fresh machine from zero
 
 1. Clone the repo, `cd` into it.
@@ -72,5 +86,6 @@ go test -run=NONE -bench=. ./cli/internal/adapters/claudecode/...   # hook bench
 ## Removing everything
 
 ```sh
+source scripts/env.sh && gh auth logout --hostname github.com --user mr-vaibh   # removes the keychain token
 rm -rf .tools
 ```
