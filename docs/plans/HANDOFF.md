@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated: 2026-11-01, end of session 1.
+Last updated: 2026-11-01, end of session 1 (after merging the M0 stack).
 
 ## Where we are
 
@@ -8,15 +8,16 @@ Last updated: 2026-11-01, end of session 1.
   `docs/plans/M0-report.md` (real fresh Claude Code sessions resume a change with nothing lost;
   every package ≥ 90% coverage, 95.2% total; hook p95 12.22 ms locally, 26.20 ms on CI, budget
   50 ms).
-- Everything is in **22 stacked PRs (#1–#22)**, all pushed, all green on CI. Merging by the agent
-  is blocked by Claude Code's permission classifier, so **the owner merges them in order**:
-  #1 (base `main`) → #2 → … → #22. When a merged PR's branch is deleted, GitHub retargets the next
-  PR to `main` automatically; if not, retarget it by hand. Use merge commits (not squash) to keep
-  the per-task commits, or squash per PR if preferred; history is linear either way.
+- **All 22 PRs (#1–#22) are merged into `main`** (merge commits, in order; done by the agent on
+  the owner's explicit instruction). Before each merge the PR was retargeted to `main` (GitHub did
+  not do it automatically), checked MERGEABLE/CLEAN with exactly its own commits, and after each
+  merge its branch head was verified to be contained in `main`. `scripts/check.sh` and the resume
+  demo pass on `main` at c23c033. The task branches still exist on GitHub (all contained in
+  `main`); delete them when convenient.
 - The next milestone is **M1 Guardrails** (doc 08). Do not start it before the owner has merged
   M0 and said to begin.
 
-## PR stack
+## Merged PRs
 
 | PR | Branch | Content |
 |---|---|---|
@@ -47,15 +48,15 @@ Last updated: 2026-11-01, end of session 1.
 
 1. Start-of-session routine (CLAUDE.md), `source scripts/env.sh` (always: it selects the
    project owner's `gh` login), `gh pr list`.
-2. If the owner has merged the stack: `git checkout main && git pull`, run `scripts/check.sh`.
+2. `git checkout main && git pull`, run `scripts/check.sh`.
 3. When the owner says to start M1: read docs 02 and 04 again, then write
    `docs/plans/M1-plan.md` the same way as M0 (Phase 1, stop for approval). Report §5 lists
    what M1 needs first.
 
 ## Open questions waiting for the owner
 
-- Merge the 22 stacked PRs (owner action).
 - Confirm M0 is accepted and when to begin M1.
+- Whether to delete the 22 merged task branches on GitHub.
 
 ## Owner instructions given in chat (all logged in docs/context/decisions-from-chat.md)
 
