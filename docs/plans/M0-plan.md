@@ -1,6 +1,6 @@
 # M0 Skeleton — plan
 
-Status: **DRAFT, waiting for owner approval** (Phase 1 of M0). Nothing below is built yet.
+Status: **Approved by the owner on 2026-11-01 and fully built** (see `docs/plans/M0-report.md`). Deviations and interpretations are listed in the report §3 and ADR 011.
 
 Sources: doc 01 (Master PRD), doc 02 (Master TRD), doc 08 (Implementation Plan) govern M0.
 Docs 03–07 were read in full to make sure M0's state model, schemas and CLI do not block
