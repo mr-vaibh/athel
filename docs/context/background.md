@@ -71,7 +71,8 @@ M6 Verify and learn. Safety (M1) ships before any capability that can write.
 | Standing rules for every session | `CLAUDE.md` |
 | Original kickoff instructions | `KICKOFF-PROMPT.md` |
 | Milestone plans and reports | `docs/plans/M0-plan.md`, `M0-report.md`, `M1-plan.md`, `M1-report.md` |
-| Handoff for the next session | `docs/plans/HANDOFF.md` |
+| Handoff for the next session (start here) | `docs/plans/HANDOFF.md` |
+| What is done and what is left | `docs/plans/ROADMAP.md` |
 | Out-of-scope ideas | `docs/plans/backlog.md` |
 | Architecture decision records | `docs/adr/` |
 | Session journals (append-only) | `docs/journal/YYYY-MM-DD-session-N.md` |
