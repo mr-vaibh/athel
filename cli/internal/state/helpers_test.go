@@ -31,3 +31,9 @@ func mustCreate(t testing.TB, s *Store, title string) *Change {
 	}
 	return c
 }
+
+// testPlan is a minimal valid plan for change id.
+func testPlan(id string) []byte {
+	return []byte("schema: athel/plan@1\nchange: " + id + "\nhash: null\ntasks:\n" +
+		"  - {id: T-01, title: Add column, repo: users, paths: [\"db/**\", src/x.go], verbs: [edit, create, test, commit, push], covers: [AC-1], depends_on: [], size: S, gates: [build]}\n")
+}

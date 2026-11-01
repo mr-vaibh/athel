@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -64,7 +66,20 @@ func TestHumanOnlyThroughCLI(t *testing.T) {
 	if code != aerr.ExitPolicy || errCode(env) != string(aerr.PolicyHumanRequired) {
 		t.Errorf("exit %d env %v", code, env)
 	}
+	planPath := filepath.Join(t.TempDir(), "plan.yaml")
+	if err := os.WriteFile(planPath, []byte("schema: athel/plan@1\nchange: CHG-001\nhash: null\ntasks:\n  - {id: T-01, title: x, repo: r, paths: [src/**], verbs: [edit], covers: [AC-1], depends_on: [], size: S, gates: []}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, env := h.runJSON("state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "no plan yet"); code != aerr.ExitState || errCode(env) != string(aerr.StateNotFound) {
+		t.Errorf("approval without a plan: exit %d env %v", code, env)
+	}
+	if v := h.mustOK("plan", "set", "CHG-001", planPath); v["approved"] != false {
+		t.Errorf("plan set = %v", v)
+	}
 	h.mustOK("state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "approved in chat")
+	if v := h.mustOK("plan", "show", "CHG-001"); v["approved"] != true || v["state"] != "plan_approved" {
+		t.Errorf("plan show = %v", v)
+	}
 }
 
 func TestStepCommands(t *testing.T) {

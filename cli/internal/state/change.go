@@ -24,8 +24,11 @@ const (
 	Cancelled         State = "cancelled"
 )
 
-// SchemaID is the schema of change.yaml.
-const SchemaID = "athel/change@1"
+// SchemaID is the schema of change.yaml written by this version.
+const SchemaID = "athel/change@2"
+
+// LegacySchemaID is the M0 version, read and upgraded transparently (athel migrate rewrites it).
+const LegacySchemaID = "athel/change@1"
 
 // Change is the content of change.yaml. Field order is the YAML output order. Timestamps are
 // kept as strings in clock.Layout so the file round-trips byte for byte.
@@ -52,6 +55,13 @@ type Change struct {
 	Parent       any            `yaml:"parent" json:"parent"`
 	Flags        []any          `yaml:"flags" json:"flags"`
 	History      []Transition   `yaml:"history" json:"history"`
+	Integrity    *Integrity     `yaml:"integrity" json:"integrity"`
+}
+
+// Integrity is the hash of change.yaml as the CLI last wrote it (E-INTEGRITY, M1).
+type Integrity struct {
+	Hash string `yaml:"hash" json:"hash"`
+	At   string `yaml:"at" json:"at"`
 }
 
 // PRD lists the PRD versions of a change; each UAT round may add one (doc 07).
@@ -122,9 +132,19 @@ type Lock struct {
 	TTLMin      int    `yaml:"ttl_min" json:"ttl_min"`
 }
 
-// Approvals is reserved for the plan approval bound to the plan hash (M3).
+// Approvals records human approvals. The plan approval is bound to the plan hash: any change to
+// plan.yaml voids it (doc 05 FR-PLAN-004).
 type Approvals struct {
-	Plan any `yaml:"plan" json:"plan"`
+	Plan *PlanApproval `yaml:"plan" json:"plan"`
+}
+
+// PlanApproval is the human approval of one exact plan.
+type PlanApproval struct {
+	Hash     string  `yaml:"hash" json:"hash"`
+	By       string  `yaml:"by" json:"by"`
+	At       string  `yaml:"at" json:"at"`
+	Session  *string `yaml:"session" json:"session"`
+	PromptID *string `yaml:"prompt_id" json:"prompt_id"`
 }
 
 // Transition is one append-only history entry.
