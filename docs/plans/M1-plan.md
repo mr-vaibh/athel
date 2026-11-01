@@ -1,6 +1,6 @@
 # M1 Guardrails — plan
 
-Status: **DRAFT, waiting for owner approval** (Phase 1 of M1). Nothing below is built yet.
+Status: **Approved by the owner on 2026-11-01** (all Q1–Q12 recommendations). Phase 3 (build) in progress.
 
 Sources: doc 04 (Safety, Guardrails and Git) governs M1; doc 02 (Master TRD: hooks, workflow
 engine, cross-cutting rules, testing) and doc 08 (milestones, rules) frame it; doc 03 supplies
