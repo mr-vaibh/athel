@@ -8,6 +8,7 @@ import (
 
 	"github.com/mr-vaibh/athel/cli/internal/digest"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/grants"
 )
 
 // Actors that may request a transition.
@@ -103,32 +104,16 @@ func (s *Store) Transition(id string, req TransitionRequest) (*Change, error) {
 		return nil, err
 	}
 	var from State
+	var grant *grants.Grant
 	c, err := s.Update(id, func(c *Change) error {
 		from = c.State
-		if err := checkTransition(c, req); err != nil {
-			return err
-		}
-		if err := s.claim(c, *req.Session, s.Clock.Now()); err != nil {
-			return err
-		}
-		if req.To == PlanApproved {
-			if err := s.approvePlan(c, req); err != nil {
-				return err
-			}
-			req.Evidence = appendMissing(req.Evidence, planFile)
-		}
-		evidence, err := s.hashEvidence(c.ID, req.Evidence)
-		if err != nil {
-			return err
-		}
-		applyTransition(c, req, evidence, s.now())
-		return nil
+		return s.transition(c, req, &grant)
 	})
 	kind := EventTransition
 	switch {
 	case aerr.HasCode(err, aerr.StateIllegalTransition):
 		kind = EventIllegalTransition
-	case aerr.HasCode(err, aerr.PolicyHumanRequired):
+	case aerr.HasCode(err, aerr.PolicyHumanRequired), aerr.HasCode(err, aerr.PolicyHumanOrigin):
 		kind = EventHumanRequired
 	case err != nil:
 		return nil, err
@@ -141,7 +126,65 @@ func (s *Store) Transition(id string, req TransitionRequest) (*Change, error) {
 	if logErr := s.logEvent(ev); logErr != nil {
 		return nil, errorsJoin(err, logErr)
 	}
+	if grant != nil {
+		if logErr := s.logGrantUse(id, req.Session, grant); logErr != nil {
+			return nil, logErr
+		}
+	}
 	return c, err
+}
+
+// transition checks and applies req to c inside the change lock.
+func (s *Store) transition(c *Change, req TransitionRequest, grant **grants.Grant) error {
+	if err := checkTransition(c, req); err != nil {
+		return err
+	}
+	if err := s.claim(c, *req.Session, s.Clock.Now()); err != nil {
+		return err
+	}
+	if req.To == PlanApproved {
+		if err := s.approvePlan(c, req); err != nil {
+			return err
+		}
+		req.Evidence = appendMissing(req.Evidence, planFile)
+	}
+	evidence, err := s.hashEvidence(c.ID, req.Evidence)
+	if err != nil {
+		return err
+	}
+	if err := s.useGrant(c, req, grant); err != nil { // last: a failed transition keeps the grant
+		return err
+	}
+	applyTransition(c, req, evidence, s.now())
+	return nil
+}
+
+func (s *Store) logGrantUse(id string, session *string, g *grants.Grant) error {
+	return s.logEvent(&Event{Kind: EventGrantUsed, Change: id, Session: session, To: ptr(g.Target), By: ptr(ByHuman),
+		Reason: ptr("grant " + g.ID + " from prompt " + g.PromptID + " at " + g.At)})
+}
+
+// useGrant consumes the human's grant for a human-only transition (doc 02 §Transition rules,
+// M1 plan §4.5). Without one, --by human is a claim the CLI cannot believe: the human must type
+// /athel:approve or /athel:accept themselves.
+func (s *Store) useGrant(c *Change, req TransitionRequest, used **grants.Grant) error {
+	if !RequiresHuman(req.To) {
+		return nil
+	}
+	g, err := s.Grants().Consume(c.ID, string(req.To), *req.Session)
+	if err != nil {
+		return err
+	}
+	if g == nil {
+		cmd := "/athel:approve "
+		if req.To == Done {
+			cmd = "/athel:accept "
+		}
+		return aerr.New(aerr.PolicyHumanOrigin, fmt.Sprintf("moving %s to %s needs the human's own prompt %s%s in this session within %s",
+			c.ID, req.To, cmd, c.ID, grants.TTL)).WithNextAction("ask the developer to type " + cmd + c.ID)
+	}
+	*used = g
+	return nil
 }
 
 func checkTransition(c *Change, req TransitionRequest) error {

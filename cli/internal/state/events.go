@@ -5,6 +5,7 @@ import (
 
 	"github.com/mr-vaibh/athel/cli/internal/audit"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/grants"
 )
 
 // Event kinds this package writes to the audit log.
@@ -15,6 +16,7 @@ const (
 	EventStepEnter         = audit.KindStepEnter
 	EventStepExit          = audit.KindStepExit
 	EventLockTakeover      = audit.KindLockTakeover
+	EventGrantUsed         = audit.KindGrantUsed
 )
 
 // Event is a state event before it is stamped and chained into the audit log.
@@ -28,6 +30,11 @@ type Event struct {
 	By        *string
 	Reason    *string
 	ErrorCode *string
+}
+
+// Grants is the workspace's book of human-origin grants.
+func (s *Store) Grants() grants.Book {
+	return grants.Book{Dir: s.WS.StateDir(), Clock: s.Clock, LockTimeout: s.LockTimeout}
 }
 
 // AuditLog is the workspace's hash-chained audit log.
