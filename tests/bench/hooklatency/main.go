@@ -140,7 +140,9 @@ func run(args []string, stdout io.Writer) int {
 		return 1
 	}
 	defer func() { _ = os.RemoveAll(dir) }()
-	env := append(os.Environ(), "ATHEL_HOME="+filepath.Join(dir, "home"))
+	// A minimal environment: the hook reads kube, gcloud and aws settings from HOME and the
+	// environment, and a benchmark must never read the real ones.
+	env := []string{"HOME=" + filepath.Join(dir, "user"), "ATHEL_HOME=" + filepath.Join(dir, "home")}
 	const session = "bench-session"
 	if err := prepare(*binary, dir, session, env); err != nil {
 		_, _ = fmt.Fprintln(stdout, "error:", err)
