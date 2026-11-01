@@ -1,5 +1,6 @@
 // Package athel embeds the files the helper CLI ships inside its binary: the versioned JSON
-// Schemas for every state and config file, and the built-in policy defaults (config layer 1).
+// Schemas for every state and config file, the built-in policy defaults (config layer 1) and
+// the plugin manifest (for the minimum tested Claude Code version).
 package athel
 
 import "embed"
@@ -13,3 +14,8 @@ var Schemas embed.FS
 //
 //go:embed plugin/policies/defaults/*.yaml
 var Defaults embed.FS
+
+// PluginManifest is plugin/.claude-plugin/plugin.json.
+//
+//go:embed plugin/.claude-plugin/plugin.json
+var PluginManifest []byte
