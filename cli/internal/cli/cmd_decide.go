@@ -30,15 +30,16 @@ func cmdPolicyDecide(r *runCtx, args []string) (any, error) {
 	if *cwd == "" {
 		*cwd = r.env.Cwd
 	}
-	return r.decide(classify.Call{Tool: *tool, Input: json.RawMessage(*input), Cwd: *cwd}, r.session, *agent), nil
+	return r.decide(classify.Call{Tool: *tool, Input: json.RawMessage(*input), Cwd: *cwd}, r.session, *agent, *agent != ""), nil
 }
 
 // decide classifies a tool call and applies the policy rules (doc 04 §Decision order). The
 // mode follows the session's change lock (ADR 015). It never fails: when the config, the
 // policy files or the state cannot be read, that error becomes rule 0 and every write is
 // denied (FR-SAFE-012), because "no decision" would let the call through.
-func (r *runCtx) decide(call classify.Call, session, agent string) engine.Result {
+func (r *runCtx) decide(call classify.Call, session, agent string, subagent bool) engine.Result {
 	ctx, err := r.engineContext(session, agent)
+	ctx.Subagent = subagent
 	if err != nil && ctx.PolicyErr == nil {
 		ctx.PolicyErr = err
 	}
@@ -52,7 +53,7 @@ func (r *runCtx) hookDecide(req *hookio.Request) engine.Result {
 	if call.Cwd == "" {
 		call.Cwd = r.env.Cwd
 	}
-	return r.decide(call, req.SessionID, req.AgentType)
+	return r.decide(call, req.SessionID, req.AgentType, req.AgentID != "")
 }
 
 func (r *runCtx) engineContext(session, agent string) (engine.Context, error) {
@@ -73,6 +74,10 @@ func (r *runCtx) engineContext(session, agent string) (engine.Context, error) {
 	s, err := r.storeFor()
 	if err != nil {
 		return ctx, err
+	}
+	ctx.HumanGrant = func(change, target string) bool {
+		g, err := s.Grants().Valid(change, target, session)
+		return err == nil && g != nil
 	}
 	c, err := s.HeldBy(session)
 	if err != nil || c == nil {

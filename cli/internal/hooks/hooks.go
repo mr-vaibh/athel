@@ -14,6 +14,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/clock"
 	"github.com/mr-vaibh/athel/cli/internal/digest"
 	"github.com/mr-vaibh/athel/cli/internal/engine"
+	"github.com/mr-vaibh/athel/cli/internal/grants"
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
 	"github.com/mr-vaibh/athel/cli/internal/scrub"
 	"github.com/mr-vaibh/athel/cli/internal/state"
@@ -24,6 +25,7 @@ const (
 	RuleMalformed = "1"
 	RuleLogOnly   = "log-only"
 	RuleScrub     = "scrub"
+	RuleGrant     = "grant"
 )
 
 // StopBlockLimit is doc 02's limit: after 3 blocked stops the step moves to blocked.
@@ -154,7 +156,28 @@ func userPromptSubmit(req *hookio.Request, d Deps) Outcome {
 		}
 		o.Response.AdditionalContext = fmt.Sprintf("Athel: active change %s (%s, %s).", c.ID, c.State, step)
 	}
+	if change, target, ok := grants.ParsePrompt(req.Prompt); ok && d.Store != nil && req.AgentID == "" {
+		recordGrant(req, d, change, target, &o)
+	}
 	return o
+}
+
+// recordGrant turns the human's literal /athel:approve or /athel:accept prompt into a one-time
+// grant (M1 plan §4.5). Only this hook sees the human's own words, so only it may create one.
+func recordGrant(req *hookio.Request, d Deps, change, target string, o *Outcome) {
+	g, err := d.Store.Grants().Create(change, target, req.SessionID, req.PromptID)
+	if err == nil {
+		_, err = d.Store.AuditLog().Append(audit.Record{Kind: audit.KindGrantCreated, Session: audit.Str(req.SessionID),
+			PromptID: audit.Str(req.PromptID), Change: audit.Str(change), To: audit.Str(target), By: audit.Str(state.ByHuman),
+			Reason: audit.Str("grant " + g.ID), Result: audit.ResultOK})
+	}
+	if err != nil {
+		o.Result, o.Notes = "error", append(o.Notes, "grant: "+err.Error())
+		return
+	}
+	o.Rule = RuleGrant
+	o.Response.AdditionalContext = strings.TrimSpace(o.Response.AdditionalContext + fmt.Sprintf(
+		"\nAthel: the developer granted %s → %s (grant %s, usable once for %s by the main agent).", change, target, g.ID, grants.TTL))
 }
 
 func preCompact(req *hookio.Request, d Deps) Outcome {
