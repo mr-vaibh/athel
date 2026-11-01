@@ -24,3 +24,10 @@ func TestEmbeddedSchemasAreJSON(t *testing.T) {
 		}
 	}
 }
+
+func TestEmbeddedDefaultsPresent(t *testing.T) {
+	b, err := fs.ReadFile(Defaults, "plugin/policies/defaults/athel.yaml")
+	if err != nil || len(b) == 0 {
+		t.Fatalf("built-in athel.yaml not embedded: %v", err)
+	}
+}
