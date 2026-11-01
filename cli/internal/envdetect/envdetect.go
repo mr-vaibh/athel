@@ -74,8 +74,8 @@ func (r *Resolver) match(kind, value, how string) Resolution {
 	if r.Policy != nil {
 		for name, env := range r.Policy.Environments {
 			for _, p := range patterns(env, kind) {
-				if Glob(p, value) && strictness(name) > rank {
-					best, rank = name, strictness(name)
+				if Glob(p, value) && Strictness(name) > rank {
+					best, rank = name, Strictness(name)
 				}
 			}
 		}
@@ -98,8 +98,8 @@ func patterns(env policy.Environment, kind string) []string {
 	return env.URLs
 }
 
-// strictness ranks environments: prod is the strictest, dev the loosest, others in between.
-func strictness(name string) int {
+// Strictness ranks environments: prod is the strictest, dev the loosest, others in between.
+func Strictness(name string) int {
 	switch name {
 	case "prod", "production":
 		return 3
@@ -241,7 +241,7 @@ func (r *Resolver) urls(urls []string) Resolution {
 	best := Resolution{}
 	for _, u := range urls {
 		res := r.match("url", hostOf(u), "url")
-		if best.Env == "" || strictness(res.Env) > strictness(best.Env) {
+		if best.Env == "" || Strictness(res.Env) > Strictness(best.Env) {
 			best = res
 		}
 	}
