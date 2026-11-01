@@ -64,7 +64,7 @@ type PRD struct {
 type PRDVersion struct {
 	Version string `yaml:"version" json:"version"`
 	Path    string `yaml:"path" json:"path"`
-	SHA256  string `yaml:"sha256"`
+	SHA256  string `yaml:"sha256" json:"sha256"`
 	Source  string `yaml:"source" json:"source"`
 	At      string `yaml:"at" json:"at"`
 }
@@ -142,7 +142,7 @@ type Transition struct {
 // Evidence is a file that justified a transition and its hash at that moment.
 type Evidence struct {
 	Path   string `yaml:"path" json:"path"`
-	SHA256 string `yaml:"sha256"`
+	SHA256 string `yaml:"sha256" json:"sha256"`
 }
 
 // Origin records where a transition command came from, so M1 can enforce that human-only

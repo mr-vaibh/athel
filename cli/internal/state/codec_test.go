@@ -3,6 +3,7 @@ package state
 import (
 	"bytes"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -142,4 +143,18 @@ func FuzzLoadChange(f *testing.F) {
 			t.Fatalf("a change that decoded does not re-encode: %v", err)
 		}
 	})
+}
+
+// TestJSONKeysMatchYAMLKeys keeps --json output identical to change.yaml key names.
+func TestJSONKeysMatchYAMLKeys(t *testing.T) {
+	src, err := os.ReadFile("change.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	re := regexp.MustCompile("`yaml:\"([^\"]+)\"( json:\"([^\"]+)\")?`")
+	for _, m := range re.FindAllStringSubmatch(string(src), -1) {
+		if m[1] != m[3] {
+			t.Errorf("yaml key %q has json key %q", m[1], m[3])
+		}
+	}
 }
