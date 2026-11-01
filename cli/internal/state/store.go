@@ -27,6 +27,9 @@ type Store struct {
 	Reg         *schema.Registry
 	Clock       clock.Clock
 	LockTimeout time.Duration
+	// TTLMin and HeartbeatEvery tune the session lock; zero means the defaults.
+	TTLMin         int
+	HeartbeatEvery time.Duration
 }
 
 // NewStore returns a store with the default lock timeout.

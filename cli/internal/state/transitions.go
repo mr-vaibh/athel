@@ -81,7 +81,8 @@ func NextStates(c *Change) []State {
 	return out
 }
 
-// TransitionRequest is a request to move a change to another state.
+// TransitionRequest is a request to move a change to another state. Session is required:
+// the caller becomes (or must already be) the change's lock holder.
 type TransitionRequest struct {
 	To       State
 	By       string
@@ -95,10 +96,19 @@ type TransitionRequest struct {
 // entry with the hashes of the evidence files. Illegal and human-required rejections are
 // recorded in the state event log and change nothing.
 func (s *Store) Transition(id string, req TransitionRequest) (*Change, error) {
+	if req.Session == nil {
+		return nil, CheckSession("")
+	}
+	if err := CheckSession(*req.Session); err != nil {
+		return nil, err
+	}
 	var from State
 	c, err := s.Update(id, func(c *Change) error {
 		from = c.State
 		if err := checkTransition(c, req); err != nil {
+			return err
+		}
+		if err := s.claim(c, *req.Session, s.Clock.Now()); err != nil {
 			return err
 		}
 		evidence, err := s.hashEvidence(c.ID, req.Evidence)
@@ -155,6 +165,9 @@ func applyTransition(c *Change, req TransitionRequest, evidence []Evidence, now 
 	c.BlockedFrom = nil
 	if req.To == Blocked {
 		c.BlockedFrom = ptr(from)
+	}
+	if IsTerminal(req.To) {
+		c.Lock = nil // nothing can be written to a finished change, so nobody holds it
 	}
 	c.State = req.To
 	c.History = append(c.History, Transition{
