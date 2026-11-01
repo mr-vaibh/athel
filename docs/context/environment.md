@@ -72,16 +72,15 @@ remove it. Before leaving a borrowed machine, run
 
 ## Build, test, lint, benchmark
 
-These commands are defined in Phase 2 (scaffold) and filled in as the code lands:
-
 ```sh
 source scripts/env.sh
-go build ./...
-go vet ./...
-golangci-lint run
-go test -race -coverprofile=coverage.out ./...
-go test -run=NONE -bench=. ./cli/internal/adapters/claudecode/...   # hook benchmark
+scripts/check.sh            # everything CI runs: build, vet, golangci-lint, race tests + per-package 90% coverage gate
+go build -o plugin/bin/athel ./cli/cmd/athel   # host binary for local plugin testing
+claude plugin validate ./plugin                 # validate the plugin manifest and layout
+claude --plugin-dir ./plugin                    # try the plugin for one session (never installs it)
 ```
+
+The hook latency benchmark is added in M0 task PR-17; its command is documented there.
 
 ## Removing everything
 

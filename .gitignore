@@ -4,6 +4,8 @@
 .DS_Store
 # Build and coverage outputs
 /bin/
-/plugin/bin/
+/plugin/bin/*
 *.out
 coverage.*
+!/plugin/bin/README.md
+/athel
