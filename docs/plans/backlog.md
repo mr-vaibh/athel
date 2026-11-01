@@ -11,3 +11,4 @@
 | 2026-11-01 | Cache compiled JSON Schemas across hook invocations (or skip config re-validation on the hot path when the config files are unchanged) | M0 hook p95 is 13 ms end to end, ~5 ms of it in-process schema compilation; well inside 50 ms, but M1 adds shell parsing and policy evaluation | M1 |
 | 2026-11-01 | PowerShell command parsing for the policy engine | M1 treats PowerShell commands as unparseable (deny writes, approve reads); Athel's users run Bash on macOS/Linux | Windows support |
 | 2026-11-01 | Delete the 23 merged M0 task branches on GitHub | All contained in main; owner has not asked yet | any time |
+| 2026-11-01 | Policy cache across hook processes (compiled policy keyed by file content hash) | Not needed: p95 15.9 ms with the engine (ADR 016); would add a stale-policy risk | When hook p95 exceeds 30 ms |

@@ -10,6 +10,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/fsutil"
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
 	"github.com/mr-vaibh/athel/cli/internal/hooks"
+	"github.com/mr-vaibh/athel/cli/internal/scrub"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
 
@@ -20,8 +21,9 @@ const maxHookInput = 10 << 20
 type rawOutput string
 
 // cmdHook handles `athel hook <event>`: payload on stdin, Claude Code's hook JSON on stdout,
-// always exit 0 (any other code changes Claude Code's behaviour; M0-plan §3 D3). Failures to
-// read state or write the audit line never turn into a block in M0; they are recorded instead.
+// always exit 0 (any other code changes Claude Code's behaviour; M0-plan §3 D3). PreToolUse
+// fails closed through the engine's rule 0; other failures are recorded, never turned into a
+// block.
 func cmdHook(r *runCtx, args []string) (any, error) {
 	pos, err := parse(r.newFlags("hook"), args, 1)
 	if err != nil {
@@ -63,7 +65,8 @@ func cmdHook(r *runCtx, args []string) (any, error) {
 // hookDeps finds the workspace from the payload's cwd (the hook process may run elsewhere).
 func (r *runCtx) hookDeps(req *hookio.Request) hooks.Deps {
 	d := hooks.Deps{Clock: r.env.Clock, EnvFile: r.env.Getenv("CLAUDE_ENV_FILE"),
-		ClaudeVersion: r.env.ClaudeVersion, AppendEnv: func(path, line string) error { return fsutil.AppendLine(path, []byte(line)) }}
+		ClaudeVersion: r.env.ClaudeVersion, AppendEnv: func(path, line string) error { return fsutil.AppendLine(path, []byte(line)) },
+		Decide: r.hookDecide, Scrub: scrub.New()}
 	if minCC, err := MinClaudeCodeVersion(athel.PluginManifest); err == nil {
 		d.MinClaudeCode = minCC
 	}
@@ -85,6 +88,6 @@ func (r *runCtx) hookDeps(req *hookio.Request) hooks.Deps {
 		set := r.cfg.Settings()
 		s.TTLMin, s.HeartbeatEvery, s.WarnRatio = set.LockTTLMin, set.HeartbeatEvery, set.WarnRatio
 	}
-	d.Store = s
+	d.Store, r.store = s, s
 	return d
 }

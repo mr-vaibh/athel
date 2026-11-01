@@ -39,7 +39,9 @@ func TestParseEachEvent(t *testing.T) {
 		{"subagent-stop.json", hookio.SubagentStop, func(r *hookio.Request) bool { return !r.StopHookActive && r.AgentType == "athel:scout" }},
 		{"pre-compact.json", hookio.PreCompact, func(r *hookio.Request) bool { return r.Trigger == "auto" }},
 		{"session-end.json", hookio.SessionEnd, func(r *hookio.Request) bool { return r.Reason == "prompt_input_exit" }},
-		{"post-tool-use.json", hookio.PostToolUse, func(r *hookio.Request) bool { return r.ToolName == "Read" }},
+		{"post-tool-use.json", hookio.PostToolUse, func(r *hookio.Request) bool {
+			return r.ToolName == "Read" && strings.Contains(string(r.ToolResponse), `"content":"# shop"`)
+		}},
 		{"post-tool-use-failure.json", hookio.PostToolUseFailure, func(r *hookio.Request) bool { return r.ToolName == "Bash" }},
 	}
 	for _, tt := range tests {
@@ -125,8 +127,11 @@ func TestApproveMapsToAsk(t *testing.T) {
 			t.Errorf("deprecated PreToolUse fields used: %s", b)
 		}
 	}
-	if _, err := FormatOutput(hookio.PreToolUse, hookio.Response{}); !aerr.HasCode(err, aerr.StateInvalid) {
-		t.Errorf("missing decision: err = %v", err)
+	if b, err := FormatOutput(hookio.PreToolUse, hookio.Response{}); err != nil || string(b) != "{}" {
+		t.Errorf("no decision (ADR 015): %s %v", b, err)
+	}
+	if _, err := FormatOutput(hookio.PreToolUse, hookio.Response{Decision: "approve-ish"}); !aerr.HasCode(err, aerr.StateInvalid) {
+		t.Errorf("unknown decision: err = %v", err)
 	}
 }
 
@@ -146,6 +151,8 @@ func TestFormatOtherEvents(t *testing.T) {
 		{"stop blocked", hookio.Stop, hookio.Response{BlockStop: true, BlockReason: "gates red"}, `{"decision":"block","reason":"gates red"}`},
 		{"subagent stop blocked", hookio.SubagentStop, hookio.Response{BlockStop: true, BlockReason: "no result"}, `{"decision":"block","reason":"no result"}`},
 		{"post tool use", hookio.PostToolUse, hookio.Response{}, `{}`},
+		{"post tool use scrubbed", hookio.PostToolUse, hookio.Response{UpdatedToolOutput: []byte(`{"stdout":"[REDACTED:github-token]"}`)},
+			`{"hookSpecificOutput":{"hookEventName":"PostToolUse","updatedToolOutput":{"stdout":"[REDACTED:github-token]"}}}`},
 		{"system message", hookio.SessionEnd, hookio.Response{SystemMessage: "released 1 lock"}, `{"systemMessage":"released 1 lock"}`},
 	}
 	for _, tt := range tests {

@@ -15,10 +15,11 @@ import (
 )
 
 type hookHandler struct {
-	Type    string   `json:"type"`
-	Command string   `json:"command"`
-	Args    []string `json:"args"`
-	Timeout int      `json:"timeout"`
+	Type      string   `json:"type"`
+	Command   string   `json:"command"`
+	Args      []string `json:"args"`
+	Timeout   int      `json:"timeout"`
+	OnFailure string   `json:"onFailure"`
 }
 
 type hookGroup struct {
@@ -57,6 +58,11 @@ func TestHooksJSONCoversDocEvents(t *testing.T) {
 		}
 		if h.Timeout < 1 || h.Timeout > 10 {
 			t.Errorf("%s timeout %d s: hooks must be bounded (Claude Code defaults to 600 s)", e, h.Timeout)
+		}
+		// A PreToolUse hook that crashes or times out must block the call, not let it through
+		// (code.claude.com/docs/en/hooks, "Block the action when a hook fails"; ADR 015).
+		if (e == hookio.PreToolUse) != (h.OnFailure == "block") {
+			t.Errorf("%s onFailure %q: only PreToolUse fails closed", e, h.OnFailure)
 		}
 		if slices.Contains(toolEvents, e) != (groups[0].Matcher == "*") {
 			t.Errorf("%s matcher %q: tool events match every tool, others take no matcher", e, groups[0].Matcher)

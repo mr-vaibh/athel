@@ -78,23 +78,23 @@ func TestPolicyDecideErrors(t *testing.T) {
 			t.Errorf("usage %v: exit %d", args, code)
 		}
 	}
-	read := []string{"policy", "decide", "--tool", "Read", "--input", `{"file_path":"a"}`}
-	if code, env := h.runJSON(read...); code != aerr.ExitState || errCode(env) != string(aerr.StateIO) {
-		t.Errorf("no home: %d %v", code, env)
+	write := []string{"policy", "decide", "--tool", "Write", "--input", `{"file_path":"a","content":"x"}`}
+	denied := func(what string) {
+		t.Helper()
+		code, env := h.runJSON(write...)
+		data, _ := env["data"].(map[string]any)
+		if code != 0 || data["decision"] != "deny" || data["code"] != string(aerr.PolicyConfigInvalid) || data["rule"] != "0" {
+			t.Errorf("%s: %d %v", what, code, env)
+		}
 	}
+	denied("no home")
+	h.userHome = t.TempDir()
 	if err := os.WriteFile(filepath.Join(h.root, ".athel", "config", "tools.yaml"), []byte("nope"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	write := []string{"policy", "decide", "--tool", "Write", "--input", `{"file_path":"a","content":"x"}`}
-	code, env := h.runJSON(write...)
-	data, _ := env["data"].(map[string]any)
-	if code != 0 || data["decision"] != "deny" || data["code"] != string(aerr.PolicyConfigInvalid) {
-		t.Errorf("invalid policy: %d %v", code, env)
-	}
+	denied("invalid tools.yaml")
 	if err := os.WriteFile(filepath.Join(h.root, ".athel", "config", "athel.yaml"), []byte("nope"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if code, _ := h.runJSON(write...); code != aerr.ExitPolicy {
-		t.Errorf("invalid athel.yaml: exit %d", code)
-	}
+	denied("invalid athel.yaml")
 }

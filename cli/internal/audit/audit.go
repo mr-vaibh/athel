@@ -36,8 +36,12 @@ const SchemaID = "athel/audit@1"
 // Genesis is prev_hash of the first record ever written.
 var Genesis = "sha256:" + strings.Repeat("0", 64)
 
-// MaxAction bounds the scrubbed action text stored per record.
-const MaxAction = 2048
+// MaxAction and MaxReason bound the scrubbed texts stored per record (schema maxLength 2100
+// and 2000, with room for the truncation marker).
+const (
+	MaxAction = 2048
+	MaxReason = 1980
+)
 
 // Record is one audit line. Field names follow doc 04 (seq, ts, change, step, task, agent, tool,
 // action, tier, env, decision, rule, policy_hash, result, prev_hash) plus what M0/M1 need.
@@ -166,12 +170,17 @@ func (l *Log) Append(r Record) (Record, error) {
 	if last != nil {
 		r.Seq, r.PrevHash = last.Seq+1, last.Hash
 	}
-	if r.Action != nil && len(*r.Action) > MaxAction {
-		cut := (*r.Action)[:MaxAction] + "…[truncated]"
-		r.Action = &cut
-	}
+	r.Action, r.Reason = truncate(r.Action, MaxAction), truncate(r.Reason, MaxReason)
 	r.Hash = computeHash(r)
 	return r, fsutil.AppendLine(filepath.Join(l.Dir, now.UTC().Format("2006-01-02")+".jsonl"), encode(r))
+}
+
+func truncate(s *string, n int) *string {
+	if s == nil || len(*s) <= n {
+		return s
+	}
+	cut := (*s)[:n] + "…[truncated]"
+	return &cut
 }
 
 // last returns the newest record, reading only the tail of the newest file.

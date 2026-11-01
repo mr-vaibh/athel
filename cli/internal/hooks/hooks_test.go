@@ -9,11 +9,22 @@ import (
 	"time"
 
 	"github.com/mr-vaibh/athel/cli/internal/audit"
+	"github.com/mr-vaibh/athel/cli/internal/classify"
 	"github.com/mr-vaibh/athel/cli/internal/clock"
+	"github.com/mr-vaibh/athel/cli/internal/engine"
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
 	"github.com/mr-vaibh/athel/cli/internal/schema"
+	"github.com/mr-vaibh/athel/cli/internal/scrub"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
+
+// fixedDecision makes Decide return dec for every call, echoing the command as the action.
+func fixedDecision(dec engine.Decision, rule string) func(*hookio.Request) engine.Result {
+	return func(req *hookio.Request) engine.Result {
+		return engine.Result{Decision: dec, Rule: rule, Tier: classify.R0, Env: "n/a", Reason: "why " + string(req.ToolInput),
+			Actions: []engine.ActionDecision{{Action: classify.Action{Text: string(req.ToolInput)}, Decision: dec, Rule: rule}}}
+	}
+}
 
 const sess = "sess-A"
 
@@ -24,7 +35,8 @@ func newDeps(t *testing.T) (Deps, *clock.Fixed) {
 		t.Fatal(err)
 	}
 	clk := clock.NewFixed(time.Date(2026, 11, 1, 10, 0, 0, 0, time.UTC))
-	return Deps{Store: state.NewStore(ws, schema.NewRegistry(), clk), Clock: clk, ConfigHash: "sha256:" + strings.Repeat("a", 64)}, clk
+	return Deps{Store: state.NewStore(ws, schema.NewRegistry(), clk), Clock: clk, ConfigHash: "sha256:" + strings.Repeat("a", 64),
+		Decide: fixedDecision(engine.Allow, "12"), Scrub: scrub.New()}, clk
 }
 
 func newChange(t *testing.T, d Deps, title string) *state.Change {
@@ -44,25 +56,40 @@ func lockFor(t *testing.T, d Deps, id, session string) {
 	}
 }
 
-func TestPreToolUseStubAllows(t *testing.T) {
-	d, _ := newDeps(t)
-	for _, tool := range []string{"Bash", "Edit", "Write", "mcp__grafana__query", "WebFetch"} {
-		o := Handle(&hookio.Request{Event: hookio.PreToolUse, SessionID: sess, ToolName: tool, ToolInput: []byte(`{"command":"rm -rf /"}`)}, d)
-		if *o.Decision != hookio.Allow || o.Response.Decision != hookio.Allow || o.Rule != RuleStub {
-			t.Errorf("%s: %+v", tool, o)
-		}
+func TestPreToolUseUsesTheEngine(t *testing.T) {
+	tests := []struct {
+		dec  engine.Decision
+		want hookio.Decision
+	}{
+		{engine.Allow, hookio.Allow}, {engine.Approve, hookio.Approve}, {engine.Deny, hookio.Deny}, {engine.None, ""},
 	}
-	o := Handle(&hookio.Request{Event: hookio.PreToolUse, SessionID: sess, ToolName: "Bash"}, Deps{})
-	if *o.Decision != hookio.Allow {
-		t.Errorf("outside a workspace: %+v", o)
+	for _, tt := range tests {
+		d, _ := newDeps(t)
+		d.Decide = fixedDecision(tt.dec, "3")
+		o := Handle(&hookio.Request{Event: hookio.PreToolUse, SessionID: sess, ToolName: "Bash", ToolInput: []byte(`{"command":"ls"}`)}, d)
+		if o.Response.Decision != tt.want || o.Rule != "3" || o.Policy == nil || o.Policy.Decision != tt.dec {
+			t.Errorf("%s: %+v", tt.dec, o)
+		}
+		if (o.Decision == nil) != (tt.want == "") || (tt.want != "" && *o.Decision != tt.want) {
+			t.Errorf("%s: outcome decision %v", tt.dec, o.Decision)
+		}
+		rec := NewAuditRecord(hookio.PreToolUse, &hookio.Request{SessionID: sess}, o, "", 0)
+		if *rec.Decision != string(tt.dec) || *rec.Tier != "R0" || *rec.Env != "n/a" || *rec.Rule != "3" {
+			t.Errorf("%s: audit %+v", tt.dec, rec)
+		}
 	}
 }
 
-func TestStubReasonSaysStub(t *testing.T) {
+func TestPreToolUseScrubsTheAuditedAction(t *testing.T) {
 	d, _ := newDeps(t)
-	o := Handle(&hookio.Request{Event: hookio.PreToolUse, SessionID: sess, ToolName: "Bash"}, d)
-	if !strings.Contains(o.Response.Reason, "M0 STUB") || !strings.Contains(o.Response.Reason, "M1") {
-		t.Errorf("reason = %q", o.Response.Reason)
+	d.Decide = fixedDecision(engine.Deny, "3")
+	token := "ghp_" + strings.Repeat("A", 36)
+	o := Handle(&hookio.Request{Event: hookio.PreToolUse, SessionID: sess, ToolName: "Bash", ToolInput: []byte(`curl -H "Authorization: token ` + token + `"`)}, d)
+	if strings.Contains(o.Action, token) || strings.Contains(o.Reason, token) || !strings.Contains(o.Action, "[REDACTED:") {
+		t.Errorf("secret reached the audit fields: action %q reason %q", o.Action, o.Reason)
+	}
+	if !strings.Contains(o.Response.Reason, "why") {
+		t.Errorf("reason to Claude: %q", o.Response.Reason)
 	}
 }
 
@@ -83,8 +110,8 @@ func TestPreToolUseHeartbeat(t *testing.T) {
 	if err := os.WriteFile(d.Store.WS.ChangeFile(c.ID), []byte("broken"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if o := Handle(&hookio.Request{Event: hookio.PreToolUse, SessionID: sess, ToolName: "Bash"}, d); *o.Decision != hookio.Allow {
-		t.Errorf("unreadable state must not block the stub: %+v", o)
+	if o := Handle(&hookio.Request{Event: hookio.PreToolUse, SessionID: sess, ToolName: "Bash"}, d); o.Policy == nil {
+		t.Errorf("unreadable state must still reach the engine: %+v", o)
 	}
 }
 
@@ -204,10 +231,31 @@ func TestSessionEndReleasesOnlyOwnLocks(t *testing.T) {
 func TestPostToolUseLogsOnly(t *testing.T) {
 	d, _ := newDeps(t)
 	for _, e := range []hookio.Event{hookio.PostToolUse, hookio.PostToolUseFailure} {
-		o := Handle(&hookio.Request{Event: e, SessionID: sess, ToolName: "Read"}, d)
-		if o.Rule != RuleLogOnly || o.Decision != nil || o.Response != (hookio.Response{}) {
+		o := Handle(&hookio.Request{Event: e, SessionID: sess, ToolName: "Read", ToolResponse: []byte(`{"stdout":"hello"}`)}, d)
+		if o.Rule != RuleLogOnly || o.Decision != nil || len(o.Response.UpdatedToolOutput) != 0 {
 			t.Errorf("%s: %+v", e, o)
 		}
+	}
+}
+
+func TestPostToolUseScrubs(t *testing.T) {
+	d, _ := newDeps(t)
+	token := "ghp_" + strings.Repeat("B", 36)
+	resp := `{"stdout":"GITHUB_TOKEN=` + token + `\nok","stderr":"","interrupted":false,"n":3}`
+	o := Handle(&hookio.Request{Event: hookio.PostToolUse, SessionID: sess, ToolName: "Bash", ToolResponse: []byte(resp)}, d)
+	out := string(o.Response.UpdatedToolOutput)
+	if o.Rule != RuleScrub || strings.Contains(out, token) || !strings.Contains(out, "[REDACTED:") || !strings.Contains(o.Reason, "×1") {
+		t.Fatalf("not scrubbed: rule %s out %s reason %q", o.Rule, out, o.Reason)
+	}
+	var shape map[string]any
+	if err := json.Unmarshal(o.Response.UpdatedToolOutput, &shape); err != nil || shape["interrupted"] != false || shape["n"] != float64(3) {
+		t.Errorf("shape changed: %v %v", shape, err)
+	}
+	if o := Handle(&hookio.Request{Event: hookio.PostToolUse, SessionID: sess, ToolResponse: []byte(`{`)}, d); o.Result != "error" {
+		t.Errorf("bad tool_response: %+v", o)
+	}
+	if o := Handle(&hookio.Request{Event: hookio.PostToolUse, SessionID: sess}, d); o.Result != "ok" || o.Rule != RuleLogOnly {
+		t.Errorf("no tool_response: %+v", o)
 	}
 }
 
