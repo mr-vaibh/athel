@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/git@1.json",
+  "title": "athel/git@1",
+  "description": "git.yaml: branch naming, base and protected branches, commit and PR rules, forbidden actions (doc 04 §Git policy). M1 enforces base_branch, protected and forbidden; the rest is used from M4 (decision Q8).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema"],
+  "properties": {
+    "schema": {"const": "athel/git@1"},
+    "overridable": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "host": {"enum": ["github", "gitlab", "bitbucket"]},
+    "base_branch": {"type": "string", "minLength": 1},
+    "protected": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "branch_name": {"type": "string", "minLength": 1},
+    "side_finding_branch": {"type": "string", "minLength": 1},
+    "commit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "format": {"enum": ["conventional", "free"]},
+        "trailer": {"type": "array", "items": {"type": "string"}},
+        "max_files_per_commit": {"type": "integer", "minimum": 1},
+        "sign": {"enum": ["inherit", "always", "never"]}
+      }
+    },
+    "pr": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "draft_until_gates_pass": {"type": "boolean"},
+        "max_changed_lines": {"type": "integer", "minimum": 1},
+        "exclude_from_size": {"type": "array", "items": {"type": "string"}},
+        "template": {"type": "string"},
+        "labels": {"type": "array", "items": {"type": "string"}},
+        "request_reviewers_from": {"type": "string"}
+      }
+    },
+    "forbidden": {"type": "array", "items": {"enum": ["force_push", "push_protected", "merge", "delete_foreign_branch", "rewrite_pushed_history"]}}
+  }
+}

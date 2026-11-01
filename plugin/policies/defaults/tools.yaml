@@ -1,0 +1,85 @@
+# Built-in tool registry (layer 1), doc 03 §Tool registry. Policy values per environment are
+# allow | approve | deny and only matter for rules 8 (W2) and 11 (R1): prod writes, deploys,
+# infrastructure changes, secret reads and forbidden git actions are denied by the fixed rules
+# before tools.yaml is consulted. MCP tools are not registered by default: an unregistered MCP
+# tool is denied (FR-DISC-007, decision Q3) until the org or project registers it.
+schema: athel/tools@1
+tools:
+  - id: git
+    kind: cli
+    match: {command: git}
+    purpose: [code, history, branches]
+    read: [status, log, diff, show, grep, ls-files, rev-parse, remote, blame, describe, shortlog, cat-file, ls-tree, merge-base, fetch, config]
+    write: [commit, push, merge, rebase, reset, checkout, switch, branch, tag, stash, cherry-pick, revert, am, apply, add, rm, mv, restore, clean, worktree, pull, gc, prune, update-ref, filter-branch, filter-repo, replace, notes, submodule, init, clone]
+    policy:
+      prod: {read: allow, write: deny}
+      staging: {read: allow, write: deny}
+      dev: {read: allow, write: deny}
+  - id: gh
+    kind: cli
+    match: {command: gh}
+    purpose: [prs, issues, ci_runs, code_search]
+    read: [pr list, pr view, pr diff, pr checks, pr status, issue list, issue view, run list, run view, repo view, search, api, workflow list, workflow view, release list, release view, auth status, browse]
+    write: [pr create, pr edit, pr comment, pr merge, pr close, pr ready, pr review, issue create, issue comment, issue edit, issue close, run rerun, run cancel, workflow run, release create, repo create, repo delete, secret, variable, auth login, auth logout]
+    policy:
+      prod: {read: allow, write: deny}
+  - id: kubectl
+    kind: cli
+    match: {command: kubectl}
+    purpose: [deployed_state, routing, workload_config, logs]
+    read: [get, describe, logs, top, explain, api-resources, api-versions, version, cluster-info, events, auth can-i, config current-context, config get-contexts, config view]
+    write: [apply, create, delete, scale, rollout, patch, edit, exec, cp, port-forward, replace, set, label, annotate, expose, run, drain, cordon, uncordon, taint, autoscale, attach, debug, proxy, config use-context, config set-context]
+    environments:
+      detect: {flag: "--context", default_from: "kubectl config current-context"}
+    policy:
+      prod: {read: allow, write: deny}
+      staging: {read: allow, write: deny}
+      dev: {read: allow, write: deny}
+    forbidden_patterns: ["get secrets?\\b.*-o\\s*(yaml|json|jsonpath|go-template)", "get secrets?\\b.*--output[= ](yaml|json)", "^exec\\b"]
+    playbook: skills/integrations/kubectl/SKILL.md
+    auth_check: "kubectl auth can-i get pods"
+  - id: gcloud
+    kind: cli
+    match: {command: gcloud}
+    purpose: [gke, cloud_run, load_balancers, pubsub, iam_view, secret_names]
+    read: [list, describe, get-iam-policy, read, info, version, config list, auth list]
+    write: [create, delete, update, deploy, set-iam-policy, add-iam-policy-binding, remove-iam-policy-binding, set, enable, disable, start, stop, resize, import, export, publish, rollback, apply]
+    environments:
+      detect: {flag: "--project", default_from: "gcloud config get-value project"}
+    policy:
+      prod: {read: allow, write: deny}
+      staging: {read: allow, write: deny}
+      dev: {read: allow, write: deny}
+    forbidden_patterns: ["secrets versions access", "auth print-access-token", "auth print-identity-token", "auth application-default print-access-token"]
+  - id: aws
+    kind: cli
+    match: {command: aws}
+    purpose: [aws_resources]
+    read: [describe-, list-, get-, lookup-, sts get-caller-identity]
+    write: [create-, delete-, update-, put-, modify-, run-, start-, stop-, terminate-, attach-, detach-, register-, deregister-, tag-, untag-, invoke, deploy, publish, send-, s3 cp, s3 mv, s3 rm, s3 sync]
+    environments:
+      detect: {flag: "--profile", default_from: "AWS_PROFILE"}
+    policy:
+      prod: {read: allow, write: deny}
+      staging: {read: allow, write: deny}
+      dev: {read: allow, write: deny}
+    forbidden_patterns: ["secretsmanager get-secret-value", "ssm get-parameters?\\b.*--with-decryption", "kms decrypt", "sts get-session-token", "ecr get-login-password"]
+  - id: praxis
+    kind: cli
+    match: {command: praxis}
+    purpose: [facets_read]
+    read: []
+    write: []
+    policy:
+      prod: {read: approve, write: deny}
+    playbook: skills/integrations/praxis/SKILL.md
+  - id: raptor
+    kind: cli
+    match: {command: raptor}
+    purpose: [facets_write_blocked]
+    read: []
+    write: ["*"]
+    policy:
+      prod: {read: deny, write: deny}
+      staging: {read: deny, write: deny}
+      dev: {read: deny, write: deny}

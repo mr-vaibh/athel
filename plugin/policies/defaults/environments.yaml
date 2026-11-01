@@ -1,0 +1,6 @@
+# Built-in environments (layer 1). No environment is known until the org or project describes
+# its clusters, projects, accounts and URLs; until then every remote target is prod, so every
+# remote write is denied (doc 04 FR-SAFE-003: unknown environment = prod).
+schema: athel/environments@1
+environments: {}
+default: prod

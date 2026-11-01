@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/environments@1.json",
+  "title": "athel/environments@1",
+  "description": "environments.yaml: how to recognise each environment (doc 04 §Environment detection). Anything unmatched is the default, which should be prod.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema"],
+  "properties": {
+    "schema": {"const": "athel/environments@1"},
+    "overridable": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "environments": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[a-z][a-z0-9_\\-]{0,31}$"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kube_contexts": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "gcloud_projects": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "aws_accounts": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "urls": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        }
+      }
+    },
+    "default": {"enum": ["dev", "staging", "prod"]}
+  }
+}
