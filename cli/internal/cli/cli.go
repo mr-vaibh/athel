@@ -43,12 +43,24 @@ type command func(r *runCtx, args []string) (any, error)
 // commands maps "group" or "group sub" to its implementation. Filled by the per-area files.
 func commands() map[string]command {
 	return map[string]command{
-		"version":     cmdVersion,
-		"init":        cmdInit,
-		"change new":  cmdChangeNew,
-		"change list": cmdChangeList,
-		"change show": cmdChangeShow,
-		"state show":  cmdStateShow,
+		"version":          cmdVersion,
+		"init":             cmdInit,
+		"change new":       cmdChangeNew,
+		"change list":      cmdChangeList,
+		"change show":      cmdChangeShow,
+		"state show":       cmdStateShow,
+		"state transition": cmdStateTransition,
+		"state enter":      cmdStateEnter,
+		"state exit":       cmdStateExit,
+		"checkpoint set":   cmdCheckpointSet,
+		"checkpoint show":  cmdCheckpointShow,
+		"lock acquire":     cmdLockAcquire,
+		"lock refresh":     cmdLockRefresh,
+		"lock release":     cmdLockRelease,
+		"lock status":      cmdLockStatus,
+		"budget add":       cmdBudgetAdd,
+		"budget show":      cmdBudgetShow,
+		"resume":           cmdResume,
 	}
 }
 
