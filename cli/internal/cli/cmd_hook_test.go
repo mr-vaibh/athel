@@ -22,6 +22,14 @@ func payload(t *testing.T, h *harness, fields map[string]any) {
 	h.stdin = string(b)
 }
 
+// humanPrompt sends the developer's prompt through the UserPromptSubmit hook, as Claude Code
+// does when the human types it; it is the only way a test can create a human-origin grant.
+func (h *harness) humanPrompt(prompt string) {
+	h.t.Helper()
+	payload(h.t, h, map[string]any{"session_id": h.env["ATHEL_SESSION_ID"], "prompt_id": "prompt-" + prompt, "prompt": prompt})
+	hookOut(h.t, h, "user-prompt-submit")
+}
+
 func hookOut(t *testing.T, h *harness, event string) map[string]any {
 	t.Helper()
 	code, out, _ := h.run("hook", event)
@@ -202,5 +210,33 @@ func TestHookUsage(t *testing.T) {
 	h.stdin = `{"session_id":"s"}`
 	if code, out, _ := h.run("--json", "hook", "stop"); code != 0 || strings.TrimSpace(out) != "{}" {
 		t.Errorf("--json must not wrap hook output: %d %q", code, out)
+	}
+}
+
+func TestSubagentCannotUseGrant(t *testing.T) {
+	h := setup(t)
+	h.userHome = t.TempDir()
+	h.mustOK("lock", "acquire", "CHG-001")
+	h.humanPrompt("/athel:accept CHG-001")
+	call := func(agentID string) any {
+		fields := map[string]any{"session_id": "sess-A", "tool_name": "Bash",
+			"tool_input": map[string]any{"command": "athel state transition CHG-001 --to done --by human --reason accepted"}}
+		if agentID != "" {
+			fields["agent_id"], fields["agent_type"] = agentID, "athel:developer"
+		}
+		payload(t, h, fields)
+		return decisionOf(hookOut(t, h, "pre-tool-use"))
+	}
+	if d := call("agent-1"); d != "deny" {
+		t.Errorf("subagent with the human's grant = %v", d)
+	}
+	if d := call(""); d != "allow" {
+		t.Errorf("main agent with the human's grant = %v", d)
+	}
+	h.env["ATHEL_SESSION_ID"] = "sess-B"
+	payload(t, h, map[string]any{"session_id": "sess-B", "tool_name": "Bash",
+		"tool_input": map[string]any{"command": "athel state transition CHG-001 --to done --by human --reason accepted"}})
+	if d := decisionOf(hookOut(t, h, "pre-tool-use")); d != "deny" {
+		t.Errorf("another session = %v", d)
 	}
 }

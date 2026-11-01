@@ -56,7 +56,10 @@ type Context struct {
 	PolicyErr     error
 	Headless      bool
 	Agent         string // subagent type; "" for the main agent
+	Subagent      bool   // the call carries an agent_id
 	Resolver      *envdetect.Resolver
+	// HumanGrant reports whether the human granted change → target in this session (grants).
+	HumanGrant func(change, target string) bool
 }
 
 // ActionDecision is the verdict on one action.
@@ -127,11 +130,8 @@ func (ctx Context) decideAction(a classify.Action, cwd string, unparseable bool,
 	if unparseable && (write || a.Uncertain != "") { // rule 2, FR-SAFE-010
 		return verdict(Deny, "2", aerr.PolicyUnparseable, "the command cannot be analysed with confidence ("+why+")")
 	}
-	if a.Tier == classify.X { // rule 3; secret files are rule 12's always-deny list
-		if strings.Contains(a.Forbidden, "a secret file") {
-			return verdict(Deny, "12", aerr.PolicySecretPath, a.Forbidden)
-		}
-		return verdict(Deny, "3", aerr.PolicyForbidden, a.Forbidden)
+	if rule, code, text := ctx.forbidden(a); rule != "" {
+		return verdict(Deny, rule, code, text)
 	}
 	if ctx.Resolver != nil { // rule 4
 		r := ctx.Resolver.Resolve(a)
@@ -150,6 +150,34 @@ func (ctx Context) decideAction(a classify.Action, cwd string, unparseable bool,
 		return verdict(None, "-", "", "no Athel change is active in this session; Claude Code's own permission rules apply")
 	}
 	return ctx.changeRules(d, a, cwd, verdict)
+}
+
+// forbidden applies rule 3 (tier X; secret files are rule 12's always-deny list) and the
+// human-origin rule H (doc 02 §Transition rules; M1 plan §4.5). rule is "" when neither denies.
+func (ctx Context) forbidden(a classify.Action) (string, aerr.Code, string) {
+	switch {
+	case a.Tier == classify.X && strings.Contains(a.Forbidden, "a secret file"):
+		return "12", aerr.PolicySecretPath, a.Forbidden
+	case a.Tier == classify.X:
+		return "3", aerr.PolicyForbidden, a.Forbidden
+	case a.Athel != nil && a.Athel.ByHuman:
+		if why := ctx.humanOrigin(a.Athel); why != "" {
+			return "H", aerr.PolicyHumanOrigin, why
+		}
+	}
+	return "", "", ""
+}
+
+// humanOrigin explains why a `--by human` CLI call is not the human's, or returns "".
+func (ctx Context) humanOrigin(call *classify.AthelCall) string {
+	switch {
+	case ctx.Subagent:
+		return "a subagent cannot act as the human (" + ctx.Agent + ")"
+	case ctx.HumanGrant == nil || !ctx.HumanGrant(call.Change, call.To):
+		return fmt.Sprintf("--by human for %s → %s needs the developer's own prompt /athel:approve or /athel:accept %s in this session, used once within 10 minutes",
+			call.Change, call.To, call.Change)
+	}
+	return ""
 }
 
 type verdictFn func(Decision, string, aerr.Code, string) ActionDecision

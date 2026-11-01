@@ -2,6 +2,7 @@ package state
 
 import (
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -66,6 +67,17 @@ func TestHumanOnlyTargets(t *testing.T) {
 }
 
 // walk moves c through the given states with by=human, failing the test on any error.
+// grant records the human's /athel:approve or /athel:accept prompt for a human-only target.
+func grant(t *testing.T, s *Store, id string, to State) {
+	t.Helper()
+	if !RequiresHuman(to) {
+		return
+	}
+	if _, err := s.Grants().Create(id, string(to), testSession, "prompt-"+string(to)); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func walk(t *testing.T, s *Store, id string, states ...State) {
 	t.Helper()
 	for _, to := range states {
@@ -76,6 +88,7 @@ func walk(t *testing.T, s *Store, id string, states ...State) {
 				}
 			}
 		}
+		grant(t, s, id, to)
 		if _, err := s.Transition(id, TransitionRequest{Session: ptr(testSession), To: to, By: ByHuman, Reason: "move to " + string(to)}); err != nil {
 			t.Fatalf("→ %s: %v", to, err)
 		}
@@ -281,4 +294,57 @@ func readStateEvents(t *testing.T, s *Store) []audit.Record {
 		t.Fatal(err)
 	}
 	return recs
+}
+
+func TestByHumanWithoutGrantDenied(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "x")
+	walk(t, s, c.ID, Investigating, Specified, AwaitingDecisions, Planned)
+	if _, err := s.SetPlan(c.ID, testSession, testPlan(c.ID)); err != nil {
+		t.Fatal(err)
+	}
+	approve := TransitionRequest{To: PlanApproved, By: ByHuman, Reason: "ok", Session: ptr(testSession)}
+	if _, err := s.Transition(c.ID, approve); !aerr.HasCode(err, aerr.PolicyHumanOrigin) {
+		t.Fatalf("no grant: %v", err)
+	}
+	recs, _ := s.AuditLog().All()
+	if last := recs[len(recs)-1]; last.Kind != EventHumanRequired || *last.Code != string(aerr.PolicyHumanOrigin) {
+		t.Errorf("rejection not audited: %+v", last)
+	}
+	if _, err := s.Grants().Create(c.ID, string(PlanApproved), "other-session", "p"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Transition(c.ID, approve); !aerr.HasCode(err, aerr.PolicyHumanOrigin) {
+		t.Fatalf("another session's grant: %v", err)
+	}
+	grant(t, s, c.ID, PlanApproved)
+	if _, err := s.Transition(c.ID, approve); err != nil {
+		t.Fatal(err)
+	}
+	recs, _ = s.AuditLog().All()
+	if last := recs[len(recs)-1]; last.Kind != EventGrantUsed || !strings.Contains(*last.Reason, "prompt-plan_approved") {
+		t.Errorf("grant use not audited: %+v", last)
+	}
+	if g, _ := s.Grants().Valid(c.ID, string(PlanApproved), testSession); g != nil {
+		t.Error("grant still usable after the transition")
+	}
+}
+
+func TestCorruptGrantBookBlocksHumanTransitions(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "x")
+	walk(t, s, c.ID, Investigating, Specified, AwaitingDecisions, Planned)
+	if _, err := s.SetPlan(c.ID, testSession, testPlan(c.ID)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(s.WS.StateDir(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(s.WS.StateDir(), "grants.jsonl"), []byte("{\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := s.Transition(c.ID, TransitionRequest{To: PlanApproved, By: ByHuman, Reason: "x", Session: ptr(testSession)})
+	if !aerr.HasCode(err, aerr.IntegrityState) {
+		t.Fatalf("corrupt grant book: %v", err)
+	}
 }

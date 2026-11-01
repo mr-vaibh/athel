@@ -57,6 +57,7 @@ func TestPolicyDecideChangeMode(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.mustOK("plan", "set", "CHG-001", planPath)
+	h.humanPrompt("/athel:approve CHG-001")
 	h.mustOK("state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "ok")
 	if v := h.decide("Edit", edit, tree); v["decision"] != "allow" || v["rule"] != "10" {
 		t.Errorf("planned edit = %v", v)

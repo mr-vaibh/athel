@@ -346,3 +346,38 @@ func checkPromptRecord(t *testing.T, r audit.Record) {
 		t.Errorf("prompt record = %s", b)
 	}
 }
+
+func TestGrantFromHumanPromptOnly(t *testing.T) {
+	d, _ := newDeps(t)
+	prompts := []*hookio.Request{
+		{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p1", Prompt: "please approve CHG-001"},
+		{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p2", Prompt: "/athel:approve CHG-001 then push"},
+		{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p3", Prompt: "/athel:approve CHG-001", AgentID: "agent-1"},
+	}
+	for _, r := range prompts {
+		if o := Handle(r, d); o.Rule == RuleGrant {
+			t.Errorf("grant from %+v", r)
+		}
+	}
+	if g, _ := d.Store.Grants().Valid("CHG-001", "plan_approved", sess); g != nil {
+		t.Fatalf("grant created: %+v", g)
+	}
+	o := Handle(&hookio.Request{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p4", Prompt: "/athel:accept CHG-001"}, d)
+	g, err := d.Store.Grants().Valid("CHG-001", "done", sess)
+	if o.Rule != RuleGrant || err != nil || g == nil || g.PromptID != "p4" || !strings.Contains(o.Response.AdditionalContext, g.ID) {
+		t.Fatalf("literal prompt: %+v %+v %v", o, g, err)
+	}
+	recs, _ := d.Store.AuditLog().All()
+	if last := recs[len(recs)-1]; last.Kind != audit.KindGrantCreated || *last.To != "done" || *last.PromptID != "p4" {
+		t.Errorf("grant not audited: %+v", last)
+	}
+	if o := Handle(&hookio.Request{Event: hookio.UserPromptSubmit, SessionID: sess, Prompt: "/athel:approve CHG-001"}, Deps{}); o.Rule == RuleGrant {
+		t.Error("grant outside a workspace")
+	}
+	if err := os.WriteFile(d.Store.WS.StateDir()+"/grants.jsonl", []byte("{\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if o := Handle(&hookio.Request{Event: hookio.UserPromptSubmit, SessionID: sess, Prompt: "/athel:approve CHG-001"}, d); o.Result != "error" {
+		t.Errorf("corrupt book: %+v", o)
+	}
+}

@@ -28,6 +28,9 @@ func (w Workspace) ChangesDir() string { return filepath.Join(w.Dir(), "changes"
 // AuditDir holds the append-only event logs.
 func (w Workspace) AuditDir() string { return filepath.Join(w.Dir(), "audit") }
 
+// StateDir holds workspace-wide state written only by the CLI and its hooks (grants).
+func (w Workspace) StateDir() string { return filepath.Join(w.Dir(), "state") }
+
 // LockFile serialises workspace-wide operations such as change ID allocation.
 func (w Workspace) LockFile() string { return filepath.Join(w.Dir(), ".lock") }
 

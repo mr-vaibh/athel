@@ -76,6 +76,10 @@ func TestHumanOnlyThroughCLI(t *testing.T) {
 	if v := h.mustOK("plan", "set", "CHG-001", planPath); v["approved"] != false {
 		t.Errorf("plan set = %v", v)
 	}
+	if code, env := h.runJSON("state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "claimed"); code != aerr.ExitPolicy || errCode(env) != string(aerr.PolicyHumanOrigin) {
+		t.Errorf("--by human without the human's prompt: exit %d env %v", code, env)
+	}
+	h.humanPrompt("/athel:approve CHG-001")
 	h.mustOK("state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "approved in chat")
 	if v := h.mustOK("plan", "show", "CHG-001"); v["approved"] != true || v["state"] != "plan_approved" {
 		t.Errorf("plan show = %v", v)

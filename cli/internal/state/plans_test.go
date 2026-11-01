@@ -12,6 +12,7 @@ func TestApprovalBindsToPlanHash(t *testing.T) {
 	s, _ := newTestStore(t)
 	c := mustCreate(t, s, "x")
 	walk(t, s, c.ID, Investigating, Specified, AwaitingDecisions, Planned)
+	grant(t, s, c.ID, PlanApproved) // a failed attempt must not use it up
 	if _, err := s.Transition(c.ID, TransitionRequest{To: PlanApproved, By: ByHuman, Reason: "ok", Session: ptr(testSession)}); !aerr.HasCode(err, aerr.StateNotFound) {
 		t.Fatalf("approval without plan: %v", err)
 	}
