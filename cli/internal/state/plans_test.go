@@ -2,6 +2,7 @@ package state
 
 import (
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -121,8 +122,7 @@ func TestMigrateChange1To2(t *testing.T) {
 	c := mustCreate(t, s, "x")
 	mustCreate(t, s, "already v2")
 	b, _ := os.ReadFile(s.WS.ChangeFile(c.ID))
-	legacy := strings.Replace(string(b), "schema: athel/change@2", "schema: athel/change@1", 1)
-	legacy = strings.Replace(legacy, "integrity: null\n", "", 1)
+	legacy := toLegacy(string(b))
 	if err := os.WriteFile(s.WS.ChangeFile(c.ID), []byte(legacy), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -167,4 +167,11 @@ func TestMigrateErrors(t *testing.T) {
 	if _, err := s.Migrate(false); !aerr.HasCode(err, aerr.StateIO) {
 		t.Errorf("no changes dir: %v", err)
 	}
+}
+
+var integrityBlock = regexp.MustCompile(`(?m)^integrity:\n(  .*\n)*`)
+
+// toLegacy turns a change@2 file into the change@1 file M0 would have written.
+func toLegacy(v2 string) string {
+	return integrityBlock.ReplaceAllString(strings.Replace(v2, "schema: athel/change@2", "schema: athel/change@1", 1), "")
 }
