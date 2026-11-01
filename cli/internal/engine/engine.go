@@ -160,6 +160,8 @@ func (ctx Context) forbidden(a classify.Action) (string, aerr.Code, string) {
 		return "12", aerr.PolicySecretPath, a.Forbidden
 	case a.Tier == classify.X:
 		return "3", aerr.PolicyForbidden, a.Forbidden
+	case a.Athel != nil && a.Athel.Command == "integrity accept":
+		return "H", aerr.PolicyHumanOrigin, "only the developer accepts a hand edit of Athel state, in a terminal"
 	case a.Athel != nil && a.Athel.ByHuman:
 		if why := ctx.humanOrigin(a.Athel); why != "" {
 			return "H", aerr.PolicyHumanOrigin, why
