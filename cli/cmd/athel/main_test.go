@@ -28,3 +28,14 @@ func TestEnvironment(t *testing.T) {
 		t.Errorf("cwd fallback = %q", broken.Cwd)
 	}
 }
+
+func TestVersionOf(t *testing.T) {
+	// echo exists everywhere; its --version output differs between BSD and GNU, so only
+	// success and a non-empty answer are checked.
+	if got, err := versionOf("echo")(); err != nil || got == "" {
+		t.Errorf("echo probe = %q, %v", got, err)
+	}
+	if _, err := versionOf("athel-no-such-binary")(); err == nil {
+		t.Error("missing binary did not fail")
+	}
+}
