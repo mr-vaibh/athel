@@ -1,0 +1,280 @@
+package classify
+
+import (
+	"path"
+	"strings"
+
+	"github.com/mr-vaibh/athel/cli/internal/policy"
+	"github.com/mr-vaibh/athel/cli/internal/shellparse"
+)
+
+func classifyBash(c Call, pol *policy.Set, opts Options) Result {
+	src := inputString(c.Input, "command")
+	if strings.TrimSpace(src) == "" {
+		return Result{Malformed: "Bash tool_input has no command"}
+	}
+	var read func(string) ([]byte, error)
+	if opts.ReadFile != nil {
+		read = func(p string) ([]byte, error) { return opts.ReadFile(absolute(c.Cwd, p)) }
+	}
+	parsed := shellparse.Parse(src, shellparse.Options{ReadFile: read, Dir: c.Cwd})
+	res := Result{Unparseable: parsed.Unparseable, Reasons: parsed.Reasons}
+	cl := &cmdClassifier{pol: pol, cwd: c.Cwd, read: opts.ReadFile}
+	for _, cmd := range parsed.Commands {
+		res.Actions = append(res.Actions, cl.redirects(cmd)...)
+		a, unparseable := cl.command(cmd)
+		a.Via = cmd.Via
+		res.Actions = append(res.Actions, a)
+		if unparseable != "" {
+			res.Unparseable = true
+			res.Reasons = append(res.Reasons, unparseable)
+		}
+	}
+	if len(res.Actions) == 0 && !res.Unparseable {
+		res.Actions = []Action{{Tool: "Bash", Tier: R0, Text: src}}
+	}
+	return res
+}
+
+type cmdClassifier struct {
+	pol  *policy.Set
+	cwd  string
+	read func(string) ([]byte, error)
+}
+
+var outputOps = map[string]bool{">": true, ">>": true, "&>": true, "&>>": true, ">|": true, "<>": true}
+
+var harmlessTargets = map[string]bool{"/dev/null": true, "/dev/stdout": true, "/dev/stderr": true, "/dev/tty": true}
+
+// redirects turns > and < into file writes and reads.
+func (cl *cmdClassifier) redirects(cmd shellparse.Command) []Action {
+	var out []Action
+	for _, r := range cmd.Redirects {
+		target := pathOf(cl.cwd, r.Target)
+		switch {
+		case harmlessTargets[r.Target.Value] && r.Target.Known:
+		case outputOps[r.Op]:
+			a := Action{Tool: "redirect", Tier: W0, Text: r.Op + " " + target, Paths: []string{target}, Via: cmd.Via}
+			out = append(out, stateFileGuard(a))
+		case r.Op == "<" && r.Target.Known && IsSecretPath(r.Target.Value):
+			out = append(out, Action{Tool: "redirect", Tier: X, Text: "< " + target, Forbidden: "reads a secret file (" + r.Target.Value + ")", Via: cmd.Via})
+		case r.Op == "<":
+			out = append(out, Action{Tool: "redirect", Tier: R0, Text: "< " + target, Paths: []string{target}, Via: cmd.Via})
+		}
+	}
+	return out
+}
+
+// stateFileGuard forbids writing Athel's own state except through the athel CLI (doc 04 rule 7
+// exception: .athel/changes/<id>/ "is written only through the helper CLI").
+func stateFileGuard(a Action) Action {
+	for _, p := range a.Paths {
+		if strings.Contains("/"+p+"/", "/.athel/") {
+			a.Tier, a.Forbidden = X, "edits Athel state directly ("+p+"); only the athel CLI may write .athel/"
+		}
+	}
+	return a
+}
+
+// interpreters run code given inline; that code is not analysed.
+var interpreters = map[string][]string{
+	"python": {"-c"}, "python3": {"-c"}, "node": {"-e", "--eval", "-p"}, "ruby": {"-e"}, "perl": {"-e", "-E"},
+	"php": {"-r"}, "osascript": {"-e"}, "awk": nil, "deno": {"eval"}, "bun": {"-e"},
+}
+
+// matcher classifies a command it recognises; ok is false otherwise.
+type matcher func(cl *cmdClassifier, name string, cmd shellparse.Command) (a Action, unparseable string, ok bool)
+
+// matchers are tried in order; the first that recognises the command decides it.
+var matchers = []matcher{
+	func(cl *cmdClassifier, name string, cmd shellparse.Command) (Action, string, bool) {
+		switch {
+		case name == "git":
+			return cl.git(cmd), "", true
+		case name == "gh":
+			return cl.gh(cmd), "", true
+		case name == "athel":
+			return athelCall(cmd), "", true
+		case cloudTools[name] != nil:
+			return cl.cloud(name, cmd), "", true
+		}
+		return Action{}, "", false
+	},
+	func(_ *cmdClassifier, name string, cmd shellparse.Command) (Action, string, bool) {
+		switch {
+		case dbClients[name]:
+			return dbClient(name, cmd), "", true
+		case netTools[name]:
+			return netCommand(name, cmd), "", true
+		case remoteShells[name]:
+			return remoteShell(name, cmd), "", true
+		case printsEnvironment(name, cmd.Args):
+			return Action{Tool: name, Tier: X, Text: text(cmd), Forbidden: "prints environment variables, which hold secrets"}, "", true
+		}
+		return Action{}, "", false
+	},
+	func(_ *cmdClassifier, name string, cmd shellparse.Command) (Action, string, bool) {
+		if flags, ok := interpreters[name]; ok && hasAnyFlag(cmd.Args, flags) {
+			return Action{Tool: name, Tier: W0, Text: text(cmd), Uncertain: UnknownCommand}, name + " runs inline code that is not analysed", true
+		}
+		a, ok := packageCommand(name, cmd)
+		return a, "", ok
+	},
+	func(cl *cmdClassifier, _ string, cmd shellparse.Command) (Action, string, bool) {
+		a, ok := fileCommand(cmd, cl.cwd)
+		return stateFileGuard(a), "", ok
+	},
+}
+
+// printsEnvironment: printenv, bare env/set, export -p, declare -p dump every variable.
+func printsEnvironment(name string, args []shellparse.Word) bool {
+	bare := len(args) == 1
+	dashP := len(args) == 2 && args[1].Known && args[1].Value == "-p"
+	return name == "printenv" || (bare && (name == "env" || name == "set")) || (dashP && (name == "export" || name == "declare"))
+}
+
+// command classifies one simple command. The second result is a reason when the command makes
+// the whole call unparseable.
+func (cl *cmdClassifier) command(cmd shellparse.Command) (Action, string) {
+	if cmd.Name() == "" {
+		return Action{Tool: "Bash", Tier: W0, Text: text(cmd), Uncertain: UnknownCommand}, ""
+	}
+	name := path.Base(cmd.Name())
+	for _, m := range matchers {
+		if a, unparseable, ok := m(cl, name, cmd); ok {
+			return a, unparseable
+		}
+	}
+	a := Action{Tool: name, Tier: W0, Text: text(cmd), Uncertain: UnknownCommand}
+	if isLocalScript(cmd.Name()) || name == "make" || name == "gmake" {
+		a.Uncertain = Unresolved
+	}
+	return a, ""
+}
+
+func isLocalScript(name string) bool {
+	return strings.Contains(name, "/") && !strings.HasPrefix(name, "/usr/") && !strings.HasPrefix(name, "/bin/")
+}
+
+func hasAnyFlag(args []shellparse.Word, flags []string) bool {
+	for _, a := range args[1:] {
+		for _, f := range flags {
+			if a.Known && (a.Value == f || strings.HasPrefix(a.Value, f+"=")) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// positionals returns non-flag words, skipping the values of flags listed in valueFlags
+// (also --flag=value forms). It also returns those flag values by flag name.
+func positionals(args []shellparse.Word, valueFlags map[string]bool) ([]shellparse.Word, map[string]shellparse.Word) {
+	var pos []shellparse.Word
+	vals := map[string]shellparse.Word{}
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if !a.Known || !strings.HasPrefix(a.Value, "-") || a.Value == "-" {
+			pos = append(pos, a)
+			continue
+		}
+		if a.Value == "--" {
+			pos = append(pos, args[i+1:]...)
+			break
+		}
+		flag, val, hasVal := strings.Cut(a.Value, "=")
+		if hasVal {
+			vals[flag] = shellparse.Word{Value: val, Known: true}
+			continue
+		}
+		if valueFlags[flag] && i+1 < len(args) {
+			vals[flag] = args[i+1]
+			i++
+			continue
+		}
+		vals[flag] = shellparse.Word{Value: "", Known: true}
+	}
+	return pos, vals
+}
+
+func hint(vals map[string]shellparse.Word, assigns map[string]shellparse.Word, flags []string, envVars []string) string {
+	for _, f := range flags {
+		if v, ok := vals[f]; ok {
+			return known(v)
+		}
+	}
+	for _, e := range envVars {
+		if v, ok := assigns[e]; ok {
+			return known(v)
+		}
+	}
+	return ""
+}
+
+// flagVal is the value of a flag that may be absent ("" when absent, "?" when unknown).
+func flagVal(vals map[string]shellparse.Word, flag string) string {
+	v, ok := vals[flag]
+	if !ok {
+		return ""
+	}
+	return known(v)
+}
+
+func known(w shellparse.Word) string {
+	if !w.Known {
+		return "?"
+	}
+	return w.Value
+}
+
+func joinWords(ws []shellparse.Word) string {
+	parts := make([]string, len(ws))
+	for i, w := range ws {
+		parts[i] = known(w)
+	}
+	return strings.Join(parts, " ")
+}
+
+// athelCall classifies the athel CLI itself. `athel hook` is reserved for Claude Code: if the
+// model could call it, it could forge a human prompt (and with it a human-origin grant).
+func athelCall(cmd shellparse.Command) Action {
+	pos, vals := positionals(cmd.Args[1:], map[string]bool{"--to": true, "--by": true, "--reason": true, "--session": true,
+		"--workspace": true, "--title": true, "--prd-file": true, "--prd-text": true, "--task": true, "--result": true,
+		"--note": true, "--evidence": true, "--prompt-id": true, "-n": true, "--cost-usd": true, "--minutes": true,
+		"--tool-calls": true, "--schema": true, "--layer": true})
+	a := Action{Tool: "athel", Tier: R0, Text: text(cmd)}
+	if len(pos) == 0 {
+		return a
+	}
+	group := known(pos[0])
+	sub := ""
+	if len(pos) > 1 {
+		sub = known(pos[1])
+	}
+	call := &AthelCall{Command: strings.TrimSpace(group + " " + sub)}
+	a.Athel = call
+	switch group {
+	case "hook":
+		a.Tier, a.Forbidden = X, "athel hook is called only by Claude Code, never by a tool call"
+		return a
+	case "version", "status", "schema", "config", "policy", "audit":
+		return a
+	case "change":
+		if sub == "list" || sub == "show" {
+			return a
+		}
+	case "state":
+		if sub == "show" {
+			return a
+		}
+		if sub == "transition" && len(pos) > 2 {
+			call.Change, call.To, call.ByHuman = known(pos[2]), flagVal(vals, "--to"), flagVal(vals, "--by") == "human"
+		}
+	case "lock", "checkpoint", "budget":
+		if sub == "status" || sub == "show" {
+			return a
+		}
+	}
+	a.Tier = W0
+	return a
+}

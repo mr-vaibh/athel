@@ -192,14 +192,31 @@ func (w *walker) compound(cmd syntax.Command) {
 			w.stmts(item.Stmts, false)
 		}
 	case *syntax.DeclClause:
-		for _, a := range c.Args {
-			w.assign(a, w.sc.vars)
-		}
+		w.decl(c)
 	case *syntax.TestClause, *syntax.ArithmCmd, *syntax.LetClause:
 		syntax.Walk(c, w.substVisitor)
 	default:
 		w.p.unparseable("unsupported shell construct %T", c)
 	}
+}
+
+// decl records export/declare/local/readonly/typeset as a command (some forms, like
+// `export -p`, print every variable) and remembers the values they assign.
+func (w *walker) decl(c *syntax.DeclClause) {
+	args := []Word{{Value: c.Variant.Value, Known: true}}
+	for _, a := range c.Args {
+		switch {
+		case a.Naked && a.Value != nil:
+			args = append(args, w.word(a.Value))
+		case a.Naked && a.Name != nil:
+			args = append(args, Word{Value: a.Name.Value, Known: true})
+		default:
+			w.assign(a, w.sc.vars)
+			v := w.sc.vars[a.Name.Value]
+			args = append(args, Word{Value: a.Name.Value + "=" + v.Value, Known: v.Known})
+		}
+	}
+	w.record(Command{Args: args, Assigns: map[string]Word{}, Via: append([]string(nil), w.via...), Depth: w.depth, Source: w.source})
 }
 
 func (w *walker) forClause(c *syntax.ForClause) {

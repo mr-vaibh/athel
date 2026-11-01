@@ -215,3 +215,6 @@ func (s *Set) compile() error {
 	}
 	return nil
 }
+
+// ForbiddenRegexps returns the tool's compiled forbidden patterns.
+func (t *Tool) ForbiddenRegexps() []*regexp.Regexp { return t.forbidden }
