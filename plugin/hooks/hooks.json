@@ -7,7 +7,7 @@
       {"hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "user-prompt-submit"], "timeout": 10}]}
     ],
     "PreToolUse": [
-      {"matcher": "*", "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "pre-tool-use"], "timeout": 10}]}
+      {"matcher": "*", "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "pre-tool-use"], "timeout": 10, "onFailure": "block"}]}
     ],
     "PostToolUse": [
       {"matcher": "*", "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "post-tool-use"], "timeout": 10}]}
