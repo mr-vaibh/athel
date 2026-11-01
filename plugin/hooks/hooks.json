@@ -1,3 +1,31 @@
 {
-  "hooks": {}
+  "hooks": {
+    "SessionStart": [
+      {"hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "session-start"], "timeout": 10}]}
+    ],
+    "UserPromptSubmit": [
+      {"hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "user-prompt-submit"], "timeout": 10}]}
+    ],
+    "PreToolUse": [
+      {"matcher": "*", "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "pre-tool-use"], "timeout": 10}]}
+    ],
+    "PostToolUse": [
+      {"matcher": "*", "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "post-tool-use"], "timeout": 10}]}
+    ],
+    "PostToolUseFailure": [
+      {"matcher": "*", "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "post-tool-use-failure"], "timeout": 10}]}
+    ],
+    "SubagentStop": [
+      {"hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "subagent-stop"], "timeout": 10}]}
+    ],
+    "Stop": [
+      {"hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "stop"], "timeout": 10}]}
+    ],
+    "PreCompact": [
+      {"hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "pre-compact"], "timeout": 10}]}
+    ],
+    "SessionEnd": [
+      {"hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/athel", "args": ["hook", "session-end"], "timeout": 5}]}
+    ]
+  }
 }
