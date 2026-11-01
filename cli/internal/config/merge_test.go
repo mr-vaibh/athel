@@ -133,3 +133,29 @@ func TestOriginsAndNesting(t *testing.T) {
 		t.Errorf("no layers: %+v %v", empty, err)
 	}
 }
+
+func TestNestedWildcardRules(t *testing.T) {
+	rules := Rules{
+		"tools.*.policy.*.write":    {Kind: Ordered, Order: []string{"allow", "approve", "deny"}},
+		"tools.*.policy.prod.write": {Kind: Ordered, Order: []string{"deny"}},
+		"tools.*.read":              {Kind: Intersect},
+	}
+	high := layer("builtin", map[string]any{"tools": map[string]any{"kubectl": map[string]any{
+		"read": []any{"get", "describe"}, "policy": map[string]any{"staging": map[string]any{"write": "approve"}}}}})
+	ok := layer("project", map[string]any{"tools": map[string]any{"kubectl": map[string]any{
+		"read": []any{"get"}, "policy": map[string]any{"staging": map[string]any{"write": "deny"}}}}})
+	eff, err := Merge([]Layer{high, ok}, rules)
+	if err != nil || get(eff.Values, "tools.kubectl.policy.staging.write") != "deny" {
+		t.Fatalf("tighten: %v %v", eff, err)
+	}
+	loose := layer("project", map[string]any{"tools": map[string]any{"kubectl": map[string]any{"read": []any{"get", "exec"}}}})
+	if _, err := Merge([]Layer{high, loose}, rules); !aerr.HasCode(err, aerr.PolicyConfigLoosens) {
+		t.Errorf("widening reads: %v", err)
+	}
+	if _, err := Merge([]Layer{layer("x", map[string]any{"tools": map[string]any{"k": map[string]any{"policy": map[string]any{"prod": map[string]any{"write": "allow"}}}}})}, rules); !aerr.HasCode(err, aerr.PolicyConfigInvalid) {
+		t.Errorf("the most specific rule (prod only allows deny) must win: %v", err)
+	}
+	if _, ok := rules.lookup("tools.kubectl"); ok {
+		t.Error("pattern with different length matched")
+	}
+}

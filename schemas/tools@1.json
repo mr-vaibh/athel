@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/tools@1.json",
+  "title": "athel/tools@1",
+  "description": "tools.yaml: every CLI and MCP tool Athel may use, what it is for, which verbs read and write, per-environment policy (doc 03 §Tool registry). Wrapped with a schema line (decision Q7).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema"],
+  "properties": {
+    "schema": {"const": "athel/tools@1"},
+    "overridable": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9_*.\\-]+$"}},
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "match"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_\\-]{0,62}$"},
+          "kind": {"enum": ["cli", "mcp"]},
+          "match": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "command": {"type": "string", "minLength": 1},
+              "server": {"type": "string", "minLength": 1},
+              "tools": {"type": "array", "items": {"type": "string", "minLength": 1}}
+            }
+          },
+          "purpose": {"type": "array", "items": {"type": "string"}},
+          "read": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "write": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "environments": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "detect": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {"flag": {"type": "string"}, "default_from": {"type": "string"}}
+              }
+            }
+          },
+          "policy": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {"read": {"enum": ["allow", "approve", "deny"]}, "write": {"enum": ["allow", "approve", "deny"]}}
+            }
+          },
+          "forbidden_patterns": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "playbook": {"type": "string"},
+          "auth_check": {"type": "string"}
+        }
+      }
+    }
+  }
+}

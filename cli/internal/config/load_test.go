@@ -45,7 +45,7 @@ func TestLayersFromTempDirs(t *testing.T) {
 	write(t, filepath.Join(home, "org", "athel.yaml"), "schema: athel/config@1\noverridable: [identity]\nbudgets:\n  default:\n    max_cost_usd: 30\n")
 	write(t, filepath.Join(home, "user.yaml"), "schema: athel/config@1\nidentity: dev@example.com\nfeatures:\n  m1_policy: true\n")
 	write(t, filepath.Join(project, "athel.yaml"), "schema: athel/config@1\nbudgets:\n  default:\n    max_cost_usd: 25\n")
-	write(t, filepath.Join(project, "tools.yaml"), "anything")
+	write(t, filepath.Join(project, "gates.yaml"), "anything")
 	r, err := Load(Paths{Home: home, ProjectDir: project}, schema.NewRegistry())
 	if err != nil {
 		t.Fatal(err)
@@ -57,7 +57,7 @@ func TestLayersFromTempDirs(t *testing.T) {
 	if r.Effective.Origins["budgets.default.max_cost_usd"] != LayerProject || r.Effective.Origins["budgets.default.max_hours"] != LayerBuiltin {
 		t.Errorf("origins = %v", r.Effective.Origins)
 	}
-	if len(r.Layers) != 4 || len(r.Notes) != 1 || !strings.Contains(r.Notes[0], "tools.yaml") {
+	if len(r.Layers) != 4 || len(r.Notes) != 1 || !strings.Contains(r.Notes[0], "gates.yaml") {
 		t.Errorf("layers %d notes %v", len(r.Layers), r.Notes)
 	}
 }

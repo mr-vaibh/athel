@@ -39,7 +39,8 @@ type Rule struct {
 	Order []string
 }
 
-// Rules maps dotted keys to rules. A key ending in ".*" matches any single child key.
+// Rules maps dotted keys to rules. A "*" segment matches any single key segment, so
+// "tools.*.policy.*.write" covers every tool and environment.
 type Rules map[string]Rule
 
 // overridableKey is the reserved key holding a layer's overridable list.
@@ -59,15 +60,43 @@ type Effective struct {
 	Overridable []string          // keys any layer marked overridable
 }
 
+// lookup finds the rule for key: an exact rule first, otherwise the matching pattern with the
+// fewest wildcards (ties broken by pattern text, so the choice is deterministic).
 func (r Rules) lookup(key string) (Rule, bool) {
 	if rule, ok := r[key]; ok {
 		return rule, true
 	}
-	if i := strings.LastIndexByte(key, '.'); i > 0 {
-		rule, ok := r[key[:i]+".*"]
-		return rule, ok
+	parts := strings.Split(key, ".")
+	best, bestStars := "", -1
+	for pattern := range r {
+		stars, ok := matchPattern(strings.Split(pattern, "."), parts)
+		if !ok {
+			continue
+		}
+		if bestStars < 0 || stars < bestStars || (stars == bestStars && pattern < best) {
+			best, bestStars = pattern, stars
+		}
 	}
-	return Rule{}, false
+	if bestStars < 0 {
+		return Rule{}, false
+	}
+	return r[best], true
+}
+
+func matchPattern(pattern, key []string) (int, bool) {
+	if len(pattern) != len(key) {
+		return 0, false
+	}
+	stars := 0
+	for i, p := range pattern {
+		switch {
+		case p == "*":
+			stars++
+		case p != key[i]:
+			return 0, false
+		}
+	}
+	return stars, true
 }
 
 // Merge applies layers in order of authority (highest first) and returns the effective
@@ -92,14 +121,18 @@ func Merge(layers []Layer, rules Rules) (*Effective, error) {
 				invalid = true
 				continue
 			}
+			if problem := validValue(rule, val); problem != "" {
+				problems = append(problems, fmt.Sprintf("%s (%s): %s %s", l.Name, l.Path, key, problem))
+				invalid = true
+				continue
+			}
 			cur, has := flat[key]
 			if !has || overridable[key] {
 				flat[key], eff.Origins[key] = val, l.Name
 				continue
 			}
-			merged, err, bad := tighten(rule, cur, val)
+			merged, err := tighten(rule, cur, val)
 			if err != "" {
-				invalid = invalid || bad
 				problems = append(problems, fmt.Sprintf("%s (%s): %s %s; the %s layer set it", l.Name, l.Path, key, err, eff.Origins[key]))
 				continue
 			}
@@ -122,38 +155,50 @@ func Merge(layers []Layer, rules Rules) (*Effective, error) {
 	return eff, nil
 }
 
-// tighten returns the merged value, or a description of why next is rejected and whether the
-// rejection is a malformed value (invalid) rather than a loosening.
-func tighten(rule Rule, cur, next any) (merged any, problem string, invalid bool) {
+// tighten returns the merged value, or why next loosens cur. Both values already passed
+// validValue for this rule.
+func tighten(rule Rule, cur, next any) (any, string) {
 	switch rule.Kind {
 	case Min, Max:
-		c, okC := number(cur)
-		n, okN := number(next)
-		if !okC || !okN {
-			return nil, fmt.Sprintf("is not a number (%v)", next), true
-		}
+		c, _ := number(cur)
+		n, _ := number(next)
 		if (rule.Kind == Min && n > c) || (rule.Kind == Max && n < c) {
-			return nil, fmt.Sprintf("= %v is looser than %v", next, cur), false
+			return nil, fmt.Sprintf("= %v is looser than %v", next, cur)
 		}
 	case Ordered:
-		ci, ni := slices.Index(rule.Order, fmt.Sprint(cur)), slices.Index(rule.Order, fmt.Sprint(next))
-		if ni < 0 {
-			return nil, fmt.Sprintf("is not a known value (%v)", next), true
-		}
-		if ni < ci {
-			return nil, fmt.Sprintf("= %v is looser than %v", next, cur), false
+		if slices.Index(rule.Order, fmt.Sprint(next)) < slices.Index(rule.Order, fmt.Sprint(cur)) {
+			return nil, fmt.Sprintf("= %v is looser than %v", next, cur)
 		}
 	case Union:
-		return union(stringList(cur), stringList(next)), "", false
+		return union(stringList(cur), stringList(next)), ""
 	case Intersect:
 		allowed := stringList(cur)
 		for _, item := range stringList(next) {
 			if !slices.Contains(allowed, item) {
-				return nil, fmt.Sprintf("adds %q, which is looser than %v", item, cur), false
+				return nil, fmt.Sprintf("adds %q, which is looser than %v", item, cur)
 			}
 		}
 	}
-	return next, "", false
+	return next, ""
+}
+
+// validValue checks that a value has the shape its rule needs, whichever layer sets it first.
+func validValue(rule Rule, v any) string {
+	switch rule.Kind {
+	case Min, Max:
+		if _, ok := number(v); !ok {
+			return fmt.Sprintf("is not a number (%v)", v)
+		}
+	case Ordered:
+		if !slices.Contains(rule.Order, fmt.Sprint(v)) {
+			return fmt.Sprintf("is not one of %v (%v)", rule.Order, v)
+		}
+	case Union, Intersect:
+		if _, ok := v.([]any); !ok {
+			return fmt.Sprintf("is not a list (%v)", v)
+		}
+	}
+	return ""
 }
 
 func number(v any) (float64, bool) {

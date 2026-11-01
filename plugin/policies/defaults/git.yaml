@@ -1,0 +1,20 @@
+# Built-in git policy (layer 1), doc 04 §Git policy defaults.
+schema: athel/git@1
+host: github
+base_branch: main
+protected: [main, master, "release/*", "hotfix/*"]
+branch_name: "athel/{change_id}-{slug}"
+side_finding_branch: "athel/{change_id}-fix-{finding_id}"
+commit:
+  format: conventional
+  trailer: ["Athel-Change: {change_id}", "Athel-Task: {task_id}"]
+  max_files_per_commit: 15
+  sign: inherit
+pr:
+  draft_until_gates_pass: true
+  max_changed_lines: 400
+  exclude_from_size: ["*.lock", "package-lock.json", "**/generated/**"]
+  template: templates/pr-body.md
+  labels: ["athel"]
+  request_reviewers_from: codeowners
+forbidden: [force_push, push_protected, merge, delete_foreign_branch, rewrite_pushed_history]

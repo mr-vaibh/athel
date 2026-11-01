@@ -69,6 +69,8 @@ func commands() map[string]command {
 		"hook":             cmdHook,
 		"audit verify":     cmdAuditVerify,
 		"audit tail":       cmdAuditTail,
+		"policy validate":  cmdPolicyValidate,
+		"policy show":      cmdPolicyShow,
 	}
 }
 

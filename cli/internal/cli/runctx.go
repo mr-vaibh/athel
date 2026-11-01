@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/mr-vaibh/athel/cli/internal/config"
+	"github.com/mr-vaibh/athel/cli/internal/policy"
 	"github.com/mr-vaibh/athel/cli/internal/schema"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
@@ -19,6 +20,7 @@ type runCtx struct {
 	ws    *state.Workspace
 	cfg   *config.Result
 	store *state.Store
+	pol   *policy.Set
 }
 
 func (r *runCtx) registry() *schema.Registry {
