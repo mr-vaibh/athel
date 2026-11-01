@@ -398,3 +398,21 @@ func TestHumanOriginRule(t *testing.T) {
 		{"integrity accept is the developer's", "Bash", acceptEdit, nil, Deny, "H", aerr.PolicyHumanOrigin},
 	})
 }
+
+func TestStricterEnvironmentReported(t *testing.T) {
+	staging := ActionDecision{Decision: Deny, Rule: "6", Env: "staging"}
+	prod := ActionDecision{Decision: Deny, Rule: "5", Env: "prod"}
+	res := Result{Decision: Deny, Rule: "6", Env: "staging"}
+	if !stricter(prod, res) {
+		t.Error("prod deny must replace a staging deny")
+	}
+	if stricter(staging, Result{Decision: Deny, Rule: "5", Env: "prod"}) {
+		t.Error("staging deny replaced a prod deny")
+	}
+	if stricter(ActionDecision{Decision: Approve, Env: "prod"}, res) {
+		t.Error("a weaker decision won")
+	}
+	if !stricter(ActionDecision{Decision: None, Rule: "-"}, Result{Decision: None, Rule: "-"}) {
+		t.Error("the first action must set an undecided result")
+	}
+}

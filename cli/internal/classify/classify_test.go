@@ -180,7 +180,13 @@ func TestGitClassifier(t *testing.T) {
 		{"git -C feature push", W1, ""}, {"git -C detached push", W1, ""}, {"git push origin $BRANCH", W1, ""},
 		{"git filter-branch --tree-filter x", X, "history"}, {"git filter-repo --path x", X, "history"},
 		{"git reset --hard origin/main && git push -f", X, "force"},
+		{"git -c alias.p='push --force' p", X, "alias"}, {"git -calias.p=push p", X, "alias"},
+		{"git --config-env=alias.p=E p", X, "alias"}, {"git -c $CFG p", X, "alias"},
+		{"git -c user.name=x commit -m y", W0, ""},
 	}, Options{ReadFile: read})
+	if a := bash(t, pol, "git p origin x", Options{}).Actions[0]; a.Uncertain != UnknownCommand || a.Tier != W0 {
+		t.Errorf("unknown git subcommand must be uncertain: %+v", a)
+	}
 	r := bash(t, pol, "git push origin feature/x other", Options{})
 	if b := r.Actions[0].Branches; strings.Join(b, ",") != "feature/x,other" {
 		t.Errorf("branches = %v", b)

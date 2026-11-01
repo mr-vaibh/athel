@@ -222,7 +222,7 @@ func TestHelpers(t *testing.T) {
 	if hostOf("api.acme.com/x") != "api.acme.com" || hostOf("https://h:8080") != "h" {
 		t.Error("hostOf")
 	}
-	if strictness("qa") != 1 || strictness("production") != 3 || strictness("local") != 0 || strictness("stage") != 2 {
+	if Strictness("qa") != 1 || Strictness("production") != 3 || Strictness("local") != 0 || Strictness("stage") != 2 {
 		t.Error("strictness")
 	}
 	if iniValue([]byte("[a]\nk=v\n[b]\nk = w\n"), "b", "k") != "w" || iniValue(nil, "a", "k") != "" {

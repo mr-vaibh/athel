@@ -1,0 +1,27 @@
+group: allow
+cases:
+  - {name: read a planned file, tool: Read, input: {file_path: "{tree}/src/phone.go"}, expect: {decision: allow, rule: "12"}}
+  - {name: edit a planned file, tool: Edit, input: {file_path: "{tree}/src/phone.go", old_string: a, new_string: b}, expect: {decision: allow, rule: "10"}}
+  - {name: create a planned file, tool: Write, input: {file_path: "{tree}/src/validate.go", content: x}, expect: {decision: allow, rule: "10"}}
+  - {name: grep the worktree, tool: Grep, input: {pattern: Phone, path: "{tree}"}, expect: {decision: allow, rule: "12"}}
+  - {name: glob the worktree, tool: Glob, input: {pattern: "**/*.go", path: "{tree}"}, expect: {decision: allow, rule: "12"}}
+  - {name: git status, command: git status, expect: {decision: allow, rule: "12"}}
+  - {name: git diff, command: git diff, expect: {decision: allow, rule: "12"}}
+  - {name: git log, command: git log --oneline -5, expect: {decision: allow, rule: "12"}}
+  - {name: local commit, command: git commit -m "feat(phone) validate", expect: {decision: allow, rule: "10"}}
+  - {name: list and grep, command: ls src && grep -rn phone src, expect: {decision: allow, rule: "12"}}
+  - {name: echo, command: echo hello, expect: {decision: allow, rule: "12"}}
+  - {name: kubectl read on prod, command: kubectl get pods -n users, expect: {decision: allow, rule: "11"}}
+  - {name: kubectl logs on staging, command: kubectl --context gke_acme-staging_eu logs deploy/users, expect: {decision: allow, rule: "11"}}
+  - {name: gh pr list, command: gh pr list, expect: {decision: allow, rule: "11"}}
+  - {name: gcloud run list, command: gcloud run services list, expect: {decision: allow, rule: "11"}}
+  - {name: aws describe, command: aws ecs describe-services --cluster c --services users, expect: {decision: allow, rule: "11"}}
+  - {name: registered MCP read, tool: mcp__jira__get_issue, input: {issue: X-1}, expect: {decision: allow, rule: "11"}}
+  - {name: athel state show, command: athel --json state show CHG-001, expect: {decision: allow, rule: "7x"}}
+  - {name: athel checkpoint, command: athel --json checkpoint set CHG-001 build.t1, expect: {decision: allow, rule: "7x"}}
+  - {name: env example is not a secret, tool: Read, input: {file_path: "{tree}/.env.example"}, expect: {decision: allow, rule: "12"}}
+  - {name: web fetch asks, tool: WebFetch, input: {url: "https://docs.example.com/x", prompt: x}, expect: {decision: approve, rule: "11"}}
+  - {name: read outside the workspace asks, tool: Read, input: {file_path: /usr/share/dict/words}, expect: {decision: approve, rule: "12"}}
+  - {name: guard mode edit is left to Claude Code, session: guard, tool: Edit, input: {file_path: /somewhere/else/a.go, old_string: a, new_string: b}, expect: {decision: none, rule: "-"}}
+  - {name: guard mode unknown command, session: guard, command: npm run build, expect: {decision: none, rule: "-"}}
+  - {name: unknown git subcommand (a possible config alias) asks, command: git p origin athel/CHG-001-phone, expect: {decision: approve, rule: "7u"}}

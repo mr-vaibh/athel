@@ -37,6 +37,8 @@ func (cl *cmdClassifier) git(cmd shellparse.Command) Action {
 		dir = pathOf(cl.cwd, v)
 	}
 	switch {
+	case gitAliasOnCommandLine(cmd.Args[1:]):
+		a.Tier, a.Forbidden = X, "defines a git alias on the command line, which hides the real git command"
 	case sub == "push":
 		return cl.gitPush(a, cmd.Args[1:], dir)
 	case gitHistoryRewrite[sub]:
@@ -47,10 +49,44 @@ func (cl *cmdClassifier) git(cmd shellparse.Command) Action {
 		a.Tier = R0
 	case sub == "config":
 		a.Tier, a.Paths = W0, []string{"$HOME/.gitconfig"}
-	default:
+	case gitLocalWrites[sub]:
 		a.Tier, a.Paths = W0, []string{dir}
+	default:
+		// Not a git command Athel knows: it may be an alias from the repo's or the user's git
+		// config (`git p` = `push --force`), so its effect is unknown.
+		a.Tier, a.Paths, a.Uncertain = W0, []string{dir}, UnknownCommand
 	}
 	return a
+}
+
+// gitLocalWrites are the git subcommands that change only the local repository.
+var gitLocalWrites = map[string]bool{
+	"add": true, "commit": true, "checkout": true, "switch": true, "restore": true, "reset": true, "merge": true,
+	"rebase": true, "stash": true, "tag": true, "branch": true, "rm": true, "mv": true, "apply": true, "am": true,
+	"cherry-pick": true, "revert": true, "clean": true, "init": true, "worktree": true, "pull": true, "notes": true,
+	"submodule": true, "gc": true, "prune": true, "update-index": true, "sparse-checkout": true, "bisect": true,
+	"format-patch": true, "clone": true, "remote": true, "repack": true, "maintenance": true, "fsck": true,
+}
+
+// gitAliasOnCommandLine reports `git -c alias.x=…` (or a -c value Athel cannot read), which
+// would let any name stand for any git command.
+func gitAliasOnCommandLine(args []shellparse.Word) bool {
+	for i, w := range args {
+		if !w.Known {
+			continue
+		}
+		v := strings.ToLower(w.Value)
+		switch {
+		case strings.HasPrefix(v, "-calias."), v == "--config-env" || strings.HasPrefix(v, "--config-env="):
+			return true
+		case v == "-c" && i+1 < len(args):
+			next := args[i+1]
+			if !next.Known || strings.HasPrefix(strings.ToLower(next.Value), "alias.") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // isGitRead covers read-only subcommands and the read-only forms of remote, config, branch,

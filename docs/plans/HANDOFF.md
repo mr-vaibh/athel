@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated: 2026-11-01, session 1, M1 Phase 3 (build) in progress.
+Last updated: 2026-11-01, session 1, M1 Phase 3 (build) in progress: PR-12 of 14.
 
 ## Where we are
 
@@ -15,12 +15,35 @@ Last updated: 2026-11-01, session 1, M1 Phase 3 (build) in progress.
   demo pass on `main` at c23c033. The task branches still exist on GitHub (all contained in
   `main`); delete them when convenient.
 - **M1 Guardrails**: plan approved ("approved!", all Q1–Q12 recommendations). Building in
-  stacked PRs from `docs/m1-plan` (#24): #25 audit log (`feat/m1-audit-log`), #26 scrubber
-  (`feat/m1-scrub`), #27 policy files (`feat/m1-policy-files`), #28 shell parser
-  (`feat/m1-shellparse`). Next: PR-05 `feat/m1-classify` (M1-plan §9), then envdetect,
-  plan-binding, policy engine, hook wiring, human-origin, integrity, red-team, scenarios,
-  report. Owner merges stacks (the agent may merge only when explicitly told; GitHub does not
-  retarget stacked PRs automatically: retarget each to main before merging, as done for M0).
+  stacked PRs; each PR's base is the previous branch (all open, none merged yet):
+
+  | PR | Branch | Content |
+  |---|---|---|
+  | #24 | docs/m1-plan | M1 plan |
+  | #25 | feat/m1-audit-log | hash-chained audit log, `audit verify/tail` |
+  | #26 | feat/m1-scrub | secret scrubber |
+  | #27 | feat/m1-policy-files | tools/environments/git policy files |
+  | #28 | feat/m1-shellparse | shell parser (mvdan.cc/sh) |
+  | #29 | feat/m1-classify | classifier (+ handoff commit) |
+  | #30 | feat/m1-envdetect | environment detection |
+  | #31 | feat/m1-plan-binding | plan@1, change@2, migrate |
+  | #32 | feat/m1-policy-engine | rules 0–13, guard/change mode (ADR 015), `policy decide` |
+  | #33 | feat/m1-hook-wiring | engine in PreToolUse, PostToolUse scrub, `onFailure: block` (ADR 016) |
+  | #34 | feat/m1-human-origin | grants, `/athel:approve`, `/athel:accept` (ADR 017) |
+  | #35 | feat/m1-integrity | change.yaml content hash, `integrity accept` |
+
+  In progress: PR-12 `feat/m1-redteam` (this branch). Then PR-13 `feat/m1-scenarios` (with a
+  real `claude -p` spot check: confirm `onFailure: block`, `updatedToolOutput` on Bash output,
+  and that UserPromptSubmit receives the literal `/athel:approve CHG-NNN`), PR-14
+  `docs/m1-report`. Owner merges stacks (the agent may merge only when explicitly told; GitHub
+  does not retarget stacked PRs automatically: retarget each to main before merging, as done
+  for M0).
+- Deviations/interpretations to report to the owner: engine package is `engine` not `policy`
+  (import cycle, ADR 015); `policy decide` takes flags plus `--cwd`; policy cache deferred
+  (p95 15.9 ms, ADR 016); CLI *requires* grants for `--by human` (stricter than plan, ADR 017);
+  integrity is sealed on every CLI write, not only transitions (#35).
+- One pushed commit on `feat/m1-policy-engine` has a broken message suffix
+  (`docs(journal): … $'\n\nCo-Authored-By…'`); left as is (no history rewrites).
 
 ## Merged PRs
 

@@ -1,0 +1,22 @@
+group: obfuscation
+cases:
+  - {name: alias, command: "alias k=kubectl; k delete deploy users", wrap: true, expect: {decision: deny, rule: "5"}}
+  - {name: variable command, command: "K=kubectl; $K delete deploy users", expect: {decision: deny, rule: "5"}}
+  - {name: string concatenation, command: "c=kube; ${c}ctl delete deploy users", expect: {decision: deny, rule: "5"}}
+  - {name: adjacent quotes, command: "\"kub\"\"ectl\" delete deploy users", expect: {decision: deny, rule: "5"}}
+  - {name: backslash, command: "k\\ubectl delete deploy users", expect: {decision: deny, rule: "5"}}
+  - {name: variable verb, command: "v=delete; kubectl $v deploy users", expect: {decision: deny, rule: "5"}}
+  - {name: base64 payload to sh, command: echo a3ViZWN0bCBkZWxldGUgZGVwbG95IHVzZXJz | base64 -d | sh, wrap: true, expect: {decision: deny, rule: "2"}}
+  - {name: printf to bash, command: printf 'kubectl delete deploy users' | bash, expect: {decision: deny, rule: "2"}}
+  - {name: eval of a substitution, command: "eval \"$(echo kubectl delete deploy users)\"", expect: {decision: deny, rule: "2"}}
+  - {name: command substitution as the name, command: $(echo kubectl) delete deploy users, expect: {decision: deny, rule: "2"}}
+  - {name: ANSI-C quoting, command: "$'\\x6b'ubectl delete deploy users", expect: {decision: deny, rule: "2"}}
+  - {name: here-doc into bash, command: "bash <<EOF\nkubectl delete deploy users\nEOF", expect: {decision: deny, rule: "5"}}
+  - {name: script written then executed, command: "printf 'kubectl delete deploy users' > /tmp/x.sh; bash /tmp/x.sh", expect: {decision: deny, rule: "7"}}
+  - {name: absolute path, command: /usr/local/bin/kubectl delete deploy users, wrap: true, expect: {decision: deny, rule: "5"}}
+  - {name: command builtin, command: command kubectl delete deploy users, expect: {decision: deny, rule: "5"}}
+  - {name: exec builtin, command: exec kubectl delete deploy users, expect: {decision: deny, rule: "5"}}
+  - {name: nice, command: nice -n 10 kubectl delete deploy users, expect: {decision: deny, rule: "5"}}
+  - {name: watch, command: watch kubectl delete deploy users, expect: {decision: deny, rule: "5"}}
+  - {name: git alias to force push, command: "git -c alias.p='push --force' p origin athel/CHG-001-phone", expect: {decision: deny, rule: "3"}}
+  - {name: function named like a safe command, command: "ls() { kubectl delete deploy users; }; ls", expect: {decision: deny, rule: "5"}}

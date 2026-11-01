@@ -104,7 +104,7 @@ func Decide(call classify.Call, cr classify.Result, ctx Context) Result {
 		if classify.Rank(a.Tier) > classify.Rank(res.Tier) {
 			res.Tier = a.Tier
 		}
-		if strength[d.Decision] > strength[res.Decision] || (res.Rule == "-" && d.Decision == res.Decision) {
+		if stricter(d, res) {
 			res.Decision, res.Rule, res.Code, res.Env = d.Decision, d.Rule, d.Code, d.Env
 		}
 	}
@@ -115,6 +115,19 @@ func Decide(call classify.Call, cr classify.Result, ctx Context) Result {
 		res.Reason = denyText("needs a human, and this run is headless; "+res.Reason, res.Code, res.Rule)
 	}
 	return res
+}
+
+// stricter reports whether d should decide the call instead of the current result: a stronger
+// decision wins; between equal decisions the stricter environment is reported (doc 04: a command
+// that targets several environments is decided as the stricter one).
+func stricter(d ActionDecision, res Result) bool {
+	switch {
+	case strength[d.Decision] != strength[res.Decision]:
+		return strength[d.Decision] > strength[res.Decision]
+	case res.Rule == "-":
+		return true
+	}
+	return envdetect.Strictness(d.Env) > envdetect.Strictness(res.Env)
 }
 
 func (ctx Context) decideAction(a classify.Action, cwd string, unparseable bool, why string) ActionDecision {

@@ -4,7 +4,7 @@
 # requires 90%+ on every package of the CLI.
 set -euo pipefail
 threshold="${1:-90}"
-out="$(go test -race -covermode=atomic -coverprofile=coverage.out ./... 2>&1)" || {
+out="$(go test -count=1 -race -covermode=atomic -coverprofile=coverage.out ./... 2>&1)" || {
   printf '%s\n' "$out"
   exit 1
 }

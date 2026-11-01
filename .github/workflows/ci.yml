@@ -30,3 +30,5 @@ jobs:
         run: |
           go build -o bin/athel ./cli/cmd/athel
           go run ./tests/bench/hooklatency -binary bin/athel -n 1000 -max-p95 50ms
+      - name: red-team suite (EC-1, EC-2)
+        run: go test -count=1 -v -run 'TestRedTeamSuite|TestAllowListSuite|TestCoveragePerGroup' ./tests/redteam/

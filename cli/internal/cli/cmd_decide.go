@@ -30,6 +30,9 @@ func cmdPolicyDecide(r *runCtx, args []string) (any, error) {
 	if *cwd == "" {
 		*cwd = r.env.Cwd
 	}
+	if r.workspace == "" {
+		r.workspace = *cwd // find the workspace from the call's directory, as the hook does
+	}
 	return r.decide(classify.Call{Tool: *tool, Input: json.RawMessage(*input), Cwd: *cwd}, r.session, *agent, *agent != ""), nil
 }
 
