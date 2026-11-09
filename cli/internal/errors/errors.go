@@ -41,6 +41,7 @@ const (
 	StateFactNoSource      Code = "E-STATE-FACT-NO-SOURCE" // M2: a fact without sources or recipe
 	StateFactStale         Code = "E-STATE-FACT-STALE"     // M2: decision use outside the freshness window
 	StateFactDisputed      Code = "E-STATE-FACT-DISPUTED"  // M2: decision use of a disputed or superseded fact
+	StateConfidence        Code = "E-STATE-CONFIDENCE"     // M2: a claim labelled above what its evidence allows
 	PolicyHumanRequired    Code = "E-POLICY-HUMAN-REQUIRED"
 	PolicyConfigLoosens    Code = "E-POLICY-CONFIG-LOOSENS"
 	PolicyConfigInvalid    Code = "E-POLICY-CONFIG-INVALID"
