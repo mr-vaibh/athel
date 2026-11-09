@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mr-vaibh/athel/cli/internal/facts"
+	"github.com/mr-vaibh/athel/cli/internal/grants"
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
 	"github.com/mr-vaibh/athel/cli/internal/observe"
 	"github.com/mr-vaibh/athel/cli/internal/schema"
@@ -110,5 +111,30 @@ func TestSessionStartHousekeeping(t *testing.T) {
 	}
 	if !strings.Contains(o.Response.AdditionalContext, "Athel:") {
 		t.Error("housekeeping errors must not hide the session summary")
+	}
+}
+
+func TestRootsGrantFromHumanPromptOnly(t *testing.T) {
+	d, _ := newDeps(t)
+	key := grants.RootsKey([]string{"~/Developer", "~/snabbit"})
+	for _, req := range []*hookio.Request{
+		{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p1", Prompt: "/athel:roots ~/snabbit ~/Developer", AgentID: "agent-1"},
+		{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p2", Prompt: "set roots to ~/Developer"},
+		{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p3", Prompt: "/athel:roots ~/Developer ~/snabbit and index"},
+	} {
+		if o := Handle(req, d); o.Rule == RuleGrant {
+			t.Errorf("grant from %+v", req)
+		}
+	}
+	o := Handle(&hookio.Request{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p4", Prompt: "/athel:roots ~/snabbit ~/Developer/"}, d)
+	if o.Rule != RuleGrant || !strings.Contains(o.Response.AdditionalContext, "athel repos roots set '~/Developer' '~/snabbit'") {
+		t.Fatalf("outcome = %+v", o)
+	}
+	if g, err := d.Store.Grants().Valid(key, grants.TargetRoots, sess); err != nil || g == nil {
+		t.Errorf("grant = %+v %v", g, err)
+	}
+	recs, err := d.Store.AuditLog().Tail(1)
+	if err != nil || len(recs) != 1 || recs[0].Change != nil || *recs[0].To != grants.TargetRoots || !strings.Contains(*recs[0].Reason, key) {
+		t.Errorf("audit = %+v %v", recs, err)
 	}
 }

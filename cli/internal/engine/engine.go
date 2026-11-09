@@ -19,6 +19,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/classify"
 	"github.com/mr-vaibh/athel/cli/internal/envdetect"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/grants"
 	"github.com/mr-vaibh/athel/cli/internal/plan"
 	"github.com/mr-vaibh/athel/cli/internal/policy"
 )
@@ -183,16 +184,20 @@ func (ctx Context) forbidden(a classify.Action) (string, aerr.Code, string) {
 	return "", "", ""
 }
 
-// humanOrigin explains why a `--by human` CLI call is not the human's, or returns "".
+// humanOrigin explains why a human-only CLI call (`--by human`, `repos roots set`) is not the
+// human's, or returns "".
 func (ctx Context) humanOrigin(call *classify.AthelCall) string {
 	switch {
 	case ctx.Subagent:
 		return "a subagent cannot act as the human (" + ctx.Agent + ")"
-	case ctx.HumanGrant == nil || !ctx.HumanGrant(call.Change, call.To):
+	case ctx.HumanGrant != nil && ctx.HumanGrant(call.Change, call.To):
+		return ""
+	case call.To == grants.TargetRoots:
+		return "saving repo search roots needs the developer's own prompt /athel:roots with exactly these folders in this session, used once within 10 minutes"
+	default:
 		return fmt.Sprintf("--by human for %s → %s needs the developer's own prompt /athel:approve or /athel:accept %s in this session, used once within 10 minutes",
 			call.Change, call.To, call.Change)
 	}
-	return ""
 }
 
 type verdictFn func(Decision, string, aerr.Code, string) ActionDecision

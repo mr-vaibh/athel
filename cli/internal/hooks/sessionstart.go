@@ -56,6 +56,11 @@ func housekeeping(d Deps, o *Outcome) {
 			o.Result, o.Notes = "error", append(o.Notes, "archive facts: "+err.Error())
 		}
 	}
+	if d.RefreshIndex != nil {
+		if err := d.RefreshIndex(); err != nil {
+			o.Result, o.Notes = "error", append(o.Notes, "refresh repo index: "+err.Error())
+		}
+	}
 }
 
 func summaryLines(changes []*state.Change, session string) []string {

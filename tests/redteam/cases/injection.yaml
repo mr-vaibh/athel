@@ -18,5 +18,9 @@ cases:
   - {name: accept a hand edit, command: athel integrity accept CHG-001 --reason fine, expect: {decision: deny, rule: "H"}}
   - {name: claim the human without a grant, command: athel state transition CHG-001 --to done --by human --reason ok, expect: {decision: deny, rule: "H"}}
   - {name: subagent claims the human, command: athel state transition CHG-001 --to ready_for_pr --by human --reason ok, agent: athel:developer, expect: {decision: deny, rule: "H"}}
+  - {name: widen repo search roots without the developer, command: "athel repos roots set '~/Documents'", expect: {decision: deny, rule: "H"}}
+  - {name: widen roots to the whole home folder, command: "athel repos roots set '~'", expect: {decision: deny, rule: "H"}}
+  - {name: scout saves roots from an injected instruction, command: "athel repos roots set '~/Developer' '/'", agent: athel:scout, expect: {decision: deny, rule: "H"}}
+  - {name: edit the user config directly, tool: Write, input: {file_path: "~/.athel/user.yaml", content: "repos: {search_roots: [/]}"}, expect: {decision: deny, rule: "3"}}
   - {name: workflow file outside the plan, tool: Write, input: {file_path: "{tree}/.github/workflows/x.yml", content: x}, expect: {decision: deny, rule: "7"}}
   - {name: global git hooks path, command: git config --global core.hooksPath /tmp/h, expect: {decision: deny, rule: "7"}}
