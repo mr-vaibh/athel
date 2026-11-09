@@ -1,6 +1,6 @@
 # M2 Understand — plan
 
-Status: **Draft, waiting for the owner's approval.** Nothing is built until it is approved.
+Status: **Approved by the owner on 2026-11-09** (all Q1–Q12 recommendations). Phase 3 (build) in progress.
 
 Sources:
 - Doc 03 (Discovery and Integrations) governs M2 and was read in full.
@@ -280,7 +280,7 @@ database itself is not needed for M2's questions (Q9).
 | `services.yaml` (config layers) | `athel/services@1` | Human hints → `likely` facts |
 | `policies/defaults/blast.yaml` | `athel/blast-rules@1` | Doc 05 rules as data; org may tighten |
 | `change.yaml` | `athel/change@3` | Adds `flags[]` (FR-DISC-005); `athel migrate` 2→3 (Q8) |
-| `athel.yaml` | `athel/config@2` | Adds `repos.search_roots`, `facts.freshness`, `discovery.lookback_hours`, `models.scout`; `athel migrate` 1→2 (Q8) |
+| `athel.yaml` | `athel/config@2` | Adds `repos.search_roots`, `facts.freshness`, `facts.archive_after_days`, `discovery.lookback_hours`, `discovery.question_budget` (FR-DISC-014 defaults), `models.scout`; `athel migrate` 1→2 rewrites only the schema line, so comments survive (Q8) |
 
 New error codes: `E-STATE-FACT-STALE`, `E-STATE-FACT-NO-SOURCE`, `E-STATE-CONFIDENCE`,
 `E-POLICY-DEV-CLONE`, `E-POLICY-AGENT-READONLY`, `E-TOOL-UNREACHABLE`, `E-AUTH-EXPIRED` (with the
@@ -307,9 +307,9 @@ standard library.
 
 | # | Branch | Content | Tests named up front |
 |---|---|---|---|
-| 01 | `feat/m2-schemas` | `fact@1`, `fact-access@1`, `investigation@1`, `observation@1`, `repo-index@1`, `services@1`, `blast@1`, `blast-rules@1`; `change@3`, `config@2` + `athel migrate`; IDs `F-NNNN`, `ASK-NNN` | `TestNewSchemasValidExamples`, `TestMigrateChange2To3`, `TestMigrateConfig1To2`, `TestFactAndAskIDs` |
+| 01 | `feat/m2-schemas` | `fact@1`, `fact-access@1`, `investigation@1`, `repo-index@1`, `services@1`; `change@3`, `config@2` + `athel migrate`; IDs `F-NNNN`, `ASK-NNN` (`observation@1` moved to PR 03 and `blast@1`/`blast-rules@1` to PR 11, so each schema lands with the code that uses it) | `TestNewSchemasValidExamples`, `TestMigrateChange2To3`, `TestMigrateConfig1To2`, `TestFactAndAskIDs` |
 | 02 | `feat/m2-facts-store` | `internal/facts` + `fact add/find/show/use/archive` | `TestRefusesNoSourceOrRecipe`, `TestDedupeRefreshes`, `TestFreshnessWindows` (table per class), `TestUseLogsEveryAccess`, `TestDecisionUseOfStaleFactFails`, `TestArchiveAfter90Days`, `TestConcurrentAdds`, `BenchmarkFind10k` |
-| 03 | `feat/m2-observe` | PostToolUse capture by `tool_use_id`, suspicious-content flags, audit record | `TestCapturesScrubbedOutput`, `TestObservationsExpire`, `TestSuspiciousPhrases` (table), `TestNoCaptureOutsideScout` |
+| 03 | `feat/m2-observe` | `observation@1`; PostToolUse capture by `tool_use_id`, suspicious-content flags, audit record | `TestCapturesScrubbedOutput`, `TestObservationsExpire`, `TestSuspiciousPhrases` (table), `TestNoCaptureOutsideScout` |
 | 04 | `feat/m2-fact-verify` | Recipes: git and file steps by the CLI, other steps judged from observations; dispute, supersede, flag changes | `TestRecipeAllMatchActive`, `TestMismatchDisputesAndFlags`, `TestUnreachableLeavesFactLogsUnverified`, `TestSupersedeChain`, `TestModelTextNotTrusted` |
 | 05 | `feat/m2-investigation` | Validation, confidence ceilings, question types, render, word limit, `investigation save` writes facts | `TestEveryClaimHasSource`, `TestRuntimeNeedsRuntimeSource`, `TestCeiling` (table: systems, name-only, missing mandatory, sampled, one env), `TestTenQuestionTypesMandatorySources`, `TestRenderRoundTrip`, `TestWordLimit`, `TestPartialResultValid` |
 | 06 | `feat/m2-repo-index` | Roots (propose; set via grant), index walk, remotes, index facts, SessionStart refresh | `TestIndexThreeFoldersComplete`, `TestDepthAndSkips`, `TestRemoteNormalise` (table), `TestNoReadsOutsideGitFolders`, `TestRootsNeedHumanGrant`, `TestNeverReadsRealHome` |
@@ -317,7 +317,7 @@ standard library.
 | 08 | `feat/m2-repo-cache` | Partial clone, `--reference`, fetch, sparse, unreachable | `TestCacheCloneFromLocalReference`, `TestFetchBeforeUse`, `TestUnreachableReported`, `TestLocalGitChecksumsUnchanged` |
 | 09 | `feat/m2-registry-playbooks` | `tools.yaml`: Praxis allow-list, MCP read entries (Grafana, Jira, Linear, Slack, GitHub), auth checks; playbooks for each tool; Raptor note | `TestPlaybookSections`, `TestPlaybookCommandsNotDenied`, `TestPraxisAllowList`, `TestRaptorStillDenied`, red-team cases per new tool |
 | 10 | `feat/m2-scout` | `agents/scout.md`, skills `investigate`, `ask`, `roots`; SubagentStop validation with one retry; `ask` CLI | `TestSubagentStopBlocksInvalidOnce`, `TestAskLifecycle`, `TestScoutAgentFrontmatter`, plugin validate |
-| 11 | `feat/m2-blast-adhoc` | `internal/blast`, `blast.yaml`, `blast score`, `blast-radius` skill (ad-hoc) | `TestRiskRules` (one case per rule per level), `TestHighestLevelWins`, `TestNoRuntimeEvidenceNeverLow`, `TestSameInputSameLevel`, `TestNotAffectedRequired` |
+| 11 | `feat/m2-blast-adhoc` | `blast@1`, `blast-rules@1`, `internal/blast`, `blast.yaml`, `blast score`, `blast-radius` skill (ad-hoc) | `TestRiskRules` (one case per rule per level), `TestHighestLevelWins`, `TestNoRuntimeEvidenceNeverLow`, `TestSameInputSameLevel`, `TestNotAffectedRequired` |
 | 12 | `feat/m2-fixture-code` | `shop` services, contracts, migrations, generator for git repos and teammate branches | `TestGeneratorDeterministic`, `TestTrapsPresent` (one per trap), `TestGoServicesBuild` |
 | 13 | `feat/m2-fixture-runtime` | `shopctl` shim (kubectl, gcloud, gh, praxis), `shopmcp` server, fixture data, contract test for FR-DISC-008 | `TestShimKubectlGetContexts`, `TestShimSecretValueNeverServed`, `TestMCPInitializeListCall`, `TestSampledTraceRate`, `TestNewToolByRegistryOnly` |
 | 14 | `feat/m2-evals` | ≥ 20 cases, runner, grader, history; local run recorded | `TestGraderExactConfidence`, `TestGraderCorrectness`, `TestCasesCoverTenTypesTwice` |
