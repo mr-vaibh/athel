@@ -68,7 +68,9 @@ func (s *Store) locked(fn func() error) error {
 }
 
 // Add stores a new fact, or refreshes the active fact with the same subject, predicate, object
-// and environment (doc 03 verification rule 5). It reports whether a new fact was created.
+// and environment (doc 03 verification rule 5). It reports whether a new fact was created. A new
+// fact with the key of a disputed one supersedes it (doc 03 rule 4): the old fact is kept, marked
+// superseded, and the new one names it.
 func (s *Store) Add(d Draft) (Fact, bool, error) {
 	if len(d.Sources) == 0 || len(d.Verify) == 0 {
 		return Fact{}, false, aerr.New(aerr.StateFactNoSource, "a fact needs at least one source and a verification recipe").
@@ -81,19 +83,28 @@ func (s *Store) Add(d Draft) (Fact, bool, error) {
 		if err != nil {
 			return err
 		}
-		f, now := d.fact(), clock.Format(s.Clock.Now())
-		if old := findActive(current(recs), f); old != nil {
+		f, now, cur := d.fact(), clock.Format(s.Clock.Now()), current(recs)
+		var replaced *Fact
+		if old := findActive(cur, f); old != nil {
 			f.ID, f.CreatedAt, f.Supersedes = old.ID, old.CreatedAt, old.Supersedes
 		} else {
 			f.ID, f.CreatedAt, created = ids.Fact.Next(allIDs(recs, archived)), now, true
+			if replaced = findDisputed(cur, f); replaced != nil {
+				f.Supersedes = &replaced.ID
+			}
 		}
 		f.VerifiedAt, f.Status = now, Active
-		b, err := s.encode(SchemaID, f)
+		lines, err := s.encodeAll(f, replaced)
 		if err != nil {
 			return err
 		}
 		out = f
-		return fsutil.AppendLine(s.factsPath(), b)
+		for _, b := range lines {
+			if err := fsutil.AppendLine(s.factsPath(), b); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	return out, created, err
 }
@@ -241,6 +252,30 @@ func current(recs []Fact) []Fact {
 func lookup(facts []Fact, id string) *Fact {
 	for i := range facts {
 		if facts[i].ID == id {
+			return &facts[i]
+		}
+	}
+	return nil
+}
+
+// encodeAll validates the new record and, when it replaces a disputed fact, that fact's
+// superseded record, before anything is written; the superseded record goes first.
+func (s *Store) encodeAll(f Fact, replaced *Fact) ([][]byte, error) {
+	b, err := s.encode(SchemaID, f)
+	if err != nil || replaced == nil {
+		return [][]byte{b}, err
+	}
+	old := *replaced
+	old.Status = Superseded
+	ob, err := s.encode(SchemaID, old)
+	return [][]byte{ob, b}, err
+}
+
+// findDisputed returns the disputed fact with f's key, which a new fact supersedes.
+func findDisputed(facts []Fact, f Fact) *Fact {
+	k := f.key()
+	for i := range facts {
+		if facts[i].Status == Disputed && facts[i].key() == k {
 			return &facts[i]
 		}
 	}

@@ -74,6 +74,15 @@ func (s *Store) moveToArchive(recs []Fact, raw [][]byte, gone map[string]bool) e
 	return fsutil.WriteFileAtomic(s.factsPath(), keep.Bytes())
 }
 
+// decodeAccess reads one access-log line; anything else is corruption.
+func decodeAccess(line []byte) (access, error) {
+	var a access
+	if err := json.Unmarshal(line, &a); err != nil {
+		return access{}, aerr.Wrap(aerr.StateSchema, "access.jsonl has a line that is not an access record", err)
+	}
+	return a, nil
+}
+
 // lastUses maps each fact to the time of its latest use in the access log.
 func (s *Store) lastUses() (map[string]time.Time, error) {
 	lines, err := readLines(s.accessPath())
@@ -82,9 +91,9 @@ func (s *Store) lastUses() (map[string]time.Time, error) {
 	}
 	out := map[string]time.Time{}
 	for i, line := range lines {
-		var a access
-		if err := json.Unmarshal(line, &a); err != nil {
-			return nil, aerr.Wrap(aerr.StateSchema, s.accessPath()+" has a line that is not an access record", err)
+		a, err := decodeAccess(line)
+		if err != nil {
+			return nil, err
 		}
 		at, err := clock.Parse(a.At)
 		if err != nil {
