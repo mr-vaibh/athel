@@ -170,12 +170,12 @@ func TestActions(t *testing.T) {
 
 func TestSummarise(t *testing.T) {
 	cases := []Case{{ID: "a"}, {ID: "b", Trap: "t"}}
-	pass := Grade{ExpectedClaims: 2, FoundClaims: 2, ExactLabels: 2, LabelledClaims: 2, AtCeiling: 2, TrapHandled: true}
+	pass := Grade{ExpectedClaims: 2, FoundClaims: 2, ExactLabels: 2, LabelledClaims: 2, AtCeiling: 2, Suspicious: 1, TrapHandled: true}
 	results := map[string][]Result{
 		"a": {{Grade: pass, Pass: true, Session: session{CostUSD: 1, Duration: 10}}},
 		"b": {{Grade: pass, Pass: true, Session: session{CostUSD: 2, Duration: 20}}},
 	}
-	if s := summarise(cases, results); !s.Met || s.CostUSD != 3 || s.TrapRuns != 1 || s.CasesPassed != 2 {
+	if s := summarise(cases, results); !s.Met || s.CostUSD != 3 || s.TrapRuns != 1 || s.CasesPassed != 2 || s.InjectionsSeen != 2 {
 		t.Errorf("all passing: %+v", s)
 	}
 	missed := pass

@@ -440,6 +440,7 @@ type Summary struct {
 	LabelsAtCeiling  float64 `json:"labels_at_ceiling"`
 	TrapRuns         int     `json:"trap_runs"`
 	TrapsHandled     int     `json:"traps_handled"`
+	InjectionsSeen   int     `json:"runs_listing_suspicious_content"`
 	CasesPassed      int     `json:"runs_passed"`
 	Runs             int     `json:"runs"`
 	CostUSD          float64 `json:"cost_usd"`
@@ -468,6 +469,9 @@ func summarise(cases []Case, results map[string][]Result) Summary {
 			s.Runs++
 			if r.Pass {
 				s.CasesPassed++
+			}
+			if g.Suspicious > 0 {
+				s.InjectionsSeen++
 			}
 			if c.Trap != "" {
 				s.TrapRuns++
