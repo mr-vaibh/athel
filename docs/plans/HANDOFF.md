@@ -1,8 +1,8 @@
 # HANDOFF
 
-Last updated: 2026-11-02, end of work on the borrowed machine. **The project moves to the
-owner's personal machine.** Everything needed to continue is in this repository on `main`.
-Chat history from the borrowed machine does not come along, and nothing depends on it.
+Last updated: 2026-11-09, session 3, the first session on the owner's personal machine. The
+borrowed-machine setup (`./.tools/`, `scripts/env.sh`) has been removed; tools are installed
+system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Where we are
 
@@ -15,56 +15,17 @@ Chat history from the borrowed machine does not come along, and nothing depends 
 - **Next: M2 Understand, Phase 1 (plan).** Nothing started; no open PRs; `main` is green.
 - What is left overall, milestone by milestone: **`docs/plans/ROADMAP.md`**.
 
-## Moving to the personal machine: steps for the owner
+## Setting up a machine
 
-1. Install Claude Code, then run:
-   ```sh
-   git clone https://github.com/mr-vaibh/athel.git && cd athel && claude
-   ```
-2. Paste the prompt below. Approve Claude's commands as it asks. When it asks for the GitHub
-   login, type `! gh auth login` in the Claude prompt and log in as `mr-vaibh`.
-
-## Prompt to paste into the first session on the new machine
-
-```
-This is Athel, my spec-driven agentic development framework (a Claude Code plugin plus a Go
-helper CLI named athel). M0 and M1 are done and merged. We were on a borrowed machine; this is
-now my own PC.
-
-1. Read CLAUDE.md, docs/context/background.md, docs/plans/HANDOFF.md, docs/plans/ROADMAP.md,
-   docs/plans/M1-report.md, the latest file in docs/journal/, docs/context/decisions-from-chat.md
-   and docs/context/environment.md. They hold the full context; there is no other chat history.
-2. This is my own machine. Ignore the "Environment: borrowed machine" section of CLAUDE.md and
-   do NOT source scripts/env.sh or use ./.tools. Install the tools system-wide with Homebrew
-   (ask me before running): `brew install go golangci-lint gh`. Go must be the latest stable
-   release; golangci-lint must be v2 (CI pins v2.15.0). Then ask me to run `! gh auth login`
-   and check that `gh auth status` shows mr-vaibh. Set the repo's git identity to mr-vaibh /
-   shuklavaibhav336@gmail.com (repo-local, not --global).
-3. Run `set -o pipefail; scripts/check.sh` and the red-team suite
-   (`go test -count=1 ./tests/redteam/`) to confirm main is green on this machine.
-4. First PR (branch docs/personal-machine):
-   - delete the borrowed-machine section from CLAUDE.md;
-   - delete scripts/env.sh and the .tools/ entry in .gitignore;
-   - rewrite docs/context/environment.md for a normal setup (Homebrew tools, plain go/gh);
-   - update every doc that says to source scripts/env.sh (HANDOFF.md, README.md, ROADMAP.md,
-     M0/M1 docs only where they give instructions).
-   Gate it and open the PR.
-5. Then do the remaining "First tasks on the personal machine" in HANDOFF.md:
-   - live-check onFailure:block, the literal /athel:approve prompt and updatedToolOutput, using
-     fixtures only;
-   - ask me about deleting the old merged branches.
-6. Then start M2 Phase 1: read doc 08 (M2 row and fixture system) and doc 03 in full, write
-   docs/plans/M2-plan.md in the same shape as M1-plan.md, and stop for my approval.
-
-Follow CLAUDE.md's engineering standards and git conventions throughout (feature branches,
-stacked PRs, conventional commits, journal and decision log kept current).
-Tell me in 5 lines where we are before you start step 4.
-```
+Follow `docs/context/environment.md` ("Setting up a fresh machine from zero"), then start Claude
+Code in the repository. The start-of-session routine is in `CLAUDE.md` ("Session rhythm"). The
+one-time prompt used to move from the borrowed machine is in git history (commit `83445f8`,
+this file).
 
 ## First tasks on the personal machine (in this order)
 
 1. **Remove the borrowed-machine setup** (the owner chose a normal system-wide setup on the
-   personal machine). In one PR (`docs/personal-machine`):
+   personal machine). **Done in session 3**, in one PR (`docs/personal-machine`):
    - delete CLAUDE.md's "Environment: borrowed machine" section;
    - delete `scripts/env.sh` and the `.tools/` entry in `.gitignore`;
    - rewrite `docs/context/environment.md` for Homebrew-installed tools;

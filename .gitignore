@@ -1,5 +1,3 @@
-# Project-local toolchain (Go, golangci-lint, gh); deleting it removes every installed tool.
-.tools/
 # macOS Finder metadata
 .DS_Store
 # Build and coverage outputs

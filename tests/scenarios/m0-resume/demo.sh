@@ -14,8 +14,6 @@ here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/../../.." && pwd)"
 athel="${1:-}"
 if [[ -z "$athel" ]]; then
-  # shellcheck source=/dev/null
-  source "$repo/scripts/env.sh"
   athel="$(mktemp -d)/athel"
   (cd "$repo" && go build -o "$athel" ./cli/cmd/athel)
 fi
