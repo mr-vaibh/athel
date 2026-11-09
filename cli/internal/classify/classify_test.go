@@ -349,7 +349,7 @@ func TestAthelCalls(t *testing.T) {
 		{"athel hook user-prompt-submit", X, "hook user-prompt-submit", false}, {"athel", R0, "", false},
 		{"athel fact find --subject users", R0, "fact find", false}, {"athel fact show F-0001", R0, "fact show", false},
 		{"athel fact add -", W0, "fact add", false}, {"athel fact use F-0001 --purpose decision --change CHG-001", W0, "fact use", false},
-		{"athel fact archive", W0, "fact archive", false},
+		{"athel fact archive", W0, "fact archive", false}, {"athel fact verify F-0001 --observed 0=toolu_1", W0, "fact verify", false},
 	}
 	for _, tt := range tests {
 		a := bash(t, pol, tt.cmd, Options{}).Actions[0]

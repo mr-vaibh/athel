@@ -80,6 +80,7 @@ func commands() map[string]command {
 		"fact find":        cmdFactFind,
 		"fact show":        cmdFactShow,
 		"fact use":         cmdFactUse,
+		"fact verify":      cmdFactVerify,
 		"fact archive":     cmdFactArchive,
 	}
 }
