@@ -1,49 +1,44 @@
 # HANDOFF
 
-Last updated: 2026-11-09, session 3, the first session on the owner's personal machine. The
-borrowed-machine setup (`./.tools/`, `scripts/env.sh`) has been removed; tools are installed
-system-wide with Homebrew (`docs/context/environment.md`).
+Last updated: 2026-11-09, session 3, the first session on the owner's personal machine. Tools
+are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Where we are
 
-- **M0 Skeleton: done.** PRs #1–#23 merged. Report: `docs/plans/M0-report.md`.
-- **M1 Guardrails: done.** PRs #24–#38 merged. Report: `docs/plans/M1-report.md`.
-  - 431/431 red-team cases denied with the expected rule; 0 false allows.
-  - The allow-list suite passes.
-  - Audit verify passes, and tampering is detected.
-  - Every package ≥ 90% coverage (95.8% total); hook p95 16.12 ms.
-- **Next: M2 Understand, Phase 1 (plan).** Nothing started; no open PRs; `main` is green.
-- What is left overall, milestone by milestone: **`docs/plans/ROADMAP.md`**.
+- **M0 Skeleton: done** (PRs #1–#23). **M1 Guardrails: done** (PRs #24–#38). `main` was
+  green on this machine at `83445f8`:
+  - gate passes; red-team and allow-list suites pass;
+  - hook latency p95 27.62 ms (budget 50 ms).
+- **M2 Understand: Phase 1 (plan) written, waiting for the owner's approval.**
+  `docs/plans/M2-plan.md` has 15 PRs and questions Q1–Q12, each with a recommendation.
+- What is left overall: `docs/plans/ROADMAP.md`.
+
+## Open PRs (stacked; merge in order, only when the owner says so)
+
+| PR | Branch | Base | What |
+|---|---|---|---|
+| #40 | `docs/personal-machine` | `main` | Removes the borrowed-machine setup; rewrites environment.md; fixes `tests/scenarios/m0-resume/demo.sh` (it had failed since #35; it now isolates HOME). CI green |
+| #41 | `test/m1-live-checks` | `docs/personal-machine` | `tests/live/claude-behaviours.sh`: 9/9 live checks pass (onFailure block, literal `/athel:approve`, `updatedToolOutput`); results in ADR 016/017 follow-ups and M1-report §6 |
+| — | `docs/m2-plan` | `test/m1-live-checks` | M2 plan, journal, decision log, backlog, this handoff |
+
+## Exact next step
+
+1. Get the owner's answer on `docs/plans/M2-plan.md` (approve, or answer Q1–Q12) and log it in
+   `docs/context/decisions-from-chat.md`.
+2. Ask whether to merge #40, #41 and the plan PR into `main` (same procedure as M0/M1, below).
+3. Then M2 Phase 2/3: PR 01 `feat/m2-schemas` from the plan's task list. Ask how to run M2
+   (one shot or with stops), as for M0 and M1.
 
 ## Setting up a machine
 
-Follow `docs/context/environment.md` ("Setting up a fresh machine from zero"), then start Claude
-Code in the repository. The start-of-session routine is in `CLAUDE.md` ("Session rhythm"). The
-one-time prompt used to move from the borrowed machine is in git history (commit `83445f8`,
-this file).
+Follow `docs/context/environment.md` ("Setting up a fresh machine from zero"). The
+start-of-session routine is in `CLAUDE.md` ("Session rhythm").
 
-## First tasks on the personal machine (in this order)
+## GitHub account on the personal machine
 
-1. **Remove the borrowed-machine setup** (the owner chose a normal system-wide setup on the
-   personal machine). **Done in session 3**, in one PR (`docs/personal-machine`):
-   - delete CLAUDE.md's "Environment: borrowed machine" section;
-   - delete `scripts/env.sh` and the `.tools/` entry in `.gitignore`;
-   - rewrite `docs/context/environment.md` for Homebrew-installed tools;
-   - update the docs that say to source `scripts/env.sh`.
-2. **Live-check three Claude Code behaviours** that M1 verified only from the docs. Use only the
-   fixture workspace and harmless commands; never point anything at real systems.
-   - With `claude --plugin-dir ./plugin` (never install the plugin into user settings), confirm
-     the PreToolUse `onFailure: "block"` behaviour: a hook that fails or times out blocks the
-     call.
-   - Confirm that UserPromptSubmit receives a typed `/athel:approve CHG-001` literally.
-   - Confirm that the scrubbed `updatedToolOutput` replaces Bash output.
-
-   Record the results in a journal entry, in ADR 016/017 follow-up notes if anything differs,
-   and in the M1 report.
-3. Ask the owner whether to delete the merged M0/M1 task branches on GitHub.
-4. **Start M2 Phase 1**: read doc 08 (M2 row, fixture system) and doc 03 in full, write
-   `docs/plans/M2-plan.md` in the same shape as `M1-plan.md`, and stop for approval. M2 needs
-   the `tests/fixtures/shop` fixture system (doc 08 §Fixture system).
+`gh` runs as **vs-snabbit**, through a `GITHUB_TOKEN` environment variable. The owner chose this
+on 2026-11-09 and added vs-snabbit as a collaborator with write access. Commits use the repo-local
+identity mr-vaibh / shuklavaibhav336@gmail.com.
 
 ## How the work is run (the owner's standing instructions)
 
@@ -76,8 +71,13 @@ this file).
 - Build commit messages with a variable (`T=$'\n\nCo-Authored-By: …'`); `$'…'` inside double
   quotes does not expand. One pushed commit on `feat/m1-policy-engine` has that literal suffix;
   left as is (no history rewrites).
+- The CLI needs a session ID (`--session` or `ATHEL_SESSION_ID`) for transitions; a fixture
+  that sets one must release its lock before a Claude session can take the change.
+- CI runs the Go scenario tests, not the shell demos; run `tests/scenarios/m0-resume/demo.sh`
+  by hand when touching state output.
 - macOS: `/var` is a symlink to `/private/var`; compare paths in the form the caller gave them.
-- Claude Code facts used by Athel:
+- Claude Code facts used by Athel (the `onFailure`, UserPromptSubmit and `updatedToolOutput`
+  facts were confirmed live on 2026-11-09 by `tests/live/claude-behaviours.sh`):
   - Deprecated PreToolUse `"approve"` means allow, so Athel's approve maps to `ask`.
   - `onFailure: "block"` makes a failing PreToolUse hook block the call.
   - UserPromptSubmit gets a typed skill command as typed.
@@ -87,7 +87,9 @@ this file).
 
 ## Open questions for the owner
 
-- Delete the merged M0/M1 task branches on GitHub?
+- Approve the M2 plan (Q1–Q12 in `docs/plans/M2-plan.md`).
+- Merge #40, #41 and the M2 plan PR into `main`?
+- How to run M2 after approval (one shot, as M1, or with stops)?
 
 ## Owner instructions given in chat (all also in docs/context/decisions-from-chat.md)
 
@@ -100,3 +102,7 @@ this file).
   and write proper documentation … proper handoff … how to continue … commit and push
   everything on this machine and then destroy everything of mine - gh account linked on this,
   the repo, but not before my confirmation".
+- 2026-11-09: tools via Homebrew (approved); gh account vs-snabbit (owner's choice, against the
+  recommendation to log in as mr-vaibh); vs-snabbit added as a collaborator; keep the merged
+  M0/M1 branches. The owner asked for the work to be done "properly … production enterprise
+  level … accurate and precise".

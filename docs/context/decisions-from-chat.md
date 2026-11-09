@@ -29,3 +29,4 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-09 | Install tools with Homebrew? | "Yes, run it": `brew update && brew upgrade go gh && brew install golangci-lint` (Go 1.27.3, gh 2.103.3, golangci-lint 2.15.0) | `docs/context/environment.md` |
 | 2026-11-09 | `gh` is logged in as vs-snabbit (via `GITHUB_TOKEN`), not mr-vaibh. Which account for Athel's GitHub calls? | "Use vs-snabbit" (the agent had recommended logging in as mr-vaibh). Commits keep the repo-local identity mr-vaibh / shuklavaibhav336@gmail.com | `docs/context/environment.md`, journal 2026-11-09 |
 | 2026-11-09 | vs-snabbit has only read access to mr-vaibh/athel. How to get push access? | "Add vs-snabbit as collaborator": the owner invites vs-snabbit with Write access and accepts the invite | `docs/context/environment.md` |
+| 2026-11-09 | Delete the 39 merged M0/M1 branches on GitHub? | "Keep them" | backlog, HANDOFF |
