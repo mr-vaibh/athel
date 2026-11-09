@@ -50,59 +50,16 @@ results, and open questions. Keep it short and factual.
 
 ---
 
-# Environment: borrowed machine (read this first, every session)
+# Tools, documentation and session rhythm
 
-> When this project moves to the owner's own computer, delete this whole section.
+## Tools
+Required: git, Go (latest stable), gh (GitHub CLI), golangci-lint v2 (the version CI pins).
+Others only if the approved plan needs them. They are installed system-wide with Homebrew;
+`docs/context/environment.md` records versions and how to set up a fresh machine. Ask the
+owner before installing or upgrading anything.
 
-## Whose machine this is
-This computer and its Claude Code installation belong to a friend of the project owner.
-The project owner is building Athel here temporarily and will continue on their own
-machine later. Treat everything outside this repository as someone else's private
-property.
-
-## Hard rules on this machine
-- Work only inside this repository folder. Do not read, list, search or open anything
-  outside it: no home folder browsing, no other projects, no documents, no downloads,
-  no browser data, no shell history.
-- Do not use or inspect the machine owner's credentials or identity: no ~/.ssh, no
-  ~/.gitconfig edits, no cloud CLIs, no keychains, no saved tokens, no other git remotes.
-- Git identity is set per repository only, inside this repo:
-  `git config user.name "mr-vaibh"` and `git config user.email "shuklavaibhav336@gmail.com"`.
-  Never use `git config --global`.
-- GitHub access is only through the project owner's own `gh` login. If `gh auth status`
-  shows a different account than the project owner's, stop and tell me.
-- Do not change system settings, shell startup files (.zshrc, .bashrc, .profile),
-  global package configs, or anything that would still affect this machine after we leave.
-- Never store secrets, tokens or personal data in the repo, in docs, or in logs.
-
-## Installing missing tools
-Required tools: git, Go (latest stable), gh (GitHub CLI), golangci-lint. Others only if
-the approved plan needs them.
-
-At the start of every session:
-1. Check each tool (`git --version`, `go version`, `gh --version`, `golangci-lint --version`).
-2. If a tool is missing or too old, install it WITHOUT admin rights and WITHOUT touching
-   the machine owner's setup:
-   - Install into a project-local tools folder `./.tools/` (add `.tools/` to .gitignore).
-   - Go: download the official archive for this OS and CPU from go.dev and extract it to
-     `./.tools/go`. Set GOPATH and GOCACHE to `./.tools/gopath` and `./.tools/gocache`.
-   - golangci-lint and other Go-based tools: install with `go install` into
-     `./.tools/bin` (set GOBIN), or use the official release archive.
-   - gh: use the official release archive extracted into `./.tools/bin`.
-   - Verify every download against its published checksum before using it.
-3. Create `scripts/env.sh` (committed) that puts `./.tools/go/bin` and `./.tools/bin`
-   first on PATH and sets GOPATH, GOCACHE and GOBIN to the local folders. Source it in
-   every shell you open: `source scripts/env.sh`. Never edit shell startup files instead.
-4. If a tool cannot be installed without admin rights (sudo, system installer, package
-   manager needing a password), do NOT try. Stop and give me the exact command so I can
-   decide with the machine owner.
-5. Record every tool, version, download URL and checksum in
-   `docs/context/environment.md`, with how to remove it (deleting `./.tools/` must
-   remove everything).
-
-## Why documentation matters here
-Claude Code's chat history stays on this machine and will NOT come with us. The next
-session will likely run on a different computer with no memory of this one. Everything
+## Why documentation matters
+Claude Code's chat history does not travel between machines or sessions. Everything
 needed to continue must be written into the repository, committed and pushed.
 
 ## Required documentation (keep these current, commit and push them)
@@ -137,7 +94,8 @@ needed to continue must be written into the repository, committed and pushed.
 6. ADRs in `docs/adr/` for design decisions.
 
 ## Session rhythm
-- Start of session: run the tool check, source scripts/env.sh, read CLAUDE.md,
+- Start of session: run the tool check (`git --version`, `go version`, `gh --version`,
+  `golangci-lint --version`), read CLAUDE.md,
   docs/context/background.md, docs/plans/HANDOFF.md, the latest journal entry and the
   current plan, check open PRs with `gh pr list`, then tell me in 5 lines where we are
   and what you will do next.
@@ -146,4 +104,4 @@ needed to continue must be written into the repository, committed and pushed.
 - End of session, or when I say "wrap up": finish or safely park the current step,
   update HANDOFF.md, the journal and decisions-from-chat.md, run the full test suite,
   commit, push every branch, and confirm `git status` is clean and nothing is
-  unpushed. Tell me it is safe to leave this machine.
+  unpushed. Tell me it is safe to stop.

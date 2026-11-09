@@ -18,5 +18,5 @@ has the setup steps and the exact prompt to give Claude Code.
 | Architecture decisions | `docs/adr/` |
 | Session journals | `docs/journal/` |
 
-Build and test: `source scripts/env.sh && scripts/check.sh` (details in
+Build and test: `scripts/check.sh` (details in
 `docs/context/environment.md`).

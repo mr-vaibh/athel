@@ -184,7 +184,6 @@ documented Claude Code fact.
 ## 6. How to reproduce everything
 
 ```sh
-source scripts/env.sh
 scripts/check.sh                                   # EC-2 (and every unit, fuzz-seed and scenario test)
 tests/scenarios/m0-resume/demo.sh                  # EC-1 scripted
 scripts/build-plugin.sh

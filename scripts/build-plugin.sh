@@ -4,8 +4,6 @@
 # Multi-platform packaging is a later release task (docs/plans/backlog.md).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-# shellcheck source=/dev/null
-source scripts/env.sh
 version="$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${version}" -o plugin/bin/athel ./cli/cmd/athel
 echo "built plugin/bin/athel (${version})"
