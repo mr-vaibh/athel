@@ -36,5 +36,15 @@ claim needs proof that the model cannot forge.
   text for a plugin skill command. This is checked in PR-13's `claude -p` spot check. If it does
   not, the owner decides a fallback.
 
+## Follow-up (2026-11-09): verified live
+`tests/live/claude-behaviours.sh` (check B) ran `claude -p "/athel:approve CHG-001"` with Athel's
+plugin (Claude Code 2.1.311, model haiku, macOS arm64) on a fixture change in `planned` with a plan. Results:
+- The UserPromptSubmit payload carried `"prompt":"/athel:approve CHG-001"` literally.
+- Athel recorded `grant_created`; the skill's `state transition --by human` used the grant
+  (`grant_used`), and the change reached `plan_approved`.
+- `athel audit verify` passed.
+
+The decision stands unchanged; no fallback is needed.
+
 ## Spec references
 Doc 02 §Transition rules, §Security baseline; doc 04 §Audit log; M1 plan §4.5, decision Q4.

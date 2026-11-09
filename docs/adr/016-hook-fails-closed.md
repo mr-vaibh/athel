@@ -36,6 +36,17 @@ processes, keyed by file mtimes and hash) to keep latency under 50 ms.
   is intended; the fix is to repair or disable the plugin.
 - Not yet verified live in a `claude -p` session; done in PR-13's real spot check.
 
+## Follow-up (2026-11-09): verified live
+`tests/live/claude-behaviours.sh` (check A) ran real `claude -p --plugin-dir` sessions (Claude Code 2.1.311, model haiku, macOS arm64)
+against a temporary folder. Results:
+- A PreToolUse hook with `"onFailure": "block"` that exits 1 blocked the Bash call.
+- The same hook that timed out (2 s timeout, 30 s sleep) also blocked it.
+- In both cases the model saw `PreToolUse:Bash hook error: …` as the tool result.
+- The control (the same failing hook without `onFailure`) let the call through.
+- A copy of Athel's own plugin whose `athel` binary crashes on `pre-tool-use` also blocked the call.
+
+The behaviour matches the docs; the decision stands unchanged.
+
 ## Spec references
 Doc 04 §Decision order (rule 0), FR-SAFE-012, NFR hook latency (doc 08 M1 exit), ADR 004,
 ADR 015, M1 plan §3 D9, §9 PR-09.
