@@ -63,7 +63,7 @@ cases:
     trap: orders reaches payments only through the gateway
     question: How does orders reach payments?
     expect:
-      claims: [{subject: [orders], predicate: routes_via|calls, object: [gateway], confidence: confirmed, why: client code plus the cluster's gateway routes and request metrics}]
+      claims: [{subject: [orders], predicate: routes_via|calls, object: [gateway], confidence: confirmed, why: "client code plus the gateway's route config in the cluster (doc 03, follow the hop)"}]
       forbidden: [{subject: [orders], predicate: calls, object: [payments], above: unverified}]
   - id: deployed-state-clean
     type: deployed_state

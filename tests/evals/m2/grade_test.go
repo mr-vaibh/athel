@@ -113,8 +113,8 @@ func (g Grade) Pass() bool {
 var rank = map[string]int{"unverified": 0, "likely": 1, "confirmed": 2}
 
 // names is every name an entity goes by, lower-cased: its name and any other field but its kind,
-// and for a qualified name (users.users.phone) also its last part, so a column or field matches
-// however much of its path the answer spells out.
+// and for a qualified name (users.users.phone, github.com/acme/users) also its last part, so a
+// column, field or repo matches however much of its path the answer spells out.
 func names(m map[string]string) []string {
 	out := make([]string, 0, 2*len(m))
 	for k, v := range m {
@@ -123,8 +123,10 @@ func names(m map[string]string) []string {
 		}
 		v = strings.ToLower(v)
 		out = append(out, v)
-		if i := strings.LastIndex(v, "."); i >= 0 && i < len(v)-1 {
-			out = append(out, v[i+1:])
+		for _, sep := range []string{".", "/"} {
+			if i := strings.LastIndex(v, sep); i >= 0 && i < len(v)-1 {
+				out = append(out, v[i+1:])
+			}
 		}
 	}
 	return out
@@ -402,5 +404,12 @@ func TestGraderPredicateAlternatives(t *testing.T) {
 		if g := GradeAnswer(c, a, map[string]string{"C1": "confirmed"}, nil, ""); !g.Pass() {
 			t.Errorf("orders %s gateway: %+v", predicate, g)
 		}
+	}
+}
+
+func TestGraderQualifiedNames(t *testing.T) {
+	a := answer(t, "claims: [{id: C1, subject: {kind: repo, name: github.com/acme/users}, predicate: owned_by, object: {kind: team, name: '@acme/identity'}, env: any, confidence: likely}]")
+	if g := GradeAnswer(caseByID(t, "service-owner-trap-alias"), a, map[string]string{"C1": "likely"}, nil, ""); !g.Pass() {
+		t.Errorf("a repo path names its service: %+v", g)
 	}
 }
