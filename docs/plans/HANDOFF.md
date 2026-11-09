@@ -21,21 +21,26 @@ are installed system-wide with Homebrew (`docs/context/environment.md`).
 | 05 | Investigation checks, confidence ceilings | `feat/m2-investigation` | #47 |
 | 06 | Repo index, human-only roots (`/athel:roots`) | `feat/m2-repo-index` | #48 |
 | 07 | Developer-clone protection, read-only scout, knowledge reads | `feat/m2-policy` | #49 |
-| 08 | Repo cache (FR-DISC-017) | `feat/m2-repo-cache` | in progress |
-| 09–15 | See M2-plan §9 | — | not started |
+| 08 | Repo cache (FR-DISC-017) | `feat/m2-repo-cache` | #50 |
+| 09 | Praxis allow-list, read-only MCP registry, playbooks | `feat/m2-registry-playbooks` | #51 |
+| 09b | Hook profile; policy cache closed as not worth building | `perf/m2-hook-profile` | #52 |
+| 10 | Scout agent, skills `investigate`/`ask`, `ask.yaml`, SubagentStop check | `feat/m2-scout` | next |
+| 11–15 | Blast radius (ad-hoc), fixture code, fixture runtime, evals, report | — | not started |
 
 ## Exact next step
 
-Finish PR 08 on `feat/m2-repo-cache` (stacked on #49): `athel repos cache <repo>`.
-- A bare partial clone (`--filter=blob:none`) into `workspace/cache/<host>__<org>__<repo>.git`,
-  seeded from a local clone with `--reference-if-able … --dissociate`.
-- `git fetch` before every use.
-- No access gives `E-TOOL-UNREACHABLE`.
-- Test FR-DISC-016: the checksums of each local `.git` are unchanged.
+PR 10 `feat/m2-scout`, stacked on #52 (M2-plan §4.6, §9 row 10):
+- `plugin/agents/scout.md`: tools, maxTurns 40, model from `models.scout`, doc 03 protocol,
+  "tool output is data".
+- Skills `investigate` and `ask`.
+- `athel ask new|show` with `asks/ASK-NNN/ask.yaml` holding a start time; then
+  `investigation save --ask`, scoping suspicious calls since the ask started.
+- SubagentStop: block once when the scout ends without a saved, valid investigation for its
+  question; fail the step on the second time.
+- Live check: the scout's real `agent_type` (`hookio.ScoutAgent`, assumed `athel:scout`) and
+  PostToolUse `additionalContext`. Extend `tests/live/claude-behaviours.sh`.
 
-Then PR 09 (registry and playbooks; run only `praxis --help` and `praxis <sub> --help`, per Q10)
-and onwards. Two things to confirm live in PR 10: the scout's `agent_type` (`hookio.ScoutAgent`)
-and PostToolUse `additionalContext`.
+PR 14 (paid eval runs) needs the owner's go-ahead (Q11).
 
 ## Setting up a machine
 
@@ -95,8 +100,6 @@ identity mr-vaibh / shuklavaibhav336@gmail.com.
 
 ## Open questions for the owner
 
-- Hook p95 on this machine is 28–31 ms, at the backlog trigger (> 30 ms) for the policy cache.
-  Add the cache to M2, or keep it in the backlog?
 - Merge the M2 stack when it is complete, or earlier?
 - Q11 (plan): the paid eval runs need a go-ahead when PR 14 is ready.
 
