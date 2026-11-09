@@ -129,7 +129,8 @@ contexts:
   - {name: gke_acme-staging_eu, context: {cluster: gke_acme-staging_eu, user: dev}}
 `
 
-// writeHome gives the fake developer a prod kube context (trap: prod is current), Athel's user
+// writeHome gives the fake developer prod as the current kube context and gcloud project (trap:
+// prod is the default), Athel's user
 // layer with the search roots the developer confirmed, and git rules that resolve the fixture's
 // GitHub remotes to its bare repositories, so cache clones never reach the network.
 func (s *sandbox) writeHome(l *shop.Layout) error {
@@ -140,9 +141,11 @@ func (s *sandbox) writeHome(l *shop.Layout) error {
 		fmt.Fprintf(&git, "[url %q]\n\tinsteadOf = https://%s\n", r.Bare, r.Remote)
 	}
 	files := map[string]string{
-		filepath.Join(s.home, ".kube", "config"): kubeconfig,
-		filepath.Join(s.home, ".gitconfig"):      git.String(),
-		filepath.Join(s.athelHome, "user.yaml"):  "schema: athel/config@2\nrepos:\n  search_roots: [~/Developer]\n",
+		filepath.Join(s.home, ".kube", "config"):                                       kubeconfig,
+		filepath.Join(s.home, ".config", "gcloud", "active_config"):                    "default\n",
+		filepath.Join(s.home, ".config", "gcloud", "configurations", "config_default"): "[core]\nproject = acme-prod\naccount = dev@example.invalid\n",
+		filepath.Join(s.home, ".gitconfig"):                                            git.String(),
+		filepath.Join(s.athelHome, "user.yaml"):                                        "schema: athel/config@2\nrepos:\n  search_roots: [~/Developer]\n",
 	}
 	for p, body := range files {
 		if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
@@ -240,10 +243,13 @@ type session struct {
 }
 
 func (s *sandbox) runClaude(ctx context.Context, set evalSettings, question string) (session, error) {
+	// The developer's clones live outside the workspace, as on a real machine; --add-dir lets
+	// Claude Code's own file tools read them. Athel's hooks still decide every call.
 	args := []string{"-p", "/athel:ask " + question, "--plugin-dir", s.plugin, "--setting-sources", "local",
 		"--strict-mcp-config", "--mcp-config", s.mcp, "--no-session-persistence", "--output-format", "stream-json",
-		"--verbose", "--max-turns", "80", "--allowedTools",
+		"--verbose", "--max-turns", "80", "--add-dir", filepath.Join(s.home, "Developer"), "--allowedTools",
 		"Bash(athel:*)", "Bash(kubectl:*)", "Bash(gcloud:*)", "Bash(gh:*)", "Bash(praxis:*)", "Bash(git:*)",
+		"Bash(ls:*)", "Bash(cat:*)", "Bash(head:*)", "Bash(grep:*)", "Bash(find:*)", "Bash(wc:*)",
 		"Read", "Grep", "Glob", "Agent", "mcp__grafana", "mcp__atlassian"}
 	if set.model != "" {
 		args = append(args, "--model", set.model)

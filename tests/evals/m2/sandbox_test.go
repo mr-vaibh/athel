@@ -79,6 +79,23 @@ func TestSandbox(t *testing.T) {
 		}
 	}
 	checkCeilings(t, sb)
+	checkProdDefault(t, sb)
+}
+
+// checkProdDefault proves the fake HOME makes prod the default target of kubectl and gcloud, as
+// the trap cases need, and that Athel resolves it from there.
+func checkProdDefault(t *testing.T, sb *sandbox) {
+	t.Helper()
+	for cmd, from := range map[string]string{"kubectl get pods": "kube context gke_acme-prod_eu", "gcloud secrets list": "gcloud project acme-prod"} {
+		input, _ := json.Marshal(map[string]string{"command": cmd})
+		out, err := sb.athel("", "--json", "policy", "decide", "--tool", "Bash", "--input", string(input), "--cwd", sb.ws)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(out), `"env":"prod"`) || !strings.Contains(string(out), from) {
+			t.Errorf("%s: want prod from the %s: %s", cmd, from, out)
+		}
+	}
 }
 
 // checkCeilings proves the grader's ceilings come from the CLI's own checks.
