@@ -175,6 +175,17 @@ func (s Shim) describe(a args, env string) error {
 	d := ds[0]
 	s.printf("Name: %s\nLabels: app=%s\nAnnotations: source-repo=%s\nReplicas: %d desired | %d available\nImage: %s\n",
 		d.Name, d.App, d.Repo, d.Replicas, d.Replicas, d.Image[env])
+	// The pod template's config and secret mounts, as a real describe shows them.
+	for _, c := range s.Data.Kube.ConfigMaps {
+		if c.App == d.App {
+			s.printf("Environment Variables from:\n  %s  ConfigMap  Optional: false\n", c.Name)
+		}
+	}
+	for _, sec := range s.Data.Kube.Secrets {
+		if sec.App == d.App {
+			s.printf("Mounts:\n  /var/run/secrets/%s from %s (ro)\nVolumes:\n  %s:\n    Type: Secret\n    SecretName: %s\n", sec.Name, sec.Name, sec.Name, sec.Name)
+		}
+	}
 	return nil
 }
 

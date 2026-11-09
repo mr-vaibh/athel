@@ -37,6 +37,8 @@ func TestShimCommands(t *testing.T) {
 		{"kubectl --context gke_acme-prod_eu -n shop get deploy user-svc -o jsonpath={.spec.template.spec.containers[*].image}", 0, "ghcr.io/acme/users:1.8.2"},
 		{"kubectl get deploy -l app=nothing", 0, "No resources found."},
 		{"kubectl --context gke_acme-prod_eu describe deploy user-svc", 0, "source-repo=github.com/acme/users"},
+		{"kubectl describe deploy user-svc", 0, "users-config  ConfigMap"},
+		{"kubectl describe deploy user-svc", 0, "SecretName: users-db"},
 		{"kubectl describe deploy nope", 1, "not found"},
 		{"kubectl get svc,ingress -l app=user-svc", 0, "service/user-svc"},
 		{"kubectl get configmap -l app=user-svc", 0, "users-config keys=DB_HOST,EVENTS_TOPIC"},
