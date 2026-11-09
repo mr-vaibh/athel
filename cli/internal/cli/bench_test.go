@@ -25,7 +25,7 @@ func BenchmarkPreToolUseInProcess(b *testing.B) {
 	call := func(stdin string, args ...string) {
 		var out, errOut bytes.Buffer
 		if code := Run(Env{Args: args, Stdin: strings.NewReader(stdin), Stdout: &out, Stderr: &errOut,
-			Getenv: env, Cwd: root, Clock: clk, Version: "bench"}); code != 0 {
+			Getenv: env, Cwd: root, Clock: clk, Version: "bench", UserHome: func() (string, error) { return home, nil }}); code != 0 {
 			b.Fatalf("athel %v: exit %d %s", args, code, errOut.String())
 		}
 	}

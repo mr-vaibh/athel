@@ -50,3 +50,29 @@ The behaviour matches the docs; the decision stands unchanged.
 ## Spec references
 Doc 04 §Decision order (rule 0), FR-SAFE-012, NFR hook latency (doc 08 M1 exit), ADR 004,
 ADR 015, M1 plan §3 D9, §9 PR-09.
+
+## Follow-up (2026-11-09, M2): the policy cache is closed, not built
+
+On the owner's personal machine, hook p95 measured 28–31 ms (budget 50 ms), above the backlog
+trigger of 30 ms. The owner asked for a decision rather than a deferral, so the cost was measured
+before building anything.
+
+- **In-process.** `BenchmarkPreToolUseInProcess` takes 12.5 ms per call. The CPU profile shows
+  filesystem system calls as the largest item (`syscall.rawsyscalln`, 33%). Loading
+  `athel.yaml` and the policy files accounts for 20% and 15%, and almost all of that is
+  `os.ReadFile`. YAML decoding, schema validation and merging take a few percent.
+- **Per file.** On this machine, opening and reading an existing file takes about 66 µs. A
+  missing file or a `stat` takes 2 µs. File opens are the cost, which is consistent with
+  software that inspects every file open.
+- **Conclusion.** A correct cache must still read the layer files to hash them, and the cache
+  file is one more open. It would save almost nothing and bring back the stale-policy risk this
+  ADR avoided.
+
+The policy cache is therefore closed as not worth building. The guard is the CI latency gate
+(p95 < 50 ms over 1,000 real spawns), which fails the build if the budget is ever at risk. If
+latency becomes a problem, the lever is the number of files a hook opens (change state, locks,
+audit log), not the policy.
+
+The in-process benchmark had panicked since M1 because it never set `UserHome`. It is fixed in
+the same change.
+
