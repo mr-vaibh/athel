@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders
+  labels: {app: orders}
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: orders
+          image: ghcr.io/acme/orders:3.1.0

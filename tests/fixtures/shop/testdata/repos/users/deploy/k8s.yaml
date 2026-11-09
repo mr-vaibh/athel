@@ -1,0 +1,15 @@
+# The cluster calls this service user-svc; the image and repo say users.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-svc
+  labels: {app: user-svc, repo: github.com-acme-users}
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels: {app: user-svc}
+    spec:
+      containers:
+        - name: users
+          image: ghcr.io/acme/users:1.8.2
