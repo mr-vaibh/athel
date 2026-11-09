@@ -347,6 +347,9 @@ func TestAthelCalls(t *testing.T) {
 		{"athel --session s state transition CHG-001 --to=done --by=human --reason ok", W0, "state transition", true},
 		{"athel state transition CHG-001 --to investigating --by athel --reason ok", W0, "state transition", false},
 		{"athel hook user-prompt-submit", X, "hook user-prompt-submit", false}, {"athel", R0, "", false},
+		{"athel fact find --subject users", R0, "fact find", false}, {"athel fact show F-0001", R0, "fact show", false},
+		{"athel fact add -", W0, "fact add", false}, {"athel fact use F-0001 --purpose decision --change CHG-001", W0, "fact use", false},
+		{"athel fact archive", W0, "fact archive", false},
 	}
 	for _, tt := range tests {
 		a := bash(t, pol, tt.cmd, Options{}).Actions[0]

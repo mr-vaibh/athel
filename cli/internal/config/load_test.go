@@ -22,6 +22,24 @@ func write(t *testing.T, path, content string) {
 	}
 }
 
+func TestBuiltinFactSettings(t *testing.T) {
+	r, err := Load(Paths{Home: t.TempDir()}, schema.NewRegistry())
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := r.Settings()
+	day := 24 * time.Hour
+	want := map[string]time.Duration{"volatile": 0, "runtime": time.Hour, "topology": day, "structural": 7 * day, "organisational": 7 * day}
+	for class, w := range want {
+		if got, ok := s.FactWindows[class]; !ok || got != w {
+			t.Errorf("window %s = %v, want %v", class, got, w)
+		}
+	}
+	if s.FactArchiveAfter != 90*day {
+		t.Errorf("archive after = %v", s.FactArchiveAfter)
+	}
+}
+
 func TestBuiltinOnly(t *testing.T) {
 	r, err := Load(Paths{Home: t.TempDir()}, schema.NewRegistry())
 	if err != nil {

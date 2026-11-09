@@ -253,28 +253,26 @@ func athelCall(cmd shellparse.Command) Action {
 	}
 	call := &AthelCall{Command: strings.TrimSpace(group + " " + sub)}
 	a.Athel = call
-	switch group {
-	case "hook":
+	switch {
+	case group == "hook":
 		a.Tier, a.Forbidden = X, "athel hook is called only by Claude Code, never by a tool call"
 		return a
-	case "version", "status", "schema", "config", "policy", "audit":
+	case athelReadGroups[group] || athelReads[call.Command]:
 		return a
-	case "change":
-		if sub == "list" || sub == "show" {
-			return a
-		}
-	case "state":
-		if sub == "show" {
-			return a
-		}
-		if sub == "transition" && len(pos) > 2 {
-			call.Change, call.To, call.ByHuman = known(pos[2]), flagVal(vals, "--to"), flagVal(vals, "--by") == "human"
-		}
-	case "lock", "checkpoint", "budget":
-		if sub == "status" || sub == "show" {
-			return a
-		}
+	case call.Command == "state transition" && len(pos) > 2:
+		call.Change, call.To, call.ByHuman = known(pos[2]), flagVal(vals, "--to"), flagVal(vals, "--by") == "human"
 	}
 	a.Tier = W0
 	return a
 }
+
+// athelReadGroups are athel command groups that only read; athelReads are single read-only
+// subcommands of groups that also write. Every other athel call writes .athel/ (tier W0).
+var (
+	athelReadGroups = map[string]bool{"version": true, "status": true, "schema": true, "config": true, "policy": true, "audit": true}
+	athelReads      = map[string]bool{
+		"change list": true, "change show": true, "state show": true,
+		"lock status": true, "lock show": true, "checkpoint status": true, "checkpoint show": true,
+		"budget status": true, "budget show": true, "fact find": true, "fact show": true,
+	}
+)

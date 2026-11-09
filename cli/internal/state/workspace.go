@@ -28,6 +28,9 @@ func (w Workspace) ChangesDir() string { return filepath.Join(w.Dir(), "changes"
 // AuditDir holds the append-only event logs.
 func (w Workspace) AuditDir() string { return filepath.Join(w.Dir(), "audit") }
 
+// KnowledgeDir holds the verified fact cache and its access log (doc 03).
+func (w Workspace) KnowledgeDir() string { return filepath.Join(w.Dir(), "knowledge") }
+
 // StateDir holds workspace-wide state written only by the CLI and its hooks (grants).
 func (w Workspace) StateDir() string { return filepath.Join(w.Dir(), "state") }
 
