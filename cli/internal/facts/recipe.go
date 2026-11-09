@@ -1,15 +1,12 @@
 package facts
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 	"slices"
 	"strings"
 
+	"github.com/mr-vaibh/athel/cli/internal/gitro"
 	"github.com/mr-vaibh/athel/cli/internal/observe"
 )
 
@@ -43,7 +40,7 @@ type Recipe struct {
 	Observation func(toolUseID string) (observe.Observation, error)   // captured scout calls
 	ToolsOf     func(tool string, input []byte) []string              // tools.yaml ids of a captured call
 	Observed    map[int]string                                        // step index → tool_use_id
-	Git         func(dir string, args ...string) (int, string, error) // runs git; nil means the real one
+	Git         func(dir string, args ...string) (int, string, error) // runs git; nil means gitro.Run
 }
 
 // Check runs step i.
@@ -95,7 +92,8 @@ func (r Recipe) git(step Step, res StepResult, expect string) StepResult {
 		if err != nil || code != 0 {
 			return res.with(Unreachable, "git remote get-url origin: "+gitDetail(code, out, err))
 		}
-		return presence(res, expect, strings.TrimSpace(out) == str(step["url"]), "origin is "+strings.TrimSpace(out))
+		origin := gitro.NormaliseRemote(strings.TrimSpace(out))
+		return presence(res, expect, origin != "" && origin == gitro.NormaliseRemote(str(step["url"])), "origin is "+origin)
 	}
 	return res.with(Unreachable, "unsupported git action "+res.Action+"; use grep, exists or remote")
 }
@@ -156,24 +154,7 @@ func (r Recipe) runGit(dir string, args ...string) (int, string, error) {
 	if r.Git != nil {
 		return r.Git(dir, args...)
 	}
-	return RunGit(dir, args...)
-}
-
-// RunGit runs a read-only git command in dir. System and global git config are ignored, so a
-// developer's aliases, hooks or fsmonitor never run, and optional locks are off, so not even the
-// index of a developer's clone is touched (FR-DISC-016).
-func RunGit(dir string, args ...string) (int, string, error) {
-	cmd := exec.Command("git", append([]string{"-C", dir, "--no-pager"}, args...)...) //nolint:gosec // fixed git subcommands; values are arguments, never shell
-	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=" + os.DevNull,
-		"GIT_OPTIONAL_LOCKS=0", "GIT_TERMINAL_PROMPT=0", "LC_ALL=C"}
-	var out bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &out
-	err := cmd.Run()
-	var exit *exec.ExitError
-	if errors.As(err, &exit) {
-		return exit.ExitCode(), out.String(), nil
-	}
-	return 0, out.String(), err
+	return gitro.Run(dir, args...)
 }
 
 func gitDetail(code int, out string, err error) string {
