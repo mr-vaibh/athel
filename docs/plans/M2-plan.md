@@ -104,8 +104,10 @@ Q1). Also the edge cases and NFR-DISC-01 … 06 of doc 03.
     scout 3 source plan per type (mandatory first; unreachable → gap with login command)
     scout 4 narrow queries; raw output → artifacts/ (athel artifact put)
     scout 5 cross-check; 6 drift scan; 7 claims + evidence + confidence
-    scout → athel investigation save --from <yaml>             (CLI validates, computes ceilings,
-                                                                renders investigation.md, writes facts)
+    scout → athel fact add (each fact it caches, with recipe)  (CLI: IDs, dedupe, supersede)
+    scout → athel investigation save --change|--ask <yaml>     (CLI validates, computes ceilings,
+                                                                checks cited and created facts,
+                                                                renders investigation.md)
   SubagentStop hook: no saved, valid investigation for this question → block once with the schema
   error; the second time the step fails (doc 02 retries "re-ask once")
   conductor → summary ≤ 2,000 words to the human
@@ -311,7 +313,7 @@ standard library.
 | 02 | `feat/m2-facts-store` | `internal/facts` + `fact add/find/show/use/archive` | `TestRefusesNoSourceOrRecipe`, `TestDedupeRefreshes`, `TestFreshnessWindows` (table per class), `TestUseLogsEveryAccess`, `TestDecisionUseOfStaleFactFails`, `TestArchiveAfter90Days`, `TestConcurrentAdds`, `BenchmarkFind10k` |
 | 03 | `feat/m2-observe` | `observation@1`; PostToolUse capture by `tool_use_id`, suspicious-content flags, audit record | `TestCapturesScrubbedOutput`, `TestObservationsExpire`, `TestSuspiciousPhrases` (table), `TestNoCaptureOutsideScout` |
 | 04 | `feat/m2-fact-verify` | Recipes: git and file steps by the CLI, other steps judged from observations; dispute, supersede, flag changes | `TestRecipeAllMatchActive`, `TestMismatchDisputesAndFlags`, `TestUnreachableLeavesFactLogsUnverified`, `TestSupersedeChain`, `TestModelTextNotTrusted` |
-| 05 | `feat/m2-investigation` | Validation, confidence ceilings, question types, render, word limit, `investigation save` writes facts | `TestEveryClaimHasSource`, `TestRuntimeNeedsRuntimeSource`, `TestCeiling` (table: systems, name-only, missing mandatory, sampled, one env), `TestTenQuestionTypesMandatorySources`, `TestRenderRoundTrip`, `TestWordLimit`, `TestPartialResultValid` |
+| 05 | `feat/m2-investigation` | Validation, confidence ceilings, question types, render, word limit; `investigation validate/save --change`. Facts are added by the scout with `athel fact add` (only it knows the recipe); save checks that cited facts were read with `fact use` and created facts exist. `--ask` lands in PR 10 with `ask.yaml` | `TestEveryClaimHasSource`, `TestRuntimeNeedsRuntimeSource`, `TestCeiling` (table: systems, name-only, missing mandatory, sampled, one env), `TestTenQuestionTypesMandatorySources`, `TestRenderRoundTrip`, `TestWordLimit`, `TestPartialResultValid` |
 | 06 | `feat/m2-repo-index` | Roots (propose; set via grant), index walk, remotes, index facts, SessionStart refresh | `TestIndexThreeFoldersComplete`, `TestDepthAndSkips`, `TestRemoteNormalise` (table), `TestNoReadsOutsideGitFolders`, `TestRootsNeedHumanGrant`, `TestNeverReadsRealHome` |
 | 07 | `feat/m2-policy` | Rule 12 exception, `E-POLICY-DEV-CLONE`, scout read-only, knowledge read deny; red-team cases | `TestDevCloneReadOnlyGit` (table of allowed and denied git), `TestReadsUnderRootsAllowed`, `TestScoutWritesDenied`, `TestKnowledgeReadDenied`, `TestRedTeamSuite` (new groups) |
 | 08 | `feat/m2-repo-cache` | Partial clone, `--reference`, fetch, sparse, unreachable | `TestCacheCloneFromLocalReference`, `TestFetchBeforeUse`, `TestUnreachableReported`, `TestLocalGitChecksumsUnchanged` |

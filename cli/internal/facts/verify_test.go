@@ -346,3 +346,41 @@ func TestWriteFailuresReported(t *testing.T) {
 		t.Errorf("append to a read-only cache: %v", err)
 	}
 }
+
+func TestUsedFor(t *testing.T) {
+	s, clk := newStore(t)
+	f := mustAdd(t, s, draft(t))
+	g := mustAdd(t, s, draft(t, func(d *Draft) { d.Env = "staging" }))
+	if _, err := s.Use(f.ID, Orientation, Ref{Change: "CHG-001"}, "s"); err != nil {
+		t.Fatal(err)
+	}
+	clk.Advance(48 * time.Hour)
+	if _, err := s.Use(g.ID, Decision, Ref{Change: "CHG-001"}, "s"); err == nil {
+		t.Fatal("stale decision use allowed")
+	}
+	if _, err := s.Use(g.ID, Orientation, Ref{Ask: "ASK-001"}, "s"); err != nil {
+		t.Fatal(err)
+	}
+	used, err := s.UsedFor(Ref{Change: "CHG-001"})
+	if err != nil || !used[f.ID] || used[g.ID] || len(used) != 1 {
+		t.Errorf("used for CHG-001 = %v %v (a refused use is not a use)", used, err)
+	}
+	if _, err := s.UsedFor(Ref{}); !aerr.HasCode(err, aerr.StateInvalid) {
+		t.Errorf("no ref: %v", err)
+	}
+	if err := os.WriteFile(s.accessPath(), []byte("{\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.UsedFor(Ref{Change: "CHG-001"}); !aerr.HasCode(err, aerr.StateSchema) {
+		t.Errorf("corrupt access log: %v", err)
+	}
+	if err := os.Remove(s.accessPath()); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(s.accessPath(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.UsedFor(Ref{Change: "CHG-001"}); !aerr.HasCode(err, aerr.StateIO) {
+		t.Errorf("unreadable access log: %v", err)
+	}
+}

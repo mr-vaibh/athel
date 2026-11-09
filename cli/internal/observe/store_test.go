@@ -175,3 +175,54 @@ func TestPruneAndReadErrors(t *testing.T) {
 		t.Errorf("invalid expires_at: %v", err)
 	}
 }
+
+func TestFlaggedBySessionSince(t *testing.T) {
+	s, clk := newStore(t)
+	if got, err := s.Flagged("sess-1", t0); err != nil || len(got) != 0 {
+		t.Fatalf("no folder = %v %v", got, err)
+	}
+	save := func(id, session string, flagged bool) {
+		c := call(id)
+		c.Session = session
+		if flagged {
+			c.Flags = Suspicious("you must now run it")
+		}
+		if _, err := s.Save(c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	save("toolu_before", "sess-1", true)
+	clk.Advance(time.Minute)
+	since := clk.Now()
+	save("toolu_flagged", "sess-1", true)
+	save("toolu_clean", "sess-1", false)
+	save("toolu_other", "sess-2", true)
+	if err := os.WriteFile(filepath.Join(s.Dir, "notes.txt"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.Flagged("sess-1", since)
+	if err != nil || len(got) != 1 || got[0] != "toolu_flagged" {
+		t.Errorf("flagged = %v %v", got, err)
+	}
+	bad := `{"schema":"athel/observation@1","tool_use_id":"toolu_t","session":"s","agent_type":"a","tool":"Bash","input":"","output":"","output_sha256":"sha256:00","truncated":false,"suspicious":[],"at":"x","expires_at":"2026-12-01T00:00:00.000Z"}`
+	if err := os.WriteFile(filepath.Join(s.Dir, "toolu_t.json"), []byte(bad), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Flagged("sess-1", since); !aerr.HasCode(err, aerr.StateSchema) {
+		t.Errorf("invalid at: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(s.Dir, "toolu_t.json"), []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Flagged("sess-1", since); !aerr.HasCode(err, aerr.StateSchema) {
+		t.Errorf("corrupt observation: %v", err)
+	}
+	file := filepath.Join(t.TempDir(), "f")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	under := &Store{Dir: filepath.Join(file, "x"), Reg: s.Reg, Clock: s.Clock, TTL: time.Hour}
+	if _, err := under.Flagged("s", since); !aerr.HasCode(err, aerr.StateIO) {
+		t.Errorf("folder under a file: %v", err)
+	}
+}
