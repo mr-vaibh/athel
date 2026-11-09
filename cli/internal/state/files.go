@@ -9,7 +9,7 @@ import (
 
 // ChangeFiles are the step outputs the CLI writes into a change folder for its steps; nothing
 // else may be written there this way (doc 04: .athel/changes/<id>/ is written only by the CLI).
-var ChangeFiles = map[string]bool{"investigation.md": true}
+var ChangeFiles = map[string]bool{"investigation.md": true, "blast-radius.md": true}
 
 // SaveChangeFile writes one step output into the change folder for the session that holds (or
 // takes) the change lock, like every other change write. A finished or cancelled change is

@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/blast@1.json",
+  "title": "athel/blast@1",
+  "description": "A blast radius report (doc 05 §Blast radius analysis; FR-BLAST-002/003/004). The six sections hold structured findings; risk and rules_fired are computed by `athel blast` from those findings with the rules in blast.yaml and are never set by the model. M2 produces ad-hoc reports for a proposed change (UC-02); planned and actual reports come with M3/M4.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "mode", "proposal", "services_changed", "direct", "consumers", "data", "infra", "people", "runtime", "flags", "not_affected", "gaps", "risk", "rules_fired"],
+  "oneOf": [{"required": ["change"]}, {"required": ["ask"]}],
+  "properties": {
+    "schema": {"const": "athel/blast@1"},
+    "change": {"type": "string", "pattern": "^CHG-[0-9]{3,}(-F[1-9][0-9]*)?$"},
+    "ask": {"type": "string", "pattern": "^ASK-[0-9]{3,}$"},
+    "mode": {"enum": ["adhoc", "planned", "actual"]},
+    "proposal": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "services_changed": {"type": "array", "uniqueItems": true, "maxItems": 100, "items": {"$ref": "#/$defs/name"}},
+    "direct": {
+      "description": "The change surface (doc 05 step 1) with each contract change classified (step 2).",
+      "type": "array", "maxItems": 200,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["item", "kind", "change", "service", "evidence"],
+        "properties": {
+          "item": {"$ref": "#/$defs/text"},
+          "kind": {"enum": ["interface", "event", "schema", "config", "code", "dependency"]},
+          "change": {"enum": ["additive", "behavioural", "breaking", "internal"]},
+          "service": {"$ref": "#/$defs/name"},
+          "evidence": {"$ref": "#/$defs/evidence"}
+        }
+      }
+    },
+    "consumers": {
+      "description": "Who uses each changed contract (step 3), with observed traffic (FR-BLAST-003).",
+      "type": "array", "maxItems": 500,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["consumer", "of", "env", "in_change_set", "traffic", "evidence", "facts"],
+        "properties": {
+          "consumer": {"$ref": "#/$defs/name"},
+          "of": {"$ref": "#/$defs/text"},
+          "env": {"$ref": "#/$defs/env"},
+          "in_change_set": {"type": "boolean"},
+          "traffic": {
+            "oneOf": [
+              {"type": "null"},
+              {
+                "type": "object", "additionalProperties": false,
+                "required": ["rate", "unit", "window", "sampling"],
+                "properties": {
+                  "rate": {"type": "number", "minimum": 0},
+                  "unit": {"enum": ["calls_per_min", "events_per_min", "calls_per_day"]},
+                  "window": {"type": "string", "pattern": "^[1-9][0-9]*(m|h|d)$"},
+                  "sampling": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+                }
+              }
+            ]
+          },
+          "evidence": {"$ref": "#/$defs/evidence"},
+          "facts": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^F-[0-9]{4,}$"}}
+        }
+      }
+    },
+    "data": {
+      "description": "Migrations (step 4).",
+      "type": "array", "maxItems": 100,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["table", "service", "operation", "rows", "online", "reversible", "evidence"],
+        "properties": {
+          "table": {"$ref": "#/$defs/name"},
+          "service": {"$ref": "#/$defs/name"},
+          "operation": {"enum": ["add", "backfill", "index", "drop", "rename", "narrow", "other"]},
+          "rows": {"description": "Row count; null when unknown (treated as a table with data).", "oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+          "online": {"type": "boolean"},
+          "reversible": {"type": "boolean"},
+          "evidence": {"$ref": "#/$defs/evidence"}
+        }
+      }
+    },
+    "infra": {
+      "description": "Infrastructure and config (step 5).",
+      "type": "array", "maxItems": 100,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["item", "kind", "new", "evidence"],
+        "properties": {
+          "item": {"$ref": "#/$defs/text"},
+          "kind": {"enum": ["env_var", "secret", "resource", "ingress", "mesh", "scaling", "external_dependency"]},
+          "new": {"type": "boolean"},
+          "evidence": {"$ref": "#/$defs/evidence"}
+        }
+      }
+    },
+    "people": {
+      "description": "Owners, overlapping work and on-call of affected services (step 6).",
+      "type": "array", "maxItems": 100,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["service", "owners", "active_work", "on_call"],
+        "properties": {
+          "service": {"$ref": "#/$defs/name"},
+          "owners": {"type": "array", "items": {"$ref": "#/$defs/name"}},
+          "active_work": {"type": "array", "items": {"$ref": "#/$defs/text"}},
+          "on_call": {"type": "array", "items": {"$ref": "#/$defs/name"}}
+        }
+      }
+    },
+    "runtime": {
+      "description": "Current health of affected services (step 7).",
+      "type": "array", "maxItems": 100,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["service", "env", "calls_per_sec", "error_rate", "alerts", "evidence"],
+        "properties": {
+          "service": {"$ref": "#/$defs/name"},
+          "env": {"$ref": "#/$defs/env"},
+          "calls_per_sec": {"oneOf": [{"type": "number", "minimum": 0}, {"type": "null"}]},
+          "error_rate": {"oneOf": [{"type": "number", "minimum": 0, "maximum": 1}, {"type": "null"}]},
+          "alerts": {
+            "type": "array",
+            "items": {
+              "type": "object", "additionalProperties": false, "required": ["name", "severity", "firing"],
+              "properties": {"name": {"$ref": "#/$defs/name"}, "severity": {"enum": ["critical", "warning", "info"]}, "firing": {"type": "boolean"}}
+            }
+          },
+          "evidence": {"$ref": "#/$defs/evidence"}
+        }
+      }
+    },
+    "flags": {
+      "type": "object", "additionalProperties": false,
+      "required": ["touches_auth_payments_pii", "security_review_task", "retry_timeout_or_idempotency_change"],
+      "properties": {
+        "touches_auth_payments_pii": {"type": "boolean"},
+        "security_review_task": {"type": "boolean"},
+        "retry_timeout_or_idempotency_change": {"type": "boolean"}
+      }
+    },
+    "not_affected": {
+      "description": "What was ruled out and how (doc 05: required, so reviewers can trust the report).",
+      "type": "array", "maxItems": 200,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["item", "why", "evidence"],
+        "properties": {"item": {"$ref": "#/$defs/name"}, "why": {"$ref": "#/$defs/text"}, "evidence": {"$ref": "#/$defs/evidence"}}
+      }
+    },
+    "gaps": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/text"}},
+    "risk": {"description": "Computed by the CLI.", "oneOf": [{"enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]}, {"type": "null"}]},
+    "rules_fired": {
+      "description": "Computed by the CLI (FR-BLAST-004).",
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["rule", "level", "reason"],
+        "properties": {"rule": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"}, "level": {"enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]}, "reason": {"$ref": "#/$defs/text"}}
+      }
+    }
+  },
+  "$defs": {
+    "name": {"type": "string", "minLength": 1, "maxLength": 300},
+    "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "env": {"type": "string", "pattern": "^(any|[a-z][a-z0-9_-]{0,62})$"},
+    "evidence": {
+      "type": "array", "minItems": 1, "maxItems": 20,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["kind", "ref"],
+        "properties": {
+          "kind": {"type": "string", "pattern": "^[a-z][a-z_]*$"},
+          "ref": {"type": "string", "minLength": 1, "maxLength": 500}
+        }
+      }
+    }
+  }
+}
