@@ -15,12 +15,12 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/digest"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/fsutil"
+	"github.com/mr-vaibh/athel/cli/internal/hookio"
 	"github.com/mr-vaibh/athel/cli/internal/schema"
 )
 
-// ScoutAgentType is the agent_type Claude Code reports for Athel's scout subagent (plugin
-// subagents are named <plugin>:<agent>). Only the scout's calls are captured.
-const ScoutAgentType = "athel:scout"
+// ScoutAgentType is the scout's agent_type; only the scout's calls are captured.
+const ScoutAgentType = hookio.ScoutAgent
 
 // SchemaID is the schema of one observation file.
 const SchemaID = schema.Observation

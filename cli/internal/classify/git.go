@@ -32,10 +32,14 @@ func (cl *cmdClassifier) git(cmd shellparse.Command) Action {
 	}
 	sub := known(pos[0])
 	a.Verb = sub
+	if sub == "remote" && len(pos) > 1 {
+		a.Verb = "remote " + known(pos[1])
+	}
 	dir := cl.cwd
 	if v, ok := vals["-C"]; ok {
 		dir = pathOf(cl.cwd, v)
 	}
+	a.Dir = dir
 	switch {
 	case gitAliasOnCommandLine(cmd.Args[1:]):
 		a.Tier, a.Forbidden = X, "defines a git alias on the command line, which hides the real git command"

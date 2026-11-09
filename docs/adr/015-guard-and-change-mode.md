@@ -56,3 +56,19 @@ Interpretations made while implementing doc 04 literally:
 ## Spec references
 Doc 04 §Permission tiers, §Decision order (rules 0–13), FR-SAFE-001..012; doc 02 §Locking;
 M1 plan §4.1–4.2, decisions Q1, Q3, Q6.
+
+## Follow-up (2026-11-09, M2 PR 07): which mode the M2 rules use
+
+M2 adds four rules. Each one is placed by the same test as M1's: does it change what the developer
+can do in an ordinary Claude Code session?
+
+| Rule | Mode | Why |
+|---|---|---|
+| Rule 12 exception: inside confirmed search roots, reads in folders with `.git` and seven read-only git commands are allowed; **any other git command in a developer's clone is denied** (`E-POLICY-DEV-CLONE`) | **change mode only** | The exception is part of rule 12, and rules 7–13 apply in change mode (decision above). Applied in guard mode, it would deny every `git commit` the developer makes with Claude Code in their own clone under `~/Developer`. FR-DISC-016 protects the clones from *Athel's* work ("Athel never changes their working tree"), which only happens under a change lock |
+| The scout cannot write (`E-POLICY-AGENT-READONLY`, rule 3); its own `athel` CLI calls are exempt | both | The scout only exists during Athel work; doc 04 injection-defence layer 4 |
+| Direct reads of `.athel/knowledge/` are tier X (rule 3) | both | Athel's own data; every use goes through `athel fact …` so the access log is complete (FR-DISC-004, M2 plan Q6) |
+| `athel repos roots set` is human-only (rule H) | both | Like every human-origin grant (ADR 017) |
+
+M2 plan §4.5 first said the developer-clone denial applied in guard mode too. That would break
+everyday use, so it applies in change mode only. The plan has been corrected.
+

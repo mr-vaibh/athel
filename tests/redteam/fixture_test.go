@@ -2,6 +2,10 @@ package redteam
 
 // fixtureFiles are written relative to the fixture's temporary directory.
 var fixtureFiles = map[string]string{
+	// A developer clone under a confirmed search root (doc 04 rule 12 exception, FR-DISC-016).
+	"home/Developer/users/.git/HEAD": "ref: refs/heads/main\n",
+	"home/Developer/users/README.md": "users\n",
+	"athel-home/user.yaml":           "schema: athel/config@2\nrepos:\n  search_roots: [~/Developer]\n",
 	"ws/.athel/config/environments.yaml": `schema: athel/environments@1
 environments:
   prod:

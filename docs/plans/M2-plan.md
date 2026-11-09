@@ -180,8 +180,9 @@ over-claiming deterministically; under-claiming is caught by the grader.
 - **Rule 12 exception (doc 04).** Inside confirmed roots, reading files in folders that contain
   `.git` is `allow`. So are these git commands: `remote get-url`, `log`, `show`, `grep`,
   `ls-files`, `status`, `rev-parse`. Any other git command whose target is a developer clone is
-  `deny` with `E-POLICY-DEV-CLONE` (new code, rule 12). This holds in guard mode too, because
-  FR-DISC-016 is unconditional.
+  `deny` with `E-POLICY-DEV-CLONE` (new code, rule 12). **Change mode only**, like the rest of
+  rule 12 (ADR 015 follow-up, 2026-11-09): in guard mode the developer's own git work in their
+  clones must keep working.
 - **The scout cannot write (doc 04 injection layer 4).** Any action from `agent_type` `athel:scout`
   in a write tier is `deny` (`E-POLICY-AGENT-READONLY`), in guard and change mode alike. The agent
   file's tool list is the first layer; the hook is the enforced one.

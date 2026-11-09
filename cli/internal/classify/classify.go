@@ -59,6 +59,7 @@ type EnvHints struct {
 type Action struct {
 	Tool      string     `json:"tool"`              // Bash, Edit, kubectl, mcp__grafana__query …
 	ToolID    string     `json:"tool_id,omitempty"` // tools.yaml id when registered
+	Dir       string     `json:"dir,omitempty"`     // git: the repository the command runs in (-C or cwd)
 	Verb      string     `json:"verb,omitempty"`
 	Tier      Tier       `json:"tier"`
 	Text      string     `json:"text"`                // human-readable command or call
@@ -177,6 +178,9 @@ func fileTool(c Call, tier Tier, key string) Result {
 	}
 	if c.Tool != "Write" && c.Tool != "Glob" && IsSecretPath(p) {
 		a.Tier, a.Forbidden = X, "reads a secret file ("+p+")"
+	}
+	if !IsWrite(tier) && c.Tool != "Glob" && IsKnowledgePath(p) {
+		a.Tier, a.Forbidden = X, knowledgeRead
 	}
 	return Result{Actions: []Action{a}}
 }

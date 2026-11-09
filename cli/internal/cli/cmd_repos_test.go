@@ -259,3 +259,22 @@ func TestCloneWithoutRemoteHasNoFact(t *testing.T) {
 		t.Errorf("entry = %v", entry)
 	}
 }
+
+func TestDecideUsesConfirmedRoots(t *testing.T) {
+	h := setup(t)
+	home := devHome(t)
+	h.userHome = home
+	if err := os.WriteFile(filepath.Join(h.home, "user.yaml"), []byte("schema: athel/config@2\nrepos:\n  search_roots: [~/Developer]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	h.mustOK("lock", "acquire", "CHG-001")
+	users := filepath.Join(home, "Developer", "users")
+	fetch := h.decide("Bash", map[string]any{"command": "git -C " + users + " fetch"}, h.root)
+	if fetch["decision"] != "deny" || fetch["rule"] != "12" {
+		t.Errorf("fetch in a developer clone = %v", fetch)
+	}
+	read := h.decide("Read", map[string]any{"file_path": filepath.Join(users, "main.go")}, h.root)
+	if read["decision"] != "allow" {
+		t.Errorf("read in a developer clone = %v", read)
+	}
+}

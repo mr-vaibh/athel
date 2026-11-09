@@ -8,6 +8,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/envdetect"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
+	"github.com/mr-vaibh/athel/cli/internal/repos"
 )
 
 // cmdPolicyDecide prints the decision the PreToolUse hook would make for one tool call
@@ -68,6 +69,9 @@ func (r *runCtx) engineContext(session, agent string) (engine.Context, error) {
 			return ctx, aerr.Wrap(aerr.StateIO, "find the home folder for environment detection", err)
 		}
 		ctx.Resolver = &envdetect.Resolver{Policy: ctx.Policy, Home: home, Getenv: r.env.Getenv, ReadFile: readFile}
+		for _, root := range r.cfg.Settings().SearchRoots {
+			ctx.SearchRoots = append(ctx.SearchRoots, repos.Expand(root, home))
+		}
 	}
 	ws, err := r.workspaceDir()
 	if err != nil {

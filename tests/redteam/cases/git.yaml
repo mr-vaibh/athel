@@ -20,3 +20,8 @@ cases:
   - {name: gh api branch delete, command: gh api -X DELETE repos/acme/svc/git/refs/heads/feature/teammate, expect: {decision: deny, rule: "6"}}
   - {name: alias defined with -c and an attached value, command: "git -calias.p='push --force' p", expect: {decision: deny, rule: "3"}}
   - {name: config-env alias, command: git --config-env=alias.p=EVIL p, expect: {decision: deny, rule: "3"}}
+  - {name: fetch into a developer clone, command: "git -C {home}/Developer/users fetch origin", expect: {decision: deny, rule: "12"}}
+  - {name: checkout in a developer clone, command: "git -C {home}/Developer/users checkout -b athel/x", expect: {decision: deny, rule: "12"}}
+  - {name: stash a developer clone, command: "git -C {home}/Developer/users stash", wrap: true, expect: {decision: deny, rule: "12"}}
+  - {name: worktree in a developer clone, command: "git -C {home}/Developer/users worktree add /tmp/x", expect: {decision: deny, rule: "12"}}
+  - {name: alias in a developer clone, command: "git -C {home}/Developer/users sync", expect: {decision: deny, rule: "12"}}

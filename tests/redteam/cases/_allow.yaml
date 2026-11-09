@@ -25,3 +25,7 @@ cases:
   - {name: guard mode edit is left to Claude Code, session: guard, tool: Edit, input: {file_path: /somewhere/else/a.go, old_string: a, new_string: b}, expect: {decision: none, rule: "-"}}
   - {name: guard mode unknown command, session: guard, command: npm run build, expect: {decision: none, rule: "-"}}
   - {name: unknown git subcommand (a possible config alias) asks, command: git p origin athel/CHG-001-phone, expect: {decision: approve, rule: "7u"}}
+  - {name: read-only git in a developer clone, command: "git -C {home}/Developer/users log -3", expect: {decision: allow, rule: "12"}}
+  - {name: read a developer clone, tool: Read, input: {file_path: "{home}/Developer/users/README.md"}, expect: {decision: allow, rule: "12"}}
+  - {name: scout records a fact, command: "athel fact add -", agent: athel:scout, expect: {decision: allow, rule: "7x"}}
+  - {name: scout queries the fact cache, command: "athel fact find --subject users", agent: athel:scout, expect: {decision: allow, rule: "7x"}}

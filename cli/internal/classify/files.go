@@ -44,6 +44,16 @@ func IsSecretPath(p string) bool {
 	return false
 }
 
+// knowledgeRead is why reading the fact cache directly is refused: every use must go through
+// the CLI so the access log is complete (FR-DISC-004; M2 plan Q6).
+const knowledgeRead = "reads Athel's knowledge cache directly; use athel fact find, show or use, which log every use"
+
+// IsKnowledgePath reports whether p is inside a workspace's .athel/knowledge folder.
+func IsKnowledgePath(p string) bool {
+	norm := "/" + strings.TrimPrefix(filepath.ToSlash(p), "/") + "/"
+	return strings.Contains(norm, "/.athel/knowledge/")
+}
+
 // absolute resolves p against cwd; $HOME and unknown values stay symbolic for the engine.
 func absolute(cwd, p string) string {
 	if p == "" || strings.HasPrefix(p, "/") || strings.HasPrefix(p, "$HOME") || cwd == "" {
@@ -90,11 +100,13 @@ func fileCommand(cmd shellparse.Command, cwd string) (Action, bool) {
 	args := operands(cmd.Args[1:])
 	if readers[name] || name == "cp" || name == "scp" {
 		for _, p := range args {
-			if !p.Known || IsSecretPath(p.Value) {
-				if p.Known {
-					a.Tier, a.Forbidden = X, "reads a secret file ("+p.Value+")"
-					return a, true
-				}
+			switch {
+			case p.Known && IsSecretPath(p.Value):
+				a.Tier, a.Forbidden = X, "reads a secret file ("+p.Value+")"
+				return a, true
+			case p.Known && IsKnowledgePath(pathOf(cwd, p)):
+				a.Tier, a.Forbidden = X, knowledgeRead
+				return a, true
 			}
 		}
 	}

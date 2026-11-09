@@ -23,6 +23,10 @@ const (
 var Events = []Event{SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure,
 	SubagentStop, Stop, PreCompact, SessionEnd}
 
+// ScoutAgent is the agent_type Claude Code reports for Athel's scout subagent (plugin subagents
+// are named <plugin>:<agent>). The scout is read-only (doc 04 injection-defence layer 4).
+const ScoutAgent = "athel:scout"
+
 // Request is one hook invocation. Raw tool input is kept as bytes so it can be hashed without
 // being interpreted; only its scrubbed, classified form is ever logged.
 type Request struct {
