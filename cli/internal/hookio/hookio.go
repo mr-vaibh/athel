@@ -59,7 +59,7 @@ const (
 type Response struct {
 	Decision          Decision // PreToolUse only; empty leaves the call to Claude Code's own rules
 	Reason            string   // shown to the model (deny) or the human (approve)
-	AdditionalContext string   // SessionStart / UserPromptSubmit
+	AdditionalContext string   // SessionStart / UserPromptSubmit / PostToolUse
 	SystemMessage     string   // shown to the user
 	BlockStop         bool     // Stop / SubagentStop: keep working
 	BlockReason       string

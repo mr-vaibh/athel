@@ -155,8 +155,9 @@ func FormatOutput(event hookio.Event, resp hookio.Response) ([]byte, error) {
 			out.HookSpecificOutput = &specific{HookEventName: string(event), PermissionDecision: d, PermissionDecisionReason: resp.Reason}
 		}
 	case hookio.PostToolUse:
-		if len(resp.UpdatedToolOutput) > 0 {
-			out.HookSpecificOutput = &specific{HookEventName: string(event), UpdatedToolOutput: resp.UpdatedToolOutput}
+		if len(resp.UpdatedToolOutput) > 0 || resp.AdditionalContext != "" {
+			out.HookSpecificOutput = &specific{HookEventName: string(event), UpdatedToolOutput: resp.UpdatedToolOutput,
+				AdditionalContext: capContext(resp.AdditionalContext)}
 		}
 	case hookio.SessionStart, hookio.UserPromptSubmit:
 		if resp.AdditionalContext != "" {
