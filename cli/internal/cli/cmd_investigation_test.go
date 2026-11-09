@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/investigation"
+	"github.com/mr-vaibh/athel/cli/internal/observe"
 )
 
 const claimBlock = `schema: athel/investigation@1
@@ -261,5 +263,13 @@ func TestHelpFlag(t *testing.T) {
 	}
 	if code, out, _ := h.run("--json", "fact", "add", "--help"); code != 0 || !strings.Contains(out, "usage: athel fact add") {
 		t.Errorf("help with --json: exit %d %s", code, out)
+	}
+}
+
+// TestTemplateIsNotSuspicious: the scout reads the template in the session it saves from, so
+// text in it that the injection check flags would block its own save.
+func TestTemplateIsNotSuspicious(t *testing.T) {
+	if flags := observe.Suspicious(investigation.Template); len(flags) != 0 {
+		t.Errorf("the template trips the suspicious-content check: %+v", flags)
 	}
 }

@@ -84,7 +84,7 @@ func Check(inv *Investigation, ctx Context, summary string) Report {
 	}
 	for _, id := range ctx.Flagged {
 		if !slices.ContainsFunc(inv.Suspicious, func(s Suspicious) bool { return s.ToolUseID == id }) {
-			r.Problems = append(r.Problems, "tool call "+id+" returned suspicious content that is not listed under suspicious")
+			r.Problems = append(r.Problems, "tool call "+id+" returned suspicious content that is not listed under suspicious (add an entry with tool_use_id: "+id+")")
 		}
 	}
 	if n := len(strings.Fields(summary)); n > MaxSummaryWords {
