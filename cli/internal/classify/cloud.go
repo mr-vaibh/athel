@@ -69,7 +69,7 @@ var cloudTools = map[string]*cloudSpec{
 	"argocd":     {valueFlags: kubeValueFlags, writeTier: W3, verb: firstVerb, readVerbs: []string{"version", "login", "context", "app", "proj", "repo", "cluster", "account"}},
 	"flux":       {valueFlags: kubeValueFlags, kube: []string{"--context"}, writeTier: W3, verb: firstVerb, readVerbs: []string{"get", "logs", "check", "version", "tree", "stats", "trace", "events", "diff", "export"}},
 	"raptor":     {writeTier: W3, verb: firstVerb},
-	"praxis":     {writeTier: R1, verb: firstVerb},
+	"praxis":     {writeTier: W3, verb: praxisVerb},
 	"vercel":     {writeTier: W3, verb: firstVerb, readVerbs: []string{"ls", "list", "inspect", "logs", "whoami", "env", "domains", "dns", "certs", "projects", "teams", "help"}},
 	"fly":        {writeTier: W3, verb: firstVerb, readVerbs: []string{"status", "logs", "info", "list", "ls", "version", "auth", "apps", "regions", "doctor", "help"}},
 	"heroku":     {writeTier: W3, verb: firstVerb, readVerbs: []string{"logs", "info", "apps", "config", "ps", "releases", "addons", "auth", "help"}},
@@ -101,6 +101,22 @@ var gcloudVerbs = []string{"list", "describe", "get-iam-policy", "read", "info",
 	"resize", "import", "export", "publish", "rollback", "apply", "access", "add", "remove", "get-value", "login", "activate",
 	"ssh", "scp", "submit", "patch", "replace", "restart", "reset", "promote", "cancel", "execute", "clone", "get-credentials", "print-access-token", "print-identity-token"}
 
+// praxisVerb names Praxis calls for its tools.yaml allow-list (M2 plan Q10): a bare `praxis mcp`
+// lists the gateway's functions, `praxis mcp <server> <fn>` invokes one under the org's cloud
+// credentials, and memory, ig and duty are command groups.
+func praxisVerb(pos []shellparse.Word) string {
+	v := firstVerb(pos)
+	switch {
+	case v == "mcp" && len(pos) == 1:
+		return "mcp list"
+	case v == "mcp":
+		return "mcp call"
+	case (v == "memory" || v == "ig" || v == "duty") && len(pos) > 1:
+		return v + " " + known(pos[1])
+	}
+	return v
+}
+
 // awsVerb is "service operation" (aws s3 has its own commands).
 func awsVerb(pos []shellparse.Word) string {
 	if len(pos) < 2 {
@@ -114,6 +130,7 @@ var fixedSecretReads = []struct{ tool, pattern string }{
 	{"gcloud", "secrets versions access"}, {"gcloud", "print-access-token"}, {"gcloud", "print-identity-token"},
 	{"aws", "secretsmanager get-secret-value"}, {"aws", "kms decrypt"}, {"aws", "ecr get-login-password"},
 	{"aws", "sts get-session-token"}, {"heroku", "config:get"}, {"vercel", "env pull"},
+	{"praxis", "git-credential"}, // brokers VCS tokens
 }
 
 var kubeSecretOutput = []string{"yaml", "json", "jsonpath", "go-template", "go-template-file", "template", "custom-columns", "jsonpath-file"}
@@ -222,8 +239,6 @@ func fixedCloudTier(name, verb string) (Tier, bool) {
 	switch {
 	case name == "raptor":
 		return W3, true // every Raptor call (doc 03, doc 04 tier W3)
-	case name == "praxis":
-		return R1, true // read-only CLI; its read allow-list arrives in M2
 	case name == "gcloud" && (verb == "config list" || verb == "config get-value"):
 		return R0, true
 	case name == "gcloud" && strings.HasPrefix(verb, "config "):

@@ -20,3 +20,8 @@ cases:
   - {name: lambda update in staging, command: aws lambda update-function-code --function-name f --zip-file fileb://f.zip --profile staging, expect: {decision: deny, rule: "6"}}
   - {name: HTTP DELETE against a prod API, command: curl -X DELETE https://api.acme.com/users/1, expect: {decision: deny, rule: "5"}}
   - {name: terraform apply, command: terraform apply -auto-approve, expect: {decision: deny, rule: "5"}}
+  - {name: praxis invokes a server-side cloud command, command: "praxis mcp cloud_cli run_cloud_cli --arg command='ec2 terminate-instances --instance-ids i-1'", wrap: true, expect: {decision: deny, rule: "6"}}
+  - {name: praxis writes org memory, command: "praxis memory add --title x --audience org", expect: {decision: deny, rule: "6"}}
+  - {name: praxis publishes a catalog, command: "praxis ig publish ./g --catalog shop --member users", expect: {decision: deny, rule: "6"}}
+  - {name: praxis changes its login, command: "praxis logout --all", expect: {decision: deny, rule: "6"}}
+  - {name: praxis subcommand Athel does not know, command: "praxis release create", expect: {decision: deny, rule: "6"}}

@@ -64,14 +64,20 @@ tools:
       staging: {read: allow, write: deny}
       dev: {read: allow, write: deny}
     forbidden_patterns: ["secretsmanager get-secret-value", "ssm get-parameters?\\b.*--with-decryption", "kms decrypt", "sts get-session-token", "ecr get-login-password"]
+  # Facets through Praxis (doc 03 §Facets layer). Kept in its own entry so removing Facets means
+  # deleting it. Read allow-list from `praxis --help` and its subcommands' help (M2 plan Q10,
+  # 2026-11-09); every other subcommand reaches the org's systems and counts as a write.
   - id: praxis
     kind: cli
     match: {command: praxis}
-    purpose: [facets_read]
-    read: []
-    write: []
+    purpose: [facets_read, deployed_state, org_memory]
+    read: [status, version, profiles, agents, list-skills, help, duty, "memory recall", "memory list", "ig list", "ig status", "ig claims", "mcp list"]
+    write: [login, logout, update, refresh-skills, report, git-credential, "memory add", "ig sync", "ig publish", "ig manifest", "mcp call"]
     policy:
-      prod: {read: approve, write: deny}
+      prod: {read: allow, write: deny}
+      staging: {read: allow, write: deny}
+      dev: {read: allow, write: deny}
+    forbidden_patterns: ["git-credential"]
     playbook: skills/integrations/praxis/SKILL.md
   - id: raptor
     kind: cli
