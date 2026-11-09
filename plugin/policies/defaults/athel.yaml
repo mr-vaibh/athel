@@ -29,4 +29,4 @@ discovery:
 models:
   scout: sonnet # M2 plan Q5
 features:
-  discovery: false # M2 work in progress; turned on by the PR that ships the scout
+  discovery: true # the scout, /athel:ask and /athel:investigate; an org can switch them off

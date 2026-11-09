@@ -48,7 +48,7 @@ func TestBuiltinOnly(t *testing.T) {
 	s := r.Settings()
 	if s.BudgetMaxCostUSD != 40 || s.BudgetMaxHours != 8 || s.BudgetMaxToolCalls != 2000 || s.WarnRatio != 0.8 ||
 		s.LockTTLMin != 30 || s.HeartbeatEvery != 5*time.Minute || s.Identity != "" ||
-		len(s.Features) != 1 || s.Features["discovery"] {
+		len(s.Features) != 1 || !s.Features["discovery"] {
 		t.Errorf("settings = %+v", s)
 	}
 	if len(r.Layers) != 1 || r.Layers[0].Name != LayerBuiltin || !strings.HasPrefix(r.Hash, "sha256:") {

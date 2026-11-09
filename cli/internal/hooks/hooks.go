@@ -165,6 +165,7 @@ func postToolUse(req *hookio.Request, d Deps) Outcome {
 	}
 	o.Reason = strings.Join(reasons, "; ")
 	capture(req, d, out, flags, &o)
+	noteScoutSave(req, d, &o)
 	return o
 }
 
@@ -274,6 +275,9 @@ func sessionEnd(req *hookio.Request, d Deps) Outcome {
 func stop(req *hookio.Request, d Deps) Outcome {
 	o := Outcome{Rule: RuleLogOnly, Result: "ok", Change: activeChange(d, req.SessionID)}
 	o.Response.BlockStop = ShouldBlockStop(req, false, 0)
+	if req.Event == hookio.SubagentStop && req.AgentType == hookio.ScoutAgent {
+		scoutStop(req, d, &o)
+	}
 	return o
 }
 

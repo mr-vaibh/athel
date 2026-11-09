@@ -282,11 +282,11 @@ func athelCall(cmd shellparse.Command) Action {
 // athelReadGroups are athel command groups that only read; athelReads are single read-only
 // subcommands of groups that also write. Every other athel call writes .athel/ (tier W0).
 var (
-	athelReadGroups = map[string]bool{"version": true, "status": true, "schema": true, "config": true, "policy": true, "audit": true}
+	athelReadGroups = map[string]bool{"version": true, "status": true, "schema": true, "config": true, "policy": true, "audit": true, "playbook": true}
 	athelReads      = map[string]bool{
 		"change list": true, "change show": true, "state show": true,
 		"lock status": true, "lock show": true, "checkpoint status": true, "checkpoint show": true,
 		"budget status": true, "budget show": true, "fact find": true, "fact show": true,
-		"investigation validate": true, "repos show": true,
+		"investigation validate": true, "repos show": true, "ask show": true,
 	}
 )

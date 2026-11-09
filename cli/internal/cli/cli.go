@@ -88,6 +88,10 @@ func commands() map[string]command {
 		"repos index":            cmdReposIndex,
 		"repos show":             cmdReposShow,
 		"repos cache":            cmdReposCache,
+		"ask new":                cmdAskNew,
+		"ask show":               cmdAskShow,
+		"playbook list":          cmdPlaybookList,
+		"playbook show":          cmdPlaybookShow,
 		"fact archive":           cmdFactArchive,
 	}
 }
