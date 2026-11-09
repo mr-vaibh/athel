@@ -73,11 +73,11 @@ func TestSchemaValidateInfersSchema(t *testing.T) {
 	h.mustOK("init")
 	h.mustOK("change", "new", "--title", "t", "--prd-text", "p")
 	rel := filepath.Join(".athel", "changes", "CHG-001", "change.yaml")
-	if v := h.mustOK("schema", "validate", rel); v["schema"] != "athel/change@2" || v["valid"] != true {
+	if v := h.mustOK("schema", "validate", rel); v["schema"] != "athel/change@3" || v["valid"] != true {
 		t.Errorf("inferred = %v", v)
 	}
 	abs := filepath.Join(h.root, ".athel", "config", "athel.yaml")
-	if v := h.mustOK("schema", "validate", abs, "--schema", "athel/config@1"); v["valid"] != true {
+	if v := h.mustOK("schema", "validate", abs, "--schema", "athel/config@2"); v["valid"] != true {
 		t.Errorf("explicit = %v", v)
 	}
 	bad := filepath.Join(h.root, "bad.yaml")

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/mr-vaibh/athel/cli/internal/config"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/plan"
 )
@@ -60,20 +61,34 @@ func cmdPlanShow(r *runCtx, args []string) (any, error) {
 }
 
 type migrateResult struct {
-	DryRun   bool     `json:"dry_run"`
-	Migrated []string `json:"migrated"`
+	DryRun      bool     `json:"dry_run"`
+	Migrated    []string `json:"migrated"`
+	ConfigFiles []string `json:"config_files"`
 }
 
+// cmdMigrate upgrades config layers first: an old layer is read either way, but the store
+// needs the effective config, and the changes are rewritten under it.
 func cmdMigrate(r *runCtx, args []string) (any, error) {
 	fs := r.newFlags("migrate")
 	dry := fs.Bool("dry-run", false, "list what would be upgraded without writing")
 	if _, err := parse(fs, args, 0); err != nil {
 		return nil, err
 	}
-	s, err := r.storeFor()
+	if _, err := r.workspaceDir(); err != nil {
+		return nil, err
+	}
+	paths, err := r.configPaths()
 	if err != nil {
 		return nil, err
 	}
-	ids, err := s.Migrate(*dry)
-	return migrateResult{DryRun: *dry, Migrated: ids}, err
+	res := migrateResult{DryRun: *dry, Migrated: []string{}}
+	if res.ConfigFiles, err = config.MigrateLayers(paths, r.registry(), *dry); err != nil {
+		return res, err
+	}
+	s, err := r.storeFor()
+	if err != nil {
+		return res, err
+	}
+	res.Migrated, err = s.Migrate(*dry)
+	return res, err
 }

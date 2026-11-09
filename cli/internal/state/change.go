@@ -25,10 +25,14 @@ const (
 )
 
 // SchemaID is the schema of change.yaml written by this version.
-const SchemaID = "athel/change@2"
+const SchemaID = "athel/change@3"
 
-// LegacySchemaID is the M0 version, read and upgraded transparently (athel migrate rewrites it).
-const LegacySchemaID = "athel/change@1"
+// Older change schemas are read and upgraded in memory; `athel migrate` rewrites them. Version
+// 1 (M0) has no integrity seal; version 2 (M1) has one and only lacks the M2 flags.
+const (
+	SchemaV1 = "athel/change@1"
+	SchemaV2 = "athel/change@2"
+)
 
 // Change is the content of change.yaml. Field order is the YAML output order. Timestamps are
 // kept as strings in clock.Layout so the file round-trips byte for byte.
@@ -53,12 +57,29 @@ type Change struct {
 	Repos        []any          `yaml:"repos" json:"repos"`
 	ChangeSet    any            `yaml:"change_set" json:"change_set"`
 	Parent       any            `yaml:"parent" json:"parent"`
-	Flags        []any          `yaml:"flags" json:"flags"`
+	Flags        []Flag         `yaml:"flags" json:"flags"`
 	History      []Transition   `yaml:"history" json:"history"`
 	Integrity    *Integrity     `yaml:"integrity" json:"integrity"`
 
 	tampered bool // set on load when the stored hash does not match (integrity.go)
 }
+
+// Flag marks a fact this change used that verification later disputed or superseded (doc 03
+// FR-DISC-005). Only the CLI adds or resolves flags.
+type Flag struct {
+	Kind        string  `yaml:"kind" json:"kind"`
+	Fact        string  `yaml:"fact" json:"fact"`
+	Replacement *string `yaml:"replacement" json:"replacement"`
+	At          string  `yaml:"at" json:"at"`
+	Reason      string  `yaml:"reason" json:"reason"`
+	ResolvedAt  *string `yaml:"resolved_at" json:"resolved_at"`
+}
+
+// Flag kinds.
+const (
+	FlagFactDisputed   = "fact_disputed"
+	FlagFactSuperseded = "fact_superseded"
+)
 
 // Integrity is the hash of change.yaml as the CLI last wrote it (E-INTEGRITY, M1).
 type Integrity struct {

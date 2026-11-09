@@ -117,7 +117,7 @@ func TestSetPlanErrors(t *testing.T) {
 	}
 }
 
-func TestMigrateChange1To2(t *testing.T) {
+func TestMigrateChange1ToCurrent(t *testing.T) {
 	s, _ := newTestStore(t)
 	c := mustCreate(t, s, "x")
 	mustCreate(t, s, "already v2")
@@ -141,7 +141,7 @@ func TestMigrateChange1To2(t *testing.T) {
 		t.Fatalf("migrate = %v %v", ids, err)
 	}
 	after, _ := os.ReadFile(s.WS.ChangeFile(c.ID))
-	if !strings.Contains(string(after), "schema: athel/change@2") || IsLegacy(after) {
+	if !strings.Contains(string(after), "schema: "+SchemaID) || IsLegacy(after) {
 		t.Errorf("not upgraded:\n%s", after)
 	}
 	if ids, _ := s.Migrate(false); len(ids) != 0 {
@@ -153,7 +153,7 @@ func TestMigrateErrors(t *testing.T) {
 	s, _ := newTestStore(t)
 	c := mustCreate(t, s, "x")
 	b, _ := os.ReadFile(s.WS.ChangeFile(c.ID))
-	legacy := strings.Replace(string(b), "schema: athel/change@2", "schema: athel/change@1", 1)
+	legacy := strings.Replace(string(b), "schema: "+SchemaID, "schema: "+SchemaV1, 1)
 	badLegacy := strings.Replace(legacy, "state: draft", "state: bogus", 1)
 	if err := os.WriteFile(s.WS.ChangeFile(c.ID), []byte(badLegacy), 0o600); err != nil {
 		t.Fatal(err)
@@ -171,7 +171,7 @@ func TestMigrateErrors(t *testing.T) {
 
 var integrityBlock = regexp.MustCompile(`(?m)^integrity:\n(  .*\n)*`)
 
-// toLegacy turns a change@2 file into the change@1 file M0 would have written.
-func toLegacy(v2 string) string {
-	return integrityBlock.ReplaceAllString(strings.Replace(v2, "schema: athel/change@2", "schema: athel/change@1", 1), "")
+// toLegacy turns a current change file into the change@1 file M0 would have written.
+func toLegacy(current string) string {
+	return integrityBlock.ReplaceAllString(strings.Replace(current, "schema: "+SchemaID, "schema: "+SchemaV1, 1), "")
 }

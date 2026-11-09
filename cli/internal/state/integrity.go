@@ -40,10 +40,11 @@ func seal(c *Change, data []byte) error {
 	return nil
 }
 
-// verify sets c.tampered when the stored hash is missing or differs. Legacy change@1 files
-// predate the hash and are sealed by `athel migrate` or their next write.
-func verify(c *Change, data []byte, legacy bool) error {
-	if legacy {
+// verify sets c.tampered when the stored hash is missing or differs. change@1 files predate the
+// hash and are sealed by `athel migrate` or their next write. A change@2 file is checked like a
+// current one: its seal covers its own bytes, whatever the schema version.
+func verify(c *Change, data []byte, unsealed bool) error {
+	if unsealed {
 		return nil
 	}
 	h, err := ContentHash(data)

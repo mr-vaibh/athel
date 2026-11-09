@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/investigation@1.json",
+  "title": "athel/investigation@1",
+  "description": "The scout's answer to one question (doc 03 §Investigation output; FR-DISC-013). Saved by `athel investigation save` as the fenced yaml block of investigation.md, after the CLI checks every claim's confidence against its evidence. Every section is present, empty when there is nothing to report.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "question", "type", "scope", "complete", "budget", "claims", "drift", "gaps", "active_work", "health", "suspicious", "facts_used", "facts_created"],
+  "oneOf": [
+    {"required": ["change"]},
+    {"required": ["ask"]}
+  ],
+  "properties": {
+    "schema": {"const": "athel/investigation@1"},
+    "change": {"type": "string", "pattern": "^CHG-[0-9]{3,}(-F[1-9][0-9]*)?$"},
+    "ask": {"type": "string", "pattern": "^ASK-[0-9]{3,}$"},
+    "question": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "type": {
+      "description": "The standard question types of doc 03 §Question recipes; the type decides the mandatory sources.",
+      "enum": ["data_owner", "endpoint_callers", "event_consumers", "service_path", "deployed_state", "service_health", "service_owner", "active_work", "config_dependency", "drift_check", "custom"]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["services", "repos"],
+      "properties": {
+        "services": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/name"}},
+        "repos": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/name"}}
+      }
+    },
+    "complete": {"description": "false when the question budget ran out (FR-DISC-014); gaps then say what is missing.", "type": "boolean"},
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_tool_calls", "max_minutes", "used_tool_calls", "used_minutes"],
+      "properties": {
+        "max_tool_calls": {"type": "integer", "minimum": 1},
+        "max_minutes": {"type": "integer", "minimum": 1},
+        "used_tool_calls": {"type": "integer", "minimum": 0},
+        "used_minutes": {"type": "number", "minimum": 0}
+      }
+    },
+    "claims": {"type": "array", "maxItems": 200, "items": {"$ref": "#/$defs/claim"}},
+    "drift": {
+      "description": "Disagreements between sources (FR-DISC-006): reported, never resolved silently.",
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text", "evidence"],
+        "properties": {
+          "text": {"$ref": "#/$defs/text"},
+          "evidence": {"type": "array", "minItems": 2, "maxItems": 20, "items": {"$ref": "#/$defs/source"}}
+        }
+      }
+    },
+    "gaps": {
+      "description": "Sources the scout could not use and how that limits the answer (FR-DISC-009, FR-DISC-014).",
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "code", "reason", "login", "effect"],
+        "properties": {
+          "source": {"$ref": "#/$defs/name"},
+          "code": {"type": "string", "pattern": "^E-(AUTH|TOOL|BUDGET|POLICY)-[A-Z0-9-]+$"},
+          "reason": {"$ref": "#/$defs/text"},
+          "login": {"description": "The exact command that restores access, when the gap is an auth problem.", "oneOf": [{"type": "string", "minLength": 1, "maxLength": 500}, {"type": "null"}]},
+          "effect": {"$ref": "#/$defs/text"}
+        }
+      }
+    },
+    "active_work": {
+      "description": "Work by others on the services in scope (FR-DISC-010).",
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "ref", "author", "touches"],
+        "properties": {
+          "kind": {"enum": ["pr", "branch", "ticket", "commit", "local_changes"]},
+          "ref": {"type": "string", "minLength": 1, "maxLength": 500},
+          "author": {"oneOf": [{"$ref": "#/$defs/name"}, {"type": "null"}]},
+          "touches": {"type": "array", "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 500}}
+        }
+      }
+    },
+    "health": {
+      "description": "Current health of in-scope services (FR-DISC-011).",
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["service", "env", "window", "error_rate", "latency_ms", "alerts", "incidents", "recent_deploys", "evidence"],
+        "properties": {
+          "service": {"$ref": "#/$defs/name"},
+          "env": {"$ref": "#/$defs/env"},
+          "window": {"type": "string", "pattern": "^[1-9][0-9]*(m|h|d)$"},
+          "error_rate": {"description": "Fraction of failed requests in the window.", "oneOf": [{"type": "number", "minimum": 0, "maximum": 1}, {"type": "null"}]},
+          "latency_ms": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "p50": {"type": "number", "minimum": 0},
+                  "p95": {"type": "number", "minimum": 0},
+                  "p99": {"type": "number", "minimum": 0}
+                }
+              },
+              {"type": "null"}
+            ]
+          },
+          "alerts": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "severity", "firing"],
+              "properties": {
+                "name": {"$ref": "#/$defs/name"},
+                "severity": {"enum": ["critical", "warning", "info"]},
+                "firing": {"type": "boolean"}
+              }
+            }
+          },
+          "incidents": {"type": "array", "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 500}},
+          "recent_deploys": {"type": "array", "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 500}},
+          "evidence": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"$ref": "#/$defs/source"}}
+        }
+      }
+    },
+    "suspicious": {
+      "description": "Tool output that reads like instructions to an AI; treated as data and never followed (doc 03 edge cases; doc 04 injection layer 3).",
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ref", "excerpt"],
+        "properties": {
+          "ref": {"type": "string", "minLength": 1, "maxLength": 500},
+          "excerpt": {"type": "string", "minLength": 1, "maxLength": 500},
+          "tool_use_id": {"$ref": "#/$defs/toolUseId"}
+        }
+      }
+    },
+    "facts_used": {"type": "array", "uniqueItems": true, "maxItems": 500, "items": {"$ref": "#/$defs/factId"}},
+    "facts_created": {"type": "array", "uniqueItems": true, "maxItems": 500, "items": {"$ref": "#/$defs/factId"}}
+  },
+  "$defs": {
+    "factId": {"type": "string", "pattern": "^F-[0-9]{4,}$"},
+    "toolUseId": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,200}$"},
+    "name": {"type": "string", "minLength": 1, "maxLength": 300},
+    "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "env": {"type": "string", "pattern": "^(any|[a-z][a-z0-9_-]{0,62})$"},
+    "entity": {
+      "type": "object",
+      "required": ["kind", "name"],
+      "properties": {
+        "kind": {"enum": ["service", "endpoint", "event", "topic", "table", "column", "field", "repo", "path", "team", "person", "config", "secret", "image", "workload", "alert", "metric", "value", "branch", "pr", "ticket"]},
+        "name": {"type": "string", "minLength": 1, "maxLength": 300}
+      },
+      "additionalProperties": {"type": "string", "minLength": 1, "maxLength": 300}
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text", "subject", "predicate", "object", "env", "confidence", "evidence", "facts"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^C[1-9][0-9]*$"},
+        "text": {"$ref": "#/$defs/text"},
+        "subject": {"$ref": "#/$defs/entity"},
+        "predicate": {"enum": ["owns_data", "writes_data", "reads_data", "calls", "consumed_by", "produced_by", "routes_via", "exposes", "deployed_version", "replicas", "health", "owned_by", "on_call", "active_work", "reads_config", "mounts_secret", "alias_of", "maps_to_repo", "maps_to_path", "local_clone"]},
+        "object": {"$ref": "#/$defs/entity"},
+        "env": {"$ref": "#/$defs/env"},
+        "confidence": {"enum": ["confirmed", "likely", "unverified"]},
+        "evidence": {"description": "At least one source per claim (FR-DISC-001).", "type": "array", "minItems": 1, "maxItems": 50, "items": {"$ref": "#/$defs/source"}},
+        "facts": {"type": "array", "uniqueItems": true, "maxItems": 50, "items": {"$ref": "#/$defs/factId"}}
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {"enum": ["code", "schema", "migration", "manifest", "codeowners", "catalog", "docs", "workflow", "hint", "name", "trace", "metric", "log", "mesh", "ingress", "gateway", "cluster", "cloud", "facets", "alert", "deploy", "error_tracker", "incident", "pr", "branch", "commit", "ticket", "chat", "oncall"]},
+        "ref": {"type": "string", "minLength": 1, "maxLength": 500},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
+        "env": {"type": "string", "pattern": "^(any|[a-z][a-z0-9_-]{0,62})$"},
+        "window": {"type": "string", "pattern": "^[1-9][0-9]*(m|h|d)$"},
+        "sampling": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "tool_use_id": {"$ref": "#/$defs/toolUseId"}
+      }
+    }
+  }
+}

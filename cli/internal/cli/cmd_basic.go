@@ -57,8 +57,8 @@ func cmdVersion(r *runCtx, args []string) (any, error) {
 
 const projectConfigTemplate = `# Project layer of the Athel configuration (layer 4 of 4).
 # A project may only tighten the built-in, org and user layers unless they list a key under
-# "overridable". See docs/plans/M0-plan.md §7 for the keys M0 understands.
-schema: athel/config@1
+# "overridable". The keys are defined by schemas/config@2.json.
+schema: athel/config@2
 `
 
 type initResult struct {

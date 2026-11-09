@@ -55,13 +55,9 @@ func (r *runCtx) config() (*config.Result, error) {
 	if r.cfg != nil {
 		return r.cfg, nil
 	}
-	home, err := config.DefaultHome(r.env.Getenv, r.env.UserHome)
+	paths, err := r.configPaths()
 	if err != nil {
 		return nil, err
-	}
-	paths := config.Paths{Home: home}
-	if ws, err := r.workspaceDir(); err == nil {
-		paths.ProjectDir = ws.ConfigDir()
 	}
 	cfg, err := config.Load(paths, r.registry())
 	if err != nil {
@@ -69,6 +65,20 @@ func (r *runCtx) config() (*config.Result, error) {
 	}
 	r.cfg = cfg
 	return cfg, nil
+}
+
+// configPaths locates the config layers: ATHEL_HOME, plus the workspace's project layer when
+// there is a workspace.
+func (r *runCtx) configPaths() (config.Paths, error) {
+	home, err := config.DefaultHome(r.env.Getenv, r.env.UserHome)
+	if err != nil {
+		return config.Paths{}, err
+	}
+	paths := config.Paths{Home: home}
+	if ws, err := r.workspaceDir(); err == nil {
+		paths.ProjectDir = ws.ConfigDir()
+	}
+	return paths, nil
 }
 
 // storeFor returns the change store of the workspace, tuned by the effective config.

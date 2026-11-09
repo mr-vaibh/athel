@@ -49,15 +49,31 @@ func TestMigrateCommand(t *testing.T) {
 	h := setup(t)
 	cf := filepath.Join(h.root, ".athel", "changes", "CHG-001", "change.yaml")
 	b, _ := os.ReadFile(cf)
-	legacy := regexp.MustCompile(`(?m)^integrity:\n(  .*\n)*`).ReplaceAllString(strings.Replace(string(b), "change@2", "change@1", 1), "")
+	legacy := regexp.MustCompile(`(?m)^integrity:\n(  .*\n)*`).ReplaceAllString(strings.Replace(string(b), "change@3", "change@1", 1), "")
 	if err := os.WriteFile(cf, []byte(legacy), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if m := h.mustOK("migrate", "--dry-run"); len(m["migrated"].([]any)) != 1 || m["dry_run"] != true {
+	project := filepath.Join(h.root, ".athel", "config", "athel.yaml")
+	if err := os.WriteFile(project, []byte("# kept\nschema: athel/config@1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if m := h.mustOK("migrate", "--dry-run"); len(m["migrated"].([]any)) != 1 || len(m["config_files"].([]any)) != 1 || m["dry_run"] != true {
 		t.Errorf("dry run = %v", m)
 	}
-	if m := h.mustOK("migrate"); len(m["migrated"].([]any)) != 1 {
+	if m := h.mustOK("migrate"); len(m["migrated"].([]any)) != 1 || m["config_files"].([]any)[0] != project {
 		t.Errorf("migrate = %v", m)
+	}
+	if b, _ := os.ReadFile(project); string(b) != "# kept\nschema: athel/config@2\n" {
+		t.Errorf("project layer = %q", b)
+	}
+	if err := os.WriteFile(project, []byte("{schema: athel/config@1}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, _ := h.runJSON("migrate"); code != aerr.ExitPolicy {
+		t.Errorf("unmigratable project layer: exit %d", code)
+	}
+	if err := os.WriteFile(project, []byte("schema: athel/config@2\n"), 0o600); err != nil {
+		t.Fatal(err)
 	}
 	if code, _ := h.runJSON("migrate", "x"); code != aerr.ExitUsage {
 		t.Errorf("usage: exit %d", code)
