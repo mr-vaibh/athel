@@ -48,7 +48,8 @@ claims:
       #   cloud | facets | alert | deploy | error_tracker | incident | pr | branch | commit |
       #   ticket | chat | oncall
       # Optional per source: commit (sha), env, window (7d), sampling (0.01), tool_use_id,
-      #   supports: false (the source contradicts the claim).
+      #   supports: false (the source observes this fact and shows it false; a source about
+      #   another fact is drift, and an empty query is a gap).
       - kind: migration
         ref: billing/db/002_invoices.sql:7
       - kind: code

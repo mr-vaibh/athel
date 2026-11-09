@@ -67,7 +67,8 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
    the organisation's code (`gh search code`) and clone what it finds with `athel repos cache`.
    Check a tool's defaults (`gcloud config get-value project`, `kubectl config current-context`)
    instead of assuming them, and query the runtime sources the type needs even when code already
-   answers.
+   answers. A service often has other names in the cluster and in metrics: when a query by one
+   name returns nothing, try the others or drop the name filter before concluding.
 4. **Gather** with narrow queries (filters, label selectors, time windows; traffic lookback 7
    days unless told otherwise). Put long raw output in a file only through the CLI, and quote
    only what a claim needs.
@@ -76,10 +77,13 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
    inference or naming similarity is `unverified`. A runtime claim (calls, consumers, routes,
    deployed versions, health, config and secret mounts) needs a runtime source, or it is
    `unverified`. The label is decided by the evidence, not by you: the CLI refuses any label other
-   than the one its rules give, and its error names the right one. List every source you used,
-   and mark a source that speaks against the claim (zero traffic, another version) with
-   `supports: false`; any contradiction makes the claim `unverified`, and the disagreement is
-   drift.
+   than the one its rules give, and its error names the right one. List every source you used.
+   Mark a source `supports: false` only when it observes the claim's own fact and shows it false,
+   such as traffic metrics showing zero calls for a `calls` claim. A source about a different fact
+   is drift, not evidence against: a repo manifest says what should run, not what runs. A query
+   that returns nothing is a gap, not evidence. Any contradiction makes the claim `unverified`.
+   For a path through a gateway, mesh or broker, cite the hop's own evidence (the gateway's route
+   config, the subscription) on the claim about that hop.
 6. **Drift.** Every disagreement between sources (code vs cluster, cluster vs traffic, Facets vs
    GCP, docs vs code) is a drift entry with both pieces of evidence. Never resolve it silently.
 7. **Report.**

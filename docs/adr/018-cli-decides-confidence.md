@@ -54,3 +54,13 @@ best"), and delegated it (docs/context/decisions-from-chat.md, 2026-11-09).
 ## Spec references
 Doc 03 FR-DISC-002, FR-DISC-003, FR-DISC-006; doc 08 M2 exit criteria; M2 plan §4.3, EC-2;
 ADR 002.
+
+## Follow-up (2026-11-09, second full eval run)
+The second run (`m2-2026-11-09T162052Z.json`) showed the scout marking `supports: false` too
+widely: a query that returned nothing, and a repo manifest's version against the version the
+cluster runs. The mechanism is unchanged. Its guidance, in the scout prompt and the template, now
+says:
+- A source contradicts a claim only when it observes the claim's own fact and shows it false.
+- A source about another fact is drift. A manifest states the desired version, not the running
+  one.
+- An empty query is a gap, not evidence.
