@@ -436,3 +436,15 @@ func TestPraxisAllowList(t *testing.T) {
 		t.Errorf("git-credential brokers tokens: %+v", a)
 	}
 }
+
+func TestMCPForbiddenPatterns(t *testing.T) {
+	pol := testPolicy(t, nil)
+	for tool, want := range map[string]Tier{
+		"mcp__github__merge_pull_request": X, "mcp__github__delete_repository": X,
+		"mcp__github__search_code": R1, "mcp__github__push_files": W2, "mcp__grafana__query_sql": W2,
+	} {
+		if a := Classify(Call{Tool: tool, Input: []byte(`{}`)}, pol, Options{}).Actions[0]; a.Tier != want {
+			t.Errorf("%s: tier %s, want %s", tool, a.Tier, want)
+		}
+	}
+}

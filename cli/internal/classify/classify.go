@@ -194,6 +194,12 @@ func classifyMCP(c Call, pol *policy.Set) Action {
 		return a
 	}
 	a.ToolID = t.ID
+	for _, re := range t.ForbiddenRegexps() {
+		if re.MatchString(tool) {
+			a.Tier, a.Forbidden = X, "MCP tool "+c.Tool+" matches forbidden pattern "+re.String()+" for "+t.ID
+			return a
+		}
+	}
 	switch {
 	case containsVerb(t.Write, tool):
 		a.Tier = W2

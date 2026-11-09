@@ -21,6 +21,10 @@ gh run list --repo acme/users --limit 10 --json name,status,conclusion,headBranc
 gh api repos/acme/users/commits --jq '.[0:20][] | {sha: .sha, author: .commit.author.name, date: .commit.author.date}'
 ```
 
+With GitHub's official MCP server (registered as `github`), the same reads are
+`mcp__github__search_code`, `mcp__github__get_file_contents`, `mcp__github__list_pull_requests`,
+`mcp__github__pull_request_read`, `mcp__github__list_branches` and `mcp__github__list_commits`.
+
 ## Filtering large output
 `--json` with the fields you need, `--jq`, `--limit`. Use `gh search code` before cloning; clone
 into Athel's cache (`athel repos cache`) only to read deeply.

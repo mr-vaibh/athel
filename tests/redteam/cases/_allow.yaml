@@ -33,3 +33,6 @@ cases:
   - {name: praxis recalls org memory, command: "praxis memory recall phone number", expect: {decision: allow, rule: "11"}}
   - {name: praxis lists gateway functions, command: praxis mcp, expect: {decision: allow, rule: "11"}}
   - {name: praxis reads duty findings, command: "praxis duty findings nightly", expect: {decision: allow, rule: "11"}}
+  - {name: GitHub MCP code search, tool: mcp__github__search_code, input: {query: users.updated.v1}, expect: {decision: allow, rule: "11"}}
+  - {name: Grafana Prometheus query, tool: mcp__grafana__query_prometheus, input: {expr: up}, expect: {decision: allow, rule: "11"}}
+  - {name: Jira JQL search, tool: mcp__atlassian__searchJiraIssuesUsingJql, input: {jql: "project = SHOP"}, expect: {decision: allow, rule: "11"}}
