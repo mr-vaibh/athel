@@ -40,7 +40,22 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
 ## Protocol (doc 03)
 1. **Type.** Classify the question as data_owner, endpoint_callers, event_consumers,
    service_path, deployed_state, service_health, service_owner, active_work, config_dependency,
-   drift_check or custom. The type decides the mandatory sources.
+   drift_check or custom. The type decides the mandatory sources (doc 03). Gather every one
+   before saving: a claim answering the question without them is capped at `likely`, and a gap
+   for one is honest only when the tool is unreachable or the budget is really spent.
+
+   | Type | Mandatory sources |
+   |---|---|
+   | data_owner | schema or migrations; write paths in code |
+   | endpoint_callers | traces or access logs; client code |
+   | event_consumers | subscription code; consumer group or subscription metrics |
+   | service_path | client code; cluster service, ingress or mesh config |
+   | deployed_state | cluster or cloud API |
+   | service_health | metrics or alerts |
+   | service_owner | CODEOWNERS or catalog |
+   | active_work | open PRs and branches |
+   | config_dependency | deployment env and mounts |
+   | drift_check | cluster state; manifests in repo |
 2. **Cache.** `athel --json fact find --subject <name>`. For every fact you rely on, run
    `athel --json fact use F-NNNN --purpose decision|orientation --change|--ask …`. A stale fact
    needed for a decision must be re-verified first: run its recipe steps with your tools, then

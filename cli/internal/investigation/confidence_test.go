@@ -1,6 +1,7 @@
 package investigation
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -105,4 +106,32 @@ func containsStr(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// TestScoutPromptListsMandatorySources keeps the scout's table of mandatory sources in step with
+// the ceilings the CLI enforces: the scout cannot gather what it is never told about.
+func TestScoutPromptListsMandatorySources(t *testing.T) {
+	b, err := os.ReadFile("../../../plugin/agents/scout.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := map[string]string{}
+	for _, line := range strings.Split(string(b), "\n") {
+		cells := strings.Split(strings.TrimSpace(line), "|")
+		if len(cells) == 4 {
+			rows[strings.TrimSpace(cells[1])] = strings.TrimSpace(cells[2])
+		}
+	}
+	for typ, qt := range questionTypes {
+		if typ == "custom" {
+			continue
+		}
+		names := make([]string, 0, len(qt.mandatory))
+		for _, g := range qt.mandatory {
+			names = append(names, g.name)
+		}
+		if want := strings.Join(names, "; "); rows[typ] != want {
+			t.Errorf("scout.md row for %s is %q, the CLI requires %q", typ, rows[typ], want)
+		}
+	}
 }
