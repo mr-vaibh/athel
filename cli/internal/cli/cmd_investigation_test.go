@@ -117,7 +117,9 @@ func TestInvestigationCommandErrors(t *testing.T) {
 		{"missing block", []string{"investigation", "save", "--change", "CHG-001", filepath.Join(t.TempDir(), "x")}, nil, aerr.ExitState},
 		{"missing summary", []string{"investigation", "save", "--change", "CHG-001", "--summary", filepath.Join(t.TempDir(), "x"), block}, nil, aerr.ExitState},
 		{"invalid block", []string{"investigation", "save", "--change", "CHG-001", writeTemp(t, "bad.yaml", "schema: x\n")}, nil, aerr.ExitState},
-		{"no change", []string{"investigation", "save", block}, nil, aerr.ExitState},
+		{"neither change nor ask", []string{"investigation", "save", block}, nil, aerr.ExitUsage},
+		{"both change and ask", []string{"investigation", "save", "--change", "CHG-001", "--ask", "ASK-001", block}, nil, aerr.ExitUsage},
+		{"unknown ask", []string{"investigation", "save", "--ask", "ASK-009", block}, nil, aerr.ExitState},
 		{"unknown change", []string{"investigation", "save", "--change", "CHG-009", block}, nil, aerr.ExitState},
 		{"other session holds the lock", []string{"investigation", "save", "--change", "CHG-001", block}, map[string]string{"ATHEL_SESSION_ID": "sess-B"}, aerr.ExitState},
 	}
@@ -179,5 +181,61 @@ func TestInvestigationCreatedFactsChecked(t *testing.T) {
 	missing := writeTemp(t, "claims.yaml", strings.Replace(claimBlock, "facts_created: []", "facts_created: [F-0007]", 1))
 	if code, _ := h.runJSON("investigation", "save", "--change", "CHG-001", missing); code != aerr.ExitState {
 		t.Errorf("unknown created fact: exit %d", code)
+	}
+}
+
+func TestAskInvestigation(t *testing.T) {
+	h := setup(t)
+	h.stdin = factDraft
+	h.mustOK("fact", "add", "-")
+	a := h.mustOK("ask", "new", "--question", "Who owns the users service?")
+	if a["id"] != "ASK-001" || a["kind"] != "question" || a["session"] != "sess-A" {
+		t.Fatalf("ask new = %v", a)
+	}
+	h.mustOK("fact", "use", "F-0001", "--purpose", "orientation", "--ask", "ASK-001")
+	block := writeTemp(t, "claims.yaml", strings.Replace(claimBlock, "change: CHG-001", "ask: ASK-001", 1))
+	v := h.mustOK("investigation", "save", "--ask", "ASK-001", block)
+	if !strings.HasSuffix(v["path"].(string), filepath.Join("asks", "ASK-001", "investigation.md")) {
+		t.Errorf("save = %v", v)
+	}
+	if shown := h.mustOK("ask", "show", "ASK-001"); shown["question"] != "Who owns the users service?" {
+		t.Errorf("show = %v", shown)
+	}
+	if code, _ := h.runJSON("investigation", "save", "--ask", "ASK-001", writeTemp(t, "c.yaml", claimBlock)); code != aerr.ExitState {
+		t.Errorf("a change's block saved as an ask: exit %d", code)
+	}
+	answer := filepath.Join(h.root, ".athel", "asks", "ASK-001", "investigation.md")
+	if err := os.Remove(answer); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(answer, "x"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if code, _ := h.runJSON("investigation", "save", "--ask", "ASK-001", block); code != aerr.ExitState {
+		t.Errorf("unwritable answer file: exit %d", code)
+	}
+	for args, code := range map[string]int{"ask new": aerr.ExitUsage, "ask new x": aerr.ExitUsage, "ask show": aerr.ExitUsage, "ask new --question q --kind other": aerr.ExitState, "ask show ASK-1": aerr.ExitState} {
+		if got, _ := h.runJSON(strings.Fields(args)...); got != code {
+			t.Errorf("%s: exit %d, want %d", args, got, code)
+		}
+	}
+	outside := newHarness(t)
+	for _, args := range [][]string{{"ask", "new", "--question", "q"}, {"ask", "show", "ASK-001"}} {
+		if code, _ := outside.runJSON(args...); code != aerr.ExitState {
+			t.Errorf("%v outside a workspace: exit %d", args, code)
+		}
+	}
+}
+
+func TestSummaryText(t *testing.T) {
+	h := investigationSetup(t)
+	h.stdin = claimBlock
+	v := h.mustOK("investigation", "save", "--change", "CHG-001", "--summary-text", "Identity owns users.", "-")
+	md, _ := os.ReadFile(v["path"].(string))
+	if !strings.Contains(string(md), "Identity owns users.") {
+		t.Errorf("investigation.md = %s", md)
+	}
+	if code, _ := h.runJSON("investigation", "save", "--change", "CHG-001", "--summary", "x", "--summary-text", "y", "-"); code != aerr.ExitUsage {
+		t.Errorf("both summaries: exit %d", code)
 	}
 }
