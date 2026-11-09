@@ -31,27 +31,28 @@ type ClaimCheck struct {
 }
 
 // Report is the outcome of the checks. Gaps lists the gaps the CLI added for missing mandatory
-// sources. Problems are rule violations; Overclaims are labels above their ceiling.
+// sources. Problems are rule violations; Mislabels are labels other than the one the evidence
+// gives (ADR 018: the CLI decides labels, the scout states them).
 type Report struct {
-	Claims     []ClaimCheck `json:"claims"`
-	AddedGaps  []Gap        `json:"added_gaps"`
-	Overclaims []string     `json:"overclaims"`
-	Problems   []string     `json:"problems"`
+	Claims    []ClaimCheck `json:"claims"`
+	AddedGaps []Gap        `json:"added_gaps"`
+	Mislabels []string     `json:"mislabels"`
+	Problems  []string     `json:"problems"`
 }
 
 // Err turns a report with violations into one error naming all of them: E-STATE-CONFIDENCE when
-// a label is above its ceiling (the scout must lower it), E-STATE-INVALID for anything else.
+// a label differs from its evidence's (the scout must change it), E-STATE-INVALID otherwise.
 func (r Report) Err() error {
-	all := append(slices.Clone(r.Overclaims), r.Problems...)
+	all := append(slices.Clone(r.Mislabels), r.Problems...)
 	if len(all) == 0 {
 		return nil
 	}
 	code := aerr.StateInvalid
-	if len(r.Overclaims) > 0 {
+	if len(r.Mislabels) > 0 {
 		code = aerr.StateConfidence
 	}
 	return aerr.New(code, "investigation rejected: "+strings.Join(all, "; ")).
-		WithNextAction("fix the claim block and save again; a label may never exceed what its evidence allows")
+		WithNextAction("fix the claim block and save again; every label must be exactly what its evidence gives")
 }
 
 // Decode reads one investigation@1 document: a strict decode first (unknown fields, wrong types,
@@ -72,7 +73,7 @@ func Decode(reg *schema.Registry, data []byte) (*Investigation, error) {
 // Check applies every rule the schema cannot express and adds the gaps the CLI owes the reader.
 // It changes inv only by appending those gaps.
 func Check(inv *Investigation, ctx Context, summary string) Report {
-	r := Report{Claims: []ClaimCheck{}, AddedGaps: []Gap{}, Overclaims: []string{}, Problems: []string{}}
+	r := Report{Claims: []ClaimCheck{}, AddedGaps: []Gap{}, Mislabels: []string{}, Problems: []string{}}
 	if inv.Change != ctx.Change || inv.Ask != ctx.Ask {
 		r.Problems = append(r.Problems, fmt.Sprintf("the claim block is for %s%s, not %s%s", inv.Change, inv.Ask, ctx.Change, ctx.Ask))
 	}
@@ -102,10 +103,47 @@ func (r *Report) checkClaims(inv *Investigation) {
 		seen[c.ID] = true
 		ceil := CeilingOf(c, inv.Type)
 		r.Claims = append(r.Claims, ClaimCheck{ID: c.ID, Label: c.Confidence, Ceiling: ceil})
-		if rank[c.Confidence] > rank[ceil.Label] {
-			r.Overclaims = append(r.Overclaims, fmt.Sprintf("%s is labelled %s but its evidence allows at most %s (%s)", c.ID, c.Confidence, ceil.Label, ceil.Why))
+		if c.Confidence != ceil.Label {
+			r.Mislabels = append(r.Mislabels, fmt.Sprintf("%s is labelled %s but its evidence gives %s (%s)", c.ID, c.Confidence, ceil.Label, ceil.Why))
+		}
+		if p := direction(c); p != "" {
+			r.Problems = append(r.Problems, p)
 		}
 	}
+}
+
+// roles holds, for predicates whose direction is easy to get backwards, the entity kinds allowed
+// as subject and as object. A claim reads subject first: users.updated.v1 produced_by users.
+var roles = map[string]struct{ subject, object []string }{
+	"produced_by":   {[]string{"event", "topic"}, nil},
+	"consumed_by":   {[]string{"event", "topic"}, nil},
+	"owned_by":      {nil, []string{"team", "person"}},
+	"on_call":       {nil, []string{"team", "person"}},
+	"owns_data":     {[]string{"service", "workload", "repo", "team"}, nil},
+	"writes_data":   {[]string{"service", "workload", "repo"}, nil},
+	"reads_data":    {[]string{"service", "workload", "repo"}, nil},
+	"reads_config":  {nil, []string{"config"}},
+	"mounts_secret": {nil, []string{"secret"}},
+}
+
+// direction names a claim whose subject or object kind does not fit its predicate, which is how
+// a claim written backwards shows (the first eval run wrote "users produced_by users.updated.v1").
+func direction(c Claim) string {
+	r, ok := roles[c.Predicate]
+	if !ok {
+		return ""
+	}
+	for _, side := range []struct {
+		name  string
+		kind  string
+		allow []string
+	}{{"subject", c.Subject["kind"], r.subject}, {"object", c.Object["kind"], r.object}} {
+		if side.allow != nil && !slices.Contains(side.allow, side.kind) {
+			return fmt.Sprintf("%s: %s needs its %s kind to be %s, not %s; a claim reads subject first",
+				c.ID, c.Predicate, side.name, strings.Join(side.allow, " or "), side.kind)
+		}
+	}
+	return ""
 }
 
 // addMandatoryGaps records, once per source, the mandatory sources no answering claim used.

@@ -83,7 +83,7 @@ func TestOverclaimRejected(t *testing.T) {
 	doc := strings.Replace(example, "      - {kind: metric, ref: \"grafana:kafka-consumer-lag?group=crm-sync\", window: 7d, tool_use_id: toolu_01}\n", "", 1)
 	r := Check(decode(t, doc), okContext(), "")
 	err := r.Err()
-	if !aerr.HasCode(err, aerr.StateConfidence) || len(r.Overclaims) != 1 || !strings.Contains(r.Overclaims[0], "at most unverified") {
+	if !aerr.HasCode(err, aerr.StateConfidence) || len(r.Mislabels) != 1 || !strings.Contains(r.Mislabels[0], "evidence gives unverified") {
 		t.Fatalf("report = %+v err %v", r, err)
 	}
 	lowered := strings.Replace(doc, "confidence: confirmed", "confidence: unverified", 1)
@@ -180,5 +180,52 @@ func TestCreatedFactsNeedNoAccessRecord(t *testing.T) {
 	doc := strings.Replace(example, "    facts: [F-0001]", "    facts: [F-0001, F-0002]", 1)
 	if r := Check(decode(t, doc), okContext(), ""); r.Err() != nil {
 		t.Errorf("a fact the answer created is cited: %+v", r)
+	}
+}
+
+// TestUnderclaimRejected: the CLI decides labels (ADR 018), so a label below what the evidence
+// gives is refused as firmly as one above it.
+func TestUnderclaimRejected(t *testing.T) {
+	doc := strings.Replace(example, "confidence: confirmed", "confidence: likely", 1)
+	r := Check(decode(t, doc), okContext(), "")
+	if err := r.Err(); !aerr.HasCode(err, aerr.StateConfidence) || len(r.Mislabels) != 1 || !strings.Contains(r.Mislabels[0], "C1 is labelled likely but its evidence gives confirmed") {
+		t.Fatalf("report = %+v err %v", r, err)
+	}
+}
+
+// TestContradictingEvidence: a source marked supports: false never raises a claim and caps it at
+// unverified, as when the code calls an endpoint the metrics show gets no traffic.
+func TestContradictingEvidence(t *testing.T) {
+	doc := strings.Replace(example, "window: 7d, tool_use_id: toolu_01}", "window: 7d, tool_use_id: toolu_01, supports: false}", 1)
+	if r := Check(decode(t, doc), okContext(), ""); r.Claims[0].Ceiling.Label != Unverified || !strings.Contains(r.Claims[0].Ceiling.Why, "contradicts") {
+		t.Errorf("report = %+v", r)
+	}
+	honest := strings.Replace(doc, "confidence: confirmed", "confidence: unverified", 1)
+	if r := Check(decode(t, honest), okContext(), ""); r.Err() != nil {
+		t.Errorf("unverified is the contradicted claim's label: %+v", r)
+	}
+	explicit := strings.Replace(example, "window: 7d, tool_use_id: toolu_01}", "window: 7d, tool_use_id: toolu_01, supports: true}", 1)
+	if r := Check(decode(t, explicit), okContext(), ""); r.Err() != nil {
+		t.Errorf("supports: true is the default: %+v", r)
+	}
+}
+
+func TestClaimDirection(t *testing.T) {
+	tests := []struct {
+		name, from, to, want string
+	}{
+		{"backwards event claim", "subject: {kind: event, name: UserUpdated, topic: users.updated.v1}", "subject: {kind: service, name: users}",
+			"C1: consumed_by needs its subject kind to be event or topic, not service"},
+		{"team owner as object", "predicate: consumed_by\n    object: {kind: service, name: crm-sync}", "predicate: owned_by\n    object: {kind: service, name: crm-sync}",
+			"C1: owned_by needs its object kind to be team or person, not service"},
+		{"unconstrained predicate", "predicate: consumed_by", "predicate: exposes", ""},
+	}
+	for _, tt := range tests {
+		doc := strings.Replace(example, tt.from, tt.to, 1)
+		r := Check(decode(t, doc), okContext(), "")
+		got := strings.Join(r.Problems, "; ")
+		if tt.want == "" && strings.Contains(got, "a claim reads subject first") || tt.want != "" && !strings.Contains(got, tt.want) {
+			t.Errorf("%s: problems %q, want %q", tt.name, got, tt.want)
+		}
 	}
 }

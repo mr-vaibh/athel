@@ -28,7 +28,8 @@ claims:
   #   team | person | config | secret | image | workload | alert | metric | value | branch |
   #   pr | ticket
   # confidence: confirmed (two independent source systems agree) | likely (one strong source)
-  #   | unverified (inference, naming, docs); the CLI refuses a label above the evidence.
+  #   | unverified (inference, naming, docs, or any source against the claim). The evidence
+  #   decides it: the CLI refuses any other label and names the right one.
   # env: any, or the environment a runtime claim is about (prod, staging).
   - id: C1
     text: billing owns invoice amounts
@@ -46,7 +47,8 @@ claims:
       #   workflow | hint | name | trace | metric | log | mesh | ingress | gateway | cluster |
       #   cloud | facets | alert | deploy | error_tracker | incident | pr | branch | commit |
       #   ticket | chat | oncall
-      # Optional per source: commit (sha), env, window (7d), sampling (0.01), tool_use_id.
+      # Optional per source: commit (sha), env, window (7d), sampling (0.01), tool_use_id,
+      #   supports: false (the source contradicts the claim).
       - kind: migration
         ref: billing/db/002_invoices.sql:7
       - kind: code

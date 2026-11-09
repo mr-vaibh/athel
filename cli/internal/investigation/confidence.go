@@ -9,8 +9,6 @@ const (
 	Confirmed  = "confirmed"
 )
 
-var rank = map[string]int{Unverified: 0, Likely: 1, Confirmed: 2}
-
 // Source systems (M2 plan G8): two sources are independent only if their systems differ, so
 // code plus traffic can confirm a claim and two code files cannot.
 const (
@@ -74,6 +72,9 @@ type Ceiling struct {
 // CeilingOf applies M2 plan §4.3 to one claim of a question of type qtype. The first rule that
 // caps the claim wins, so the reason names the main limit.
 func CeilingOf(c Claim, qtype string) Ceiling {
+	if slices.ContainsFunc(c.Evidence, Source.contradicts) {
+		return Ceiling{Unverified, "a source contradicts the claim; report the disagreement as drift"}
+	}
 	kinds := make([]string, 0, len(c.Evidence))
 	for _, e := range c.Evidence {
 		kinds = append(kinds, e.Kind)

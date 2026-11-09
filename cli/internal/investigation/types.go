@@ -54,7 +54,12 @@ type Source struct {
 	Window    string  `yaml:"window,omitempty" json:"window,omitempty"`
 	Sampling  float64 `yaml:"sampling,omitempty" json:"sampling,omitempty"`
 	ToolUseID string  `yaml:"tool_use_id,omitempty" json:"tool_use_id,omitempty"`
+	// Supports is false for a source that contradicts the claim (ADR 018); absent means true.
+	Supports *bool `yaml:"supports,omitempty" json:"supports,omitempty"`
 }
+
+// contradicts reports a source marked as evidence against its claim.
+func (s Source) contradicts() bool { return s.Supports != nil && !*s.Supports }
 
 // Claim is one statement with its evidence and confidence.
 type Claim struct {
