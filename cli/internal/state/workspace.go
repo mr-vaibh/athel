@@ -31,6 +31,9 @@ func (w Workspace) AuditDir() string { return filepath.Join(w.Dir(), "audit") }
 // AskDir is the folder of one ad-hoc question (M2 plan G3); id must already be validated.
 func (w Workspace) AskDir(id string) string { return filepath.Join(w.Dir(), "asks", id) }
 
+// RepoIndexFile is the index of the developer's local clones (doc 03; FR-DISC-015).
+func (w Workspace) RepoIndexFile() string { return filepath.Join(w.Dir(), "repos", "index.yaml") }
+
 // KnowledgeDir holds the verified fact cache and its access log (doc 03).
 func (w Workspace) KnowledgeDir() string { return filepath.Join(w.Dir(), "knowledge") }
 

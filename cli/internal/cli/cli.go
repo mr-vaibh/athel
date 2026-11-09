@@ -83,6 +83,10 @@ func commands() map[string]command {
 		"fact verify":            cmdFactVerify,
 		"investigation validate": cmdInvestigationValidate,
 		"investigation save":     cmdInvestigationSave,
+		"repos roots propose":    cmdReposRootsPropose,
+		"repos roots set":        cmdReposRootsSet,
+		"repos index":            cmdReposIndex,
+		"repos show":             cmdReposShow,
 		"fact archive":           cmdFactArchive,
 	}
 }
@@ -117,16 +121,12 @@ func parseGlobals(env Env) (*runCtx, []string, error) {
 	return r, fs.Args(), nil
 }
 
+// resolve finds the longest command name (up to three words) the arguments start with.
 func resolve(args []string) (command, []string, error) {
 	cmds := commands()
-	if len(args) >= 2 {
-		if c, ok := cmds[args[0]+" "+args[1]]; ok {
-			return c, args[2:], nil
-		}
-	}
-	if len(args) >= 1 {
-		if c, ok := cmds[args[0]]; ok {
-			return c, args[1:], nil
+	for n := min(3, len(args)); n >= 1; n-- {
+		if c, ok := cmds[strings.Join(args[:n], " ")]; ok {
+			return c, args[n:], nil
 		}
 	}
 	names := make([]string, 0, len(cmds))
