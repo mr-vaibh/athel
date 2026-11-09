@@ -3,6 +3,7 @@ package cli
 import (
 	"io"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/mr-vaibh/athel/cli/internal/asks"
@@ -28,6 +29,15 @@ type investigationChecked struct {
 type investigationSaved struct {
 	Path   string               `json:"path"`
 	Report investigation.Report `json:"report"`
+}
+
+// cmdInvestigationTemplate prints a valid claim block listing every allowed value, for the scout
+// to fill in.
+func cmdInvestigationTemplate(r *runCtx, args []string) (any, error) {
+	if _, err := parse(r.newFlags("investigation template"), args, 0); err != nil {
+		return nil, err
+	}
+	return rawOutput(strings.TrimRight(investigation.Template, "\n")), nil
 }
 
 // cmdInvestigationValidate reports what save would decide, without writing anything.
