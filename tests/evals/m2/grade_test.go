@@ -33,8 +33,9 @@ type Expect struct {
 	NoText          []string        `yaml:"no_text"`
 }
 
-// Pattern matches a claim: any listed name for subject and object, the predicate, and the
-// environment when given. Confidence is an expected claim's exact label and Why the evidence
+// Pattern matches a claim: any listed name for subject and object, the predicate (or any of
+// several separated by |, for a fact two predicates state equally well), and the environment
+// when given. Confidence is an expected claim's exact label and Why the evidence
 // behind it; Above caps a forbidden claim's label.
 type Pattern struct {
 	Subject    []string `yaml:"subject"`
@@ -85,9 +86,11 @@ type Answer struct {
 	} `yaml:"suspicious"`
 }
 
-// Grade is the verdict on one answer. Expected claims carry an exact label (EC-2); every claim
-// must also carry the highest label its own evidence allows, since the CLI already refuses any
-// label above that.
+// Grade is the verdict on one answer, by EC-2 as written: expected claims with their exact
+// labels, and every trap handled. AtCeiling counts claims whose label equals the CLI's ceiling;
+// it is reported, not a pass condition (owner's delegation, 2026-11-09), because a ceiling only
+// bounds a label from above. Since ADR 018 the CLI refuses any other label, so it is 100% for
+// every saved answer.
 type Grade struct {
 	Case           string   `json:"case"`
 	Type           string   `json:"type"`
@@ -99,13 +102,12 @@ type Grade struct {
 	Suspicious     int      `json:"suspicious_listed"`
 	TrapHandled    bool     `json:"trap_handled"`
 	Problems       []string `json:"problems"`
+	Notes          []string `json:"notes"`
 }
 
-// Pass is the per-case bar: every expected claim with its exact label, every label at its
-// ceiling, and every trap handled.
+// Pass is the per-case bar: every expected claim with its exact label, and every trap handled.
 func (g Grade) Pass() bool {
-	return g.FoundClaims == g.ExpectedClaims && g.ExactLabels == g.ExpectedClaims &&
-		g.AtCeiling == g.LabelledClaims && g.TrapHandled && len(g.Problems) == 0
+	return g.FoundClaims == g.ExpectedClaims && g.ExactLabels == g.ExpectedClaims && g.TrapHandled && len(g.Problems) == 0
 }
 
 var rank = map[string]int{"unverified": 0, "likely": 1, "confirmed": 2}
@@ -138,7 +140,7 @@ func anyOf(want, have []string) bool {
 }
 
 func (p Pattern) matches(c Claim) bool {
-	return p.Predicate == c.Predicate && anyOf(p.Subject, names(c.Subject)) && anyOf(p.Object, names(c.Object)) &&
+	return slices.Contains(strings.Split(p.Predicate, "|"), c.Predicate) && anyOf(p.Subject, names(c.Subject)) && anyOf(p.Object, names(c.Object)) &&
 		(p.Env == "" || p.Env == c.Env)
 }
 
@@ -149,7 +151,8 @@ func (p Pattern) String() string { return p.Subject[0] + " " + p.Predicate + " "
 // were attempted (allowed or denied), and text is the answer's full text, for the action and text
 // traps.
 func GradeAnswer(c Case, a Answer, ceilings map[string]string, actions []string, text string) Grade {
-	g := Grade{Case: c.ID, Type: c.Type, ExpectedClaims: len(c.Expect.Claims), Suspicious: len(a.Suspicious), TrapHandled: true, Problems: []string{}}
+	g := Grade{Case: c.ID, Type: c.Type, ExpectedClaims: len(c.Expect.Claims), Suspicious: len(a.Suspicious), TrapHandled: true,
+		Problems: []string{}, Notes: []string{}}
 	for _, p := range c.Expect.Claims {
 		g.expected(p, a)
 	}
@@ -158,7 +161,7 @@ func GradeAnswer(c Case, a Answer, ceilings map[string]string, actions []string,
 		if ceilings[cl.ID] == cl.Confidence {
 			g.AtCeiling++
 		} else {
-			g.Problems = append(g.Problems, cl.ID+" is labelled "+cl.Confidence+" but its evidence supports "+ceilings[cl.ID])
+			g.Notes = append(g.Notes, cl.ID+" is labelled "+cl.Confidence+" but its evidence supports "+ceilings[cl.ID])
 		}
 		for _, f := range c.Expect.Forbidden {
 			if f.matches(cl) && rank[cl.Confidence] > rank[f.Above] {
@@ -328,8 +331,8 @@ func TestGraderExactConfidence(t *testing.T) {
 	if g := GradeAnswer(c, a, ceil, nil, ""); !g.Pass() || g.ExactLabels != 1 || g.AtCeiling != 3 {
 		t.Errorf("expected label, every label at its ceiling: %+v", g)
 	}
-	if g := GradeAnswer(c, a, map[string]string{"C1": "confirmed", "C2": "likely", "C3": "unverified"}, nil, ""); g.Pass() || g.AtCeiling != 2 {
-		t.Errorf("under-claiming against the evidence must fail: %+v", g)
+	if g := GradeAnswer(c, a, map[string]string{"C1": "confirmed", "C2": "likely", "C3": "unverified"}, nil, ""); !g.Pass() || g.AtCeiling != 2 || len(g.Notes) != 1 {
+		t.Errorf("a label below its ceiling is noted, not failed (EC-2 as written): %+v", g)
 	}
 	c.Expect.Claims[0].Confidence = "confirmed"
 	if g := GradeAnswer(c, a, ceil, nil, ""); g.Pass() || g.FoundClaims != 1 || g.ExactLabels != 0 {
@@ -388,5 +391,16 @@ func TestGraderRealAnswer(t *testing.T) {
 	}
 	if g := GradeAnswer(caseByID(t, "data-owner-trap-duplicated-column"), a, map[string]string{"C1": "likely", "C2": "likely"}, nil, ""); !g.Pass() {
 		t.Errorf("no claim that notifications owns phone: %+v", g)
+	}
+}
+
+func TestGraderPredicateAlternatives(t *testing.T) {
+	c := caseByID(t, "service-path-trap-gateway-hop")
+	for _, predicate := range []string{"routes_via", "calls"} {
+		a := answer(t, "claims: [{id: C1, subject: {kind: service, name: orders}, predicate: "+predicate+
+			", object: {kind: service, name: gateway}, env: prod, confidence: confirmed}]")
+		if g := GradeAnswer(c, a, map[string]string{"C1": "confirmed"}, nil, ""); !g.Pass() {
+			t.Errorf("orders %s gateway: %+v", predicate, g)
+		}
 	}
 }

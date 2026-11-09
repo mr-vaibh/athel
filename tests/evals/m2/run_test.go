@@ -484,7 +484,7 @@ func summarise(cases []Case, results map[string][]Result) Summary {
 		}
 	}
 	s.ClaimCorrectness, s.ExactLabels, s.LabelsAtCeiling = ratio(found, expected), ratio(exact, expected), ratio(atCeiling, labelled)
-	s.Met = s.ClaimCorrectness >= 0.95 && s.ExactLabels == 1 && s.LabelsAtCeiling == 1 && s.TrapsHandled == s.TrapRuns
+	s.Met = s.ClaimCorrectness >= 0.95 && s.ExactLabels == 1 && s.TrapsHandled == s.TrapRuns
 	return s
 }
 

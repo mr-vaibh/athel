@@ -34,6 +34,7 @@ Sources:
 |---|---|---|
 | EC-1 | All 10 question types pass on fixtures with traps | `tests/evals/m2/`: ≥ 2 scenarios per type (one clean, one trap; doc 03 §Tests), ≥ 20 in all, run as real `claude -p` sessions with the plugin and the scout against the `shop` fixture. A deterministic grader compares the saved `investigation@1` with each scenario's expected claims. Pass bar: claim correctness ≥ 95% (doc 03 §Tests) and every trap handled as its scenario states |
 | EC-2 | Confidence labelling 100% correct | Each expected claim states its confidence (`confirmed`, `likely` or `unverified`). The grader requires an exact match on every claim of every scenario. The CLI also refuses any label above the evidence's ceiling (§4.3), so a wrong `confirmed` cannot be saved at all |
+|  | *As built (PR 14, owner delegation 2026-11-09):* graded on expected claims, exactly as written; the CLI now refuses any label other than the evidence's (ADR 018), so all-claims ceiling match is 100% by construction and reported only |  |
 | Carried | M0 and M1 gates stay green | 90% per package, hook p95 < 50 ms, red-team 100% blocked with 0 false allows (new cases for every new tool and verb, doc 08 definition of done), audit verify, resume scenario |
 
 ## 2. Deliverables mapped to requirements
