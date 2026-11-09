@@ -19,6 +19,8 @@ if [[ -z "$athel" ]]; then
 fi
 ws="$(mktemp -d)"
 export ATHEL_HOME="$ws/.athel-home"   # never the real home folder
+# Hooks read kube, gcloud and aws settings from HOME; the demo must never read the real ones.
+export HOME="$ws/.user"
 trap 'rm -rf "$ws"' EXIT
 
 step() { printf '\n== %s\n' "$*"; }
@@ -45,8 +47,12 @@ a state enter CHG-001 plan >/dev/null
 a checkpoint set CHG-001 plan.tasks-drafted --note "3 tasks drafted: T-01 column, T-02 endpoint, T-03 event; waiting on order of T-02/T-03" >/dev/null
 a budget add CHG-001 --cost-usd 3.5 --minutes 20 --tool-calls 42 >/dev/null
 hook pre-compact '{"session_id":"session-1","cwd":"'"$ws"'","trigger":"auto"}'
-# change.yaml as YAML, without the two fields a resume is allowed to change (lock, updated_at).
-snapshot() { "$athel" --workspace "$ws" change show CHG-001 | awk '/^lock:/ {skip=1; next} skip && /^ / {next} {skip=0} !/^updated_at:/'; }
+# change.yaml as YAML, without the fields a resume is allowed to change: lock, updated_at and the
+# time the integrity seal was written. The seal's hash stays: the content must not change.
+snapshot() {
+  "$athel" --workspace "$ws" change show CHG-001 |
+    awk '!/^ / {skip=0; seal=0} /^lock:/ {skip=1; next} /^integrity:/ {seal=1} skip {next} seal && /^ +at:/ {next} !/^updated_at:/'
+}
 before="$(snapshot)"
 
 step "session 1 ends (SessionEnd hook releases its lock)"
