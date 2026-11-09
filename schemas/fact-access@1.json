@@ -18,8 +18,8 @@
     "ask": {"type": "string", "pattern": "^ASK-[0-9]{3,}$"},
     "purpose": {"enum": ["decision", "orientation"]},
     "result": {
-      "description": "in_window: verified within its freshness window; verified: re-verified for this use; unverified: a recipe tool was unreachable; refused_stale: a decision use of a fact outside its window, refused.",
-      "enum": ["in_window", "verified", "unverified", "refused_stale"]
+      "description": "in_window: verified within its freshness window; verified: re-verified for this use; unverified: shown for orientation outside its window or while disputed, or a recipe tool was unreachable; refused_stale / refused_disputed: a decision use of a stale, disputed or superseded fact, refused.",
+      "enum": ["in_window", "verified", "unverified", "refused_stale", "refused_disputed"]
     },
     "age_s": {"description": "Seconds since the fact was last verified, at the time of use.", "type": "integer", "minimum": 0},
     "session": {"oneOf": [{"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,200}$"}, {"type": "null"}]}
