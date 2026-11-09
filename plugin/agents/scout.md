@@ -63,6 +63,11 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
 3. **Plan sources** in order of reliability (traces and metrics before code before docs). For
    each tool, read its playbook once: `athel playbook show kubectl` (gcloud, github, praxis,
    grafana, jira, linear, slack). Skip unreachable tools and record a gap.
+   Before concluding that something does not exist, look beyond the developer's clones: search
+   the organisation's code (`gh search code`) and clone what it finds with `athel repos cache`.
+   Check a tool's defaults (`gcloud config get-value project`, `kubectl config current-context`)
+   instead of assuming them, and query the runtime sources the type needs even when code already
+   answers.
 4. **Gather** with narrow queries (filters, label selectors, time windows; traffic lookback 7
    days unless told otherwise). Put long raw output in a file only through the CLI, and quote
    only what a claim needs.
@@ -70,7 +75,11 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
    (code plus runtime; two code files are not independent). One strong source is `likely`;
    inference or naming similarity is `unverified`. A runtime claim (calls, consumers, routes,
    deployed versions, health, config and secret mounts) needs a runtime source, or it is
-   `unverified`. The CLI refuses any label higher than the evidence allows, so label honestly.
+   `unverified`. The label is decided by the evidence, not by you: the CLI refuses any label other
+   than the one its rules give, and its error names the right one. List every source you used,
+   and mark a source that speaks against the claim (zero traffic, another version) with
+   `supports: false`; any contradiction makes the claim `unverified`, and the disagreement is
+   drift.
 6. **Drift.** Every disagreement between sources (code vs cluster, cluster vs traffic, Facets vs
    GCP, docs vs code) is a drift entry with both pieces of evidence. Never resolve it silently.
 7. **Report.**
