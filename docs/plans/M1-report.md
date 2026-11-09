@@ -71,5 +71,18 @@ state 95.3, cmd/athel 100, bench 94.2.
   denied.
 - Repo search roots for rule 12 (M2), Praxis read allow-list (M2), PowerShell parsing (backlog),
   policy cache (backlog), PermissionRequest/Denied audit (backlog).
-- Live confirmation in a real Claude Code session of the three documented behaviours, on a
-  machine without production access (backlog).
+- ~~Live confirmation in a real Claude Code session of the three documented behaviours.~~ Done
+  2026-11-09 (§6).
+
+## 6. Follow-up: live confirmation (2026-11-09, session 3)
+
+`tests/live/claude-behaviours.sh` (needs a logged-in `claude`; not run in CI) runs real
+`claude -p --plugin-dir` sessions in a temporary workspace. Athel's hooks get a temporary HOME
+there, and user settings and MCP servers are not loaded. Environment: Claude Code 2.1.311, model haiku, macOS arm64. **9/9 checks
+pass:**
+
+| Behaviour | Result |
+|---|---|
+| PreToolUse `onFailure: "block"` (ADR 016) | A hook that exits 1 blocks the call, and so does one that times out. The control without `onFailure` lets the call through. A crashing `athel` in Athel's own plugin blocks the call |
+| UserPromptSubmit gets `/athel:approve CHG-001` literally (ADR 017) | The literal prompt arrives. Grant created and used, `plan_approved` reached, audit verify passes |
+| `updatedToolOutput` replaces Bash output (FR-SAFE-008) | Claude saw `deploy token: [REDACTED:github-token]`, and the raw fake token appears nowhere in the session transcript |

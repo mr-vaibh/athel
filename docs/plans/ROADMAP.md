@@ -88,7 +88,7 @@ Each milestone runs the same four phases as M0 and M1:
 
 | Item | Where recorded | When |
 |---|---|---|
-| Live check in a real Claude Code session of three documented behaviours: PreToolUse `onFailure: "block"`, UserPromptSubmit receiving the literal `/athel:approve CHG-NNN`, `updatedToolOutput` on Bash output. They were verified only from code.claude.com docs, because the borrowed machine ran live production | ADR 016, ADR 017, M1-report §4 | First session on the personal machine, with fixtures only |
+| ~~Live check in a real Claude Code session of three documented behaviours~~: all confirmed on 2026-11-09 with `tests/live/claude-behaviours.sh` | ADR 016, ADR 017 follow-ups, M1-report §6 | Done |
 | Delete merged task branches on GitHub (M0 and M1) | backlog | When the owner says so |
 | Windows support, multi-platform packaging, PowerShell parsing | backlog | Release packaging |
 | Policy cache | backlog, ADR 016 | Only if hook p95 > 30 ms |
