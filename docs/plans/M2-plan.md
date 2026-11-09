@@ -248,6 +248,13 @@ database itself is not needed for M2's questions (Q9).
 - `tests/evals/m2/cases/*.yaml`: question, type, scope, tool subset (to test gaps), budget, and
   expected `claims[]` (subject, predicate, object, env, confidence), `drift[]`, `gaps[]`,
   `active_work[]`, `health[]`, `suspicious[]`.
+  *As built (PR 14):* one `tests/evals/m2/cases.yaml`. Each expected claim carries its exact
+  label and a `why` naming the fixture sources that set it. Scope, budget and tool subsets are
+  left to the skill's defaults, and gap cases are deferred to the backlog: every fixture tool
+  is reachable.
+- *As built (PR 14):* the runner is `TestEvals` in `tests/evals/m2`, skipped unless
+  `ATHEL_EVALS=1`. It is Go rather than shell so that `TestSandbox` checks every piece of its
+  setup in CI without a model. Apart from that, it follows the original design:
 - `tests/evals/m2/run.sh` (like `tests/live/claude-behaviours.sh`) builds the fixture into a temp
   workspace and puts the shims first on a scenario-only `PATH`. Every run uses a temporary HOME.
   It runs `claude -p "/athel:ask …" --plugin-dir` per case with `--setting-sources local` and
@@ -324,7 +331,7 @@ standard library.
 | 11 | `feat/m2-blast-adhoc` | `blast@1`, `blast-rules@1`, `internal/blast`, `blast.yaml`, `blast score`, `blast-radius` skill (ad-hoc) | `TestRiskRules` (one case per rule per level), `TestHighestLevelWins`, `TestNoRuntimeEvidenceNeverLow`, `TestSameInputSameLevel`, `TestNotAffectedRequired` |
 | 12 | `feat/m2-fixture-code` | `shop` services, contracts, migrations, generator for git repos and teammate branches | `TestGeneratorDeterministic`, `TestTrapsPresent` (one per trap), `TestGoServicesBuild` |
 | 13 | `feat/m2-fixture-runtime` | `shopctl` shim (kubectl, gcloud, gh, praxis), `shopmcp` server, fixture data, contract test for FR-DISC-008 | `TestShimKubectlGetContexts`, `TestShimSecretValueNeverServed`, `TestMCPInitializeListCall`, `TestSampledTraceRate`, `TestNewToolByRegistryOnly` |
-| 14 | `feat/m2-evals` | ≥ 20 cases, runner, grader, history; local run recorded | `TestGraderExactConfidence`, `TestGraderCorrectness`, `TestCasesCoverTenTypesTwice` |
+| 14 | `feat/m2-evals` | ≥ 20 cases, runner, grader, history; local run recorded. As built (§4.9 amended): one `cases.yaml`; the runner is a Go test gated by `ATHEL_EVALS=1` instead of `run.sh`, so its setup is tested without a model; ceilings come from `athel investigation validate`, never re-implemented | `TestGraderExactConfidence`, `TestGraderCorrectness`, `TestCasesCoverTenTypesTwice`, `TestCasesLabelEveryExpectedClaim`, `TestSandbox` |
 | 15 | `docs/m2-report` | M2 report proving EC-1/EC-2, handoff, roadmap | — |
 
 Partial work stays behind `config@2 features.discovery: false` until PR 10 lands (doc 08 rule
