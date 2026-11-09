@@ -22,3 +22,16 @@ func TestRun(t *testing.T) {
 		t.Error("git without a PATH started")
 	}
 }
+
+func TestNetworkEnv(t *testing.T) {
+	env := map[string]string{"PATH": "/bin", "HOME": "/h", "SSH_AUTH_SOCK": "/s", "AWS_SECRET_ACCESS_KEY": "x"}
+	got := strings.Join(NetworkEnv(func(k string) string { return env[k] }), " ")
+	for _, want := range []string{"GIT_TERMINAL_PROMPT=0", "PATH=/bin", "HOME=/h", "SSH_AUTH_SOCK=/s"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("env %q lacks %s", got, want)
+		}
+	}
+	if strings.Contains(got, "AWS") || strings.Contains(got, "XDG") {
+		t.Errorf("env %q carries more than git needs", got)
+	}
+}
