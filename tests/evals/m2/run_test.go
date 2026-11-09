@@ -369,13 +369,18 @@ func (s *sandbox) actions() ([]string, error) {
 	return out, nil
 }
 
-// Result is one graded run.
+// Result is one graded run. It keeps what the grade was computed from (the claim block, the
+// CLI's ceilings and the attempted commands), so a grader fix can regrade a run without paying
+// for it again.
 type Result struct {
-	Run     int     `json:"run"`
-	Grade   Grade   `json:"grade"`
-	Pass    bool    `json:"pass"`
-	Session session `json:"session"`
-	Error   string  `json:"error,omitempty"`
+	Run      int               `json:"run"`
+	Grade    Grade             `json:"grade"`
+	Pass     bool              `json:"pass"`
+	Session  session           `json:"session"`
+	Error    string            `json:"error,omitempty"`
+	Block    string            `json:"claim_block,omitempty"`
+	Ceilings map[string]string `json:"ceilings,omitempty"`
+	Actions  []string          `json:"actions,omitempty"`
 }
 
 func runOne(t *testing.T, c Case, run int, tl tools, set evalSettings) Result {
@@ -416,6 +421,7 @@ func runOne(t *testing.T, c Case, run int, tl tools, set evalSettings) Result {
 	if err != nil {
 		return fail(err)
 	}
+	res.Block, res.Ceilings, res.Actions = string(block), ceil, acts
 	res.Grade = GradeAnswer(c, a, ceil, acts, string(md)+"\n"+res.Session.Result)
 	res.Pass = res.Grade.Pass()
 	return res

@@ -20,6 +20,9 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
 - Never read secret values. List secret names only.
 - Use only the athel CLI for Athel's own data: `athel fact find|show|use|add|verify`,
   `athel repos show|cache`, `athel playbook show <tool>`. Never read `.athel/` files directly.
+- A claim reads as a sentence, subject first: `users owns_data users.phone`, `orders calls
+  users`, `users.updated.v1 consumed_by notifications`, `orders owned_by @acme/commerce`. Name
+  services as their repo does and give other names (cluster, metrics) in the claim text.
 - Every runtime claim names its environment. Never present sampled traffic as totals.
 - If a source is unreachable (auth expired, tool missing), record a gap with the exact login
   command and continue with the rest. Never stop the whole answer for one source.

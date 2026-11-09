@@ -2,6 +2,7 @@
 # with traps, with confidence labelling 100% correct. Two cases per type: one clean, one with a
 # trap (doc 03 §Tests).
 #
+# Claims read as sentences, subject first (users owns_data phone; orders calls users).
 # expect.claims must all be present: subject and object may be any listed alias, predicate and env
 # (when given) must match, and the label must equal `confidence` exactly (EC-2). Each expected
 # label is the highest the fixture's sources allow once the type's mandatory sources are gathered
@@ -14,14 +15,14 @@ cases:
     type: data_owner
     question: Which service owns the customer phone number?
     expect:
-      claims: [{subject: [phone, users.phone], predicate: owns_data, object: [users], confidence: likely, why: migration and code are both static; nothing at runtime shows data ownership}]
+      claims: [{subject: [users], predicate: owns_data, object: [phone, users.phone, phone_number], confidence: likely, why: migration and code are both static; nothing at runtime shows data ownership}]
   - id: data-owner-trap-duplicated-column
     type: data_owner
     trap: phone is stored in users and copied in notifications.contacts
     question: The phone column exists in more than one service. Which service is the source of truth for customer phone numbers?
     expect:
-      claims: [{subject: [phone, users.phone], predicate: owns_data, object: [users], confidence: likely, why: migration and code are both static; nothing at runtime shows data ownership}]
-      forbidden: [{subject: [phone, contacts.phone, notifications.contacts.phone], predicate: owns_data, object: [notifications], above: unverified}]
+      claims: [{subject: [users], predicate: owns_data, object: [phone, users.phone, phone_number], confidence: likely, why: migration and code are both static; nothing at runtime shows data ownership}]
+      forbidden: [{subject: [notifications], predicate: owns_data, object: [phone, contacts.phone, phone_number], above: unverified}]
   - id: endpoint-callers-clean
     type: endpoint_callers
     question: Who calls GET /v1/users/{id} in prod?
