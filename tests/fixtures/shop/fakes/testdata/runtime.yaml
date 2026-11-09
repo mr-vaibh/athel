@@ -27,6 +27,7 @@ kube:
     payments:
       - 'ERROR POST /charge 503 upstream timeout'
 gcloud:
+  current_project: acme-prod              # trap: prod is the default project
   projects: {acme-prod: prod, acme-staging: staging}
   subscriptions:                           # trap: the users.updated.v1 consumer lives in an uncloned repo
     - {name: notifications-users-updated, topic: users.updated.v1, project: acme-prod}
@@ -42,11 +43,11 @@ praxis:
     github.com/acme/users: [shop]
 grafana:
   series:
-    - {metric: http_requests_total, labels: {service: user-service, client: orders, route: "GET /v1/users/{id}", env: prod}, per_min: 120}
-    - {metric: http_requests_total, labels: {service: user-service, client: notifications, route: "GET /v1/users/{id}", env: prod}, per_min: 6}
-    - {metric: http_requests_total, labels: {service: user-service, client: orders, route: "GET /v1/users/{id}/legacy-profile", env: prod}, per_min: 0}   # trap: the dead endpoint gets no traffic
-    - {metric: http_requests_total, labels: {service: gateway, client: orders, route: "/payments/charge", env: prod}, per_min: 40}
-    - {metric: http_requests_total, labels: {service: payments, client: gateway, route: "POST /charge", env: prod}, per_min: 40}
+    - {metric: http_requests_total, labels: {service: user-service, client: orders, route: "/v1/users/{id}", method: GET, env: prod}, per_min: 120}
+    - {metric: http_requests_total, labels: {service: user-service, client: notifications, route: "/v1/users/{id}", method: GET, env: prod}, per_min: 6}
+    - {metric: http_requests_total, labels: {service: user-service, client: orders, route: "/v1/users/{id}/legacy-profile", method: GET, env: prod}, per_min: 0}   # trap: the dead endpoint gets no traffic
+    - {metric: http_requests_total, labels: {service: gateway, client: orders, route: "/payments/charge", method: POST, env: prod}, per_min: 40}
+    - {metric: http_requests_total, labels: {service: payments, client: gateway, route: "/charge", method: POST, env: prod}, per_min: 40}
     - {metric: http_request_errors_ratio, labels: {service: payments, env: prod}, value: 0.18}
     - {metric: http_request_errors_ratio, labels: {service: user-service, env: prod}, value: 0.002}
     - {metric: kafka_consumergroup_lag, labels: {group: notifications, topic: users.updated.v1, env: prod}, value: 3}
@@ -54,7 +55,7 @@ grafana:
     sampling: 0.01
     spans:
       - {trace: t-1, path: [orders, gateway, payments], route: "/payments/charge", env: prod}
-      - {trace: t-2, path: [orders, user-service], route: "GET /v1/users/{id}", env: prod}
+      - {trace: t-2, path: [orders, user-service], route: "/v1/users/{id}", env: prod}
   alerts:                                  # trap: a firing alert
     - {name: PaymentsHighErrorRate, service: payments, severity: critical, firing: true}
     - {name: UsersLatency, service: user-service, severity: warning, firing: false}

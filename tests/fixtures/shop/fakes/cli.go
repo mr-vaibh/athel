@@ -8,7 +8,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -98,13 +100,10 @@ func (s Shim) kubectl(a args) error {
 	if !ok {
 		return fmt.Errorf("context %q does not exist", ctx)
 	}
-	cmd := strings.Join(head(a.pos, 2), " ")
+	if s.kubectlInfo(strings.Join(head(a.pos, 2), " ")) {
+		return nil
+	}
 	switch {
-	case cmd == "config current-context":
-		s.printf("%s\n", s.Data.Kube.CurrentContext)
-	case cmd == "config get-contexts":
-		names := keys(s.Data.Kube.Contexts)
-		s.printf("%s\n", strings.Join(names, "\n"))
 	case len(a.pos) >= 2 && a.pos[0] == "get" && isDeploy(a.pos[1]):
 		return s.getDeploy(a, env.Env)
 	case len(a.pos) >= 2 && a.pos[0] == "describe" && isDeploy(a.pos[1]):
@@ -116,7 +115,23 @@ func (s Shim) kubectl(a args) error {
 	default:
 		return unmodelled("kubectl", a)
 	}
-	return nil
+}
+
+// kubectlInfo answers the commands about the client and its configuration, not the cluster.
+func (s Shim) kubectlInfo(cmd string) bool {
+	switch cmd {
+	case "auth can-i":
+		s.printf("yes\n")
+	case "version":
+		s.printf("Client Version: v1.31.0\nServer Version: v1.30.4-gke.1\n")
+	case "config current-context":
+		s.printf("%s\n", s.Data.Kube.CurrentContext)
+	case "config get-contexts":
+		s.printf("%s\n", strings.Join(keys(s.Data.Kube.Contexts), "\n"))
+	default:
+		return false
+	}
+	return true
 }
 
 func isDeploy(kind string) bool {
@@ -220,10 +235,19 @@ func (s Shim) logs(app string) error {
 
 func (s Shim) gcloud(a args) error {
 	project := a.flags["--project"]
+	if project == "" {
+		project = s.Data.GCloud.CurrentProject
+	}
 	if _, ok := s.Data.GCloud.Projects[project]; !ok {
 		return fmt.Errorf("project %q is not in the fixture (pass --project acme-prod or acme-staging)", project)
 	}
 	switch strings.Join(head(a.pos, 3), " ") {
+	case "config get-value project":
+		s.printf("%s\n", s.Data.GCloud.CurrentProject)
+		return nil
+	case "auth list":
+		s.printf("ACTIVE  ACCOUNT\n*       dev@example.invalid\n")
+		return nil
 	case "pubsub subscriptions list":
 		var out []map[string]string
 		for _, sub := range s.Data.GCloud.Subscriptions {
@@ -248,8 +272,15 @@ func (s Shim) gcloud(a args) error {
 func (s Shim) gh(a args) error {
 	cmd := strings.Join(head(a.pos, 2), " ")
 	switch {
+	case cmd == "auth status":
+		s.printf("github.com\n  ✓ Logged in to github.com account dev (keyring)\n")
+		return nil
 	case cmd == "pr list":
 		return s.prList(a.flags["--repo"])
+	case cmd == "pr view" && len(a.pos) == 3:
+		return s.prView(a.flags["--repo"], a.pos[2])
+	case cmd == "search prs":
+		return s.searchPRs(strings.Join(a.pos[2:], " ") + " " + a.flags["--repo"])
 	case cmd == "search code" && len(a.pos) >= 3:
 		return s.searchCode(a.pos[2])
 	case cmd == "run list":
@@ -258,6 +289,29 @@ func (s Shim) gh(a args) error {
 		return s.api(strings.TrimPrefix(a.pos[1], "repos/acme/"))
 	}
 	return unmodelled("gh", a)
+}
+
+// prView shows one pull request of a repo by number, or fails as gh does.
+func (s Shim) prView(repo, number string) error {
+	for _, p := range s.Data.GitHub.PRs {
+		if p.Repo == repo && strconv.Itoa(p.Number) == strings.TrimPrefix(number, "#") {
+			return s.json(p)
+		}
+	}
+	return fmt.Errorf("GraphQL: Could not resolve to a PullRequest with the number of %s. (repository.pullRequest)", number)
+}
+
+// searchPRs returns open pull requests whose repo, title, branch or files mention a query word.
+func (s Shim) searchPRs(query string) error {
+	out := []PR{}
+	words := strings.Fields(strings.ToLower(query))
+	for _, p := range s.Data.GitHub.PRs {
+		text := strings.ToLower(p.Repo + " " + p.Title + " " + p.Head + " " + strings.Join(p.Files, " "))
+		if p.State == "open" && slices.ContainsFunc(words, func(w string) bool { return strings.Contains(text, w) }) {
+			out = append(out, p)
+		}
+	}
+	return s.json(out)
 }
 
 func (s Shim) prList(repo string) error {
