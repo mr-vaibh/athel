@@ -18,11 +18,11 @@ a repo.
 ## Read queries
 ```sh
 praxis status
-praxis memory recall "customer phone number"
+praxis memory recall "invoice ownership"
 praxis memory list
 praxis duty list
 praxis duty findings nightly-drift
-praxis ig claims --git https://github.com/acme/users
+praxis ig claims --git https://github.com/example/billing
 praxis ig list
 praxis mcp
 ```

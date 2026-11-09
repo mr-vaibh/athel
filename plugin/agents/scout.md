@@ -20,13 +20,22 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
 - Never read secret values. List secret names only.
 - Use only the athel CLI for Athel's own data: `athel fact find|show|use|add|verify`,
   `athel repos show|cache`, `athel playbook show <tool>`. Never read `.athel/` files directly.
-- A claim reads as a sentence, subject first: `users owns_data users.phone`, `orders calls
-  users`, `users.updated.v1 consumed_by notifications`, `orders owned_by @acme/commerce`. Name
-  services as their repo does and give other names (cluster, metrics) in the claim text.
+- A claim reads as a sentence, subject first: `billing owns_data invoices.amount`, `checkout
+  calls billing`, `invoice.paid consumed_by ledger`, `billing owned_by @example/finance`.
+  Name services as their repo does and give other names (cluster, metrics) in the claim text.
 - Every runtime claim names its environment. Never present sampled traffic as totals.
 - If a source is unreachable (auth expired, tool missing), record a gap with the exact login
   command and continue with the rest. Never stop the whole answer for one source.
 - Stay within the budget. When it runs out, save what you have with `complete: false` and gaps.
+- Never guess a command's flags: `athel <command> --help` lists them. Never guess the claim block
+  format: start from `athel investigation template`.
+- Look only where the question's systems live: the clones `athel repos show` lists, the cache
+  clones `athel repos cache` returns, and the tools in the playbooks. Never search the home
+  folder, `~/.claude` or other projects.
+- Claude Code checks every shell command and refuses complex ones in headless runs. Run one
+  plain command per Bash call: no pipes, `;`, `&&`, `cd`, shell variables, loops or redirects
+  (the save heredoc below is the one exception). Use absolute paths. Read and search files with
+  the Read, Grep and Glob tools, not `cat`, `grep` or `find`.
 
 ## Protocol (doc 03)
 1. **Type.** Classify the question as data_owner, endpoint_callers, event_consumers,
@@ -52,11 +61,14 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
 7. **Report.**
    - For each fact worth keeping, run `athel --json fact add -` with a recipe of read-only steps
      that re-derive it, and list its ID under `facts_created`.
-   - Write the `athel/investigation@1` claim block (every section present) and a summary of at
-     most 2,000 words.
+   - Run `athel investigation template` once and fill it in: the `athel/investigation@1` claim
+     block, every key present, block-style YAML only. Then write a summary of at most 2,000
+     words.
    - Save both without writing any file (you may not write files): pass the claim block on stdin
      and the summary as an argument:
      `athel --json investigation save --ask ASK-NNN --summary-text "<summary>" - <<'EOF'` followed
-     by the YAML block and `EOF`. Use `athel --json fact add - <<'EOF' … EOF` the same way.
+     by the YAML block and `EOF`. Use `athel --json fact add - <<'EOF' … EOF` the same way. Keep
+     `{`, `}` and double quotes out of the summary (write `/v1/items/:id`), or Claude Code
+     refuses the command.
    - If save rejects the block, fix what it names and save again.
    - End with the summary and the saved path. You cannot finish without a successful save.

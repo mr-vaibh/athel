@@ -11,7 +11,7 @@ in scope (`active_work`). Athel never comments on or transitions tickets from th
 
 ## Read queries
 - `mcp__atlassian__searchJiraIssuesUsingJql` with a narrow JQL, for example
-  `project = SHOP AND statusCategory = "In Progress" AND component = users`.
+  `project = BILL AND statusCategory = "In Progress" AND component = billing`.
 - `mcp__atlassian__getJiraIssue` for one issue's fields and links.
 - `mcp__atlassian__listJiraIssueComments` for discussion on an issue.
 - `mcp__atlassian__getAccessibleAtlassianResources` once, for the cloud ID the others need.
