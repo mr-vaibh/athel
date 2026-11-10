@@ -13,6 +13,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
 	"github.com/mr-vaibh/athel/cli/internal/hooks"
 	"github.com/mr-vaibh/athel/cli/internal/observe"
+	"github.com/mr-vaibh/athel/cli/internal/repos"
 	"github.com/mr-vaibh/athel/cli/internal/scrub"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
@@ -96,6 +97,22 @@ func (r *runCtx) hookDeps(req *hookio.Request) hooks.Deps {
 	if r.cfg != nil {
 		set := r.cfg.Settings()
 		d.Facts = &facts.Store{Dir: ws.KnowledgeDir(), Reg: r.registry(), Clock: r.env.Clock, Windows: set.FactWindows, ArchiveAfter: set.FactArchiveAfter}
+		d.RefreshIndex = r.refreshStaleIndex
 	}
 	return d
+}
+
+// sessionIndexBudget keeps SessionStart well inside its hook timeout; a cut walk is retried at
+// the next session.
+const sessionIndexBudget = 3 * time.Second
+
+// refreshStaleIndex rebuilds an existing index that has gone stale; with no index yet it does
+// nothing, because indexing starts when the developer confirms roots.
+func (r *runCtx) refreshStaleIndex() error {
+	idx, ok, err := repos.Load(r.registry(), r.store.WS.RepoIndexFile())
+	if err != nil || !ok || !idx.Stale(r.env.Clock.Now()) {
+		return err
+	}
+	_, _, err = r.buildIndex(sessionIndexBudget)
+	return err
 }

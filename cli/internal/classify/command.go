@@ -4,6 +4,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/mr-vaibh/athel/cli/internal/grants"
 	"github.com/mr-vaibh/athel/cli/internal/policy"
 	"github.com/mr-vaibh/athel/cli/internal/shellparse"
 )
@@ -261,6 +262,18 @@ func athelCall(cmd shellparse.Command) Action {
 		return a
 	case call.Command == "state transition" && len(pos) > 2:
 		call.Change, call.To, call.ByHuman = known(pos[2]), flagVal(vals, "--to"), flagVal(vals, "--by") == "human"
+	case call.Command == "repos roots" && len(pos) > 3 && known(pos[2]) == "set":
+		// Confirmed roots widen rule 12, so saving them is the developer's act, like --by human.
+		// shellparse writes a leading ~ as $HOME; the grant holds the ~ form the developer typed.
+		roots := make([]string, 0, len(pos)-3)
+		for _, w := range pos[3:] {
+			v := known(w)
+			if rest, ok := strings.CutPrefix(v, "$HOME/"); ok {
+				v = "~/" + rest
+			}
+			roots = append(roots, v)
+		}
+		call.Command, call.Change, call.To, call.ByHuman = "repos roots set", grants.RootsKey(roots), grants.TargetRoots, true
 	}
 	a.Tier = W0
 	return a
@@ -274,6 +287,6 @@ var (
 		"change list": true, "change show": true, "state show": true,
 		"lock status": true, "lock show": true, "checkpoint status": true, "checkpoint show": true,
 		"budget status": true, "budget show": true, "fact find": true, "fact show": true,
-		"investigation validate": true,
+		"investigation validate": true, "repos show": true,
 	}
 )

@@ -12,6 +12,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/config"
 	"github.com/mr-vaibh/athel/cli/internal/envdetect"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/grants"
 	"github.com/mr-vaibh/athel/cli/internal/plan"
 	"github.com/mr-vaibh/athel/cli/internal/policy"
 	"github.com/mr-vaibh/athel/cli/internal/schema"
@@ -414,5 +415,30 @@ func TestStricterEnvironmentReported(t *testing.T) {
 	}
 	if !stricter(ActionDecision{Decision: None, Rule: "-"}, Result{Decision: None, Rule: "-"}) {
 		t.Error("the first action must set an undecided result")
+	}
+}
+
+func TestRootsNeedTheDevelopersPrompt(t *testing.T) {
+	key := grants.RootsKey([]string{"~/Developer", "~/snabbit"})
+	granted := func(c *Context) {
+		c.HumanGrant = func(change, target string) bool { return change == key && target == grants.TargetRoots }
+	}
+	_, set := bash("athel repos roots set '~/snabbit' '~/Developer/'")
+	_, wider := bash("athel repos roots set '~/snabbit' '~/Developer' '~/Documents'")
+	_, unquoted := bash("athel repos roots set ~/snabbit ~/Developer")
+	_, dynamic := bash("athel repos roots set $HOME")
+	_, propose := bash("athel repos roots propose")
+	run(t, []ruleCase{
+		{"no grant", "Bash", set, nil, Deny, "H", aerr.PolicyHumanOrigin},
+		{"grant for exactly these roots", "Bash", set, granted, Allow, "7x", ""},
+		{"more roots than granted", "Bash", wider, granted, Deny, "H", aerr.PolicyHumanOrigin},
+		{"unknown root", "Bash", dynamic, granted, Deny, "H", aerr.PolicyHumanOrigin},
+		{"unquoted tilde reaches the CLI expanded; the CLI then refuses", "Bash", unquoted, granted, Allow, "7x", ""},
+		{"subagent with a grant", "Bash", set, func(c *Context) { granted(c); c.Subagent, c.Agent = true, "athel:scout" }, Deny, "H", aerr.PolicyHumanOrigin},
+		{"proposing needs no grant", "Bash", propose, nil, Allow, "7x", ""},
+	})
+	ctx := Context{}
+	if why := ctx.humanOrigin(&classify.AthelCall{Change: key, To: grants.TargetRoots}); !strings.Contains(why, "/athel:roots") {
+		t.Errorf("reason = %q", why)
 	}
 }

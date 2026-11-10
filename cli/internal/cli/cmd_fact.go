@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -162,16 +161,20 @@ func mismatches(steps []facts.StepResult) string {
 }
 
 // recipe wires the recipe checker to this workspace: captured scout calls, the policy's tool
-// registry to tell which tool a captured call used, and the repos the CLI may read. It runs
+// registry to tell which tool a captured call used, and the repo index for git steps. It runs
 // after factStore, which loaded the workspace.
 func (r *runCtx) recipe(obs observedFlag) (facts.Recipe, error) {
 	pol, err := r.policySet()
 	if err != nil {
 		return facts.Recipe{}, err
 	}
+	resolve, err := r.repoResolver()
+	if err != nil {
+		return facts.Recipe{}, err
+	}
 	store := &observe.Store{Dir: filepath.Join(r.store.WS.KnowledgeDir(), "observations"), Reg: r.registry(), Clock: r.env.Clock, TTL: observe.DefaultTTL}
 	return facts.Recipe{
-		Repo: repoDir, Observation: store.Get, Observed: obs,
+		Repo: resolve, Observation: store.Get, Observed: obs,
 		ToolsOf: func(tool string, input []byte) []string {
 			res := classify.Classify(classify.Call{Tool: tool, Input: json.RawMessage(input)}, pol, classify.Options{ReadFile: noFiles})
 			var out []string
@@ -183,15 +186,6 @@ func (r *runCtx) recipe(obs observedFlag) (facts.Recipe, error) {
 			return out
 		},
 	}, nil
-}
-
-// repoDir resolves a recipe's repo to a folder: an absolute path to a git checkout. Repos named
-// by their remote are resolved through the repo index once it exists.
-func repoDir(name string) (string, error) {
-	if info, err := os.Stat(filepath.Join(name, ".git")); filepath.IsAbs(name) && err == nil && info.IsDir() {
-		return name, nil
-	}
-	return "", aerr.New(aerr.StateNotFound, "repo "+name+" is not in the repo index")
 }
 
 // noFiles stops the classifier from reading scripts while it names the tools of a captured call.

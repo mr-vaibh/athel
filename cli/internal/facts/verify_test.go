@@ -74,6 +74,7 @@ func TestGitRecipeSteps(t *testing.T) {
 		{"missing file", Step{"tool": "git", "action": "exists", "repo": "crm-sync", "path": "src/consumers/order.ts"}, Mismatch},
 		{"remote", Step{"tool": "git", "action": "remote", "repo": "crm-sync", "url": "https://github.com/acme/crm-sync.git"}, Match},
 		{"other remote", Step{"tool": "git", "action": "remote", "repo": "crm-sync", "url": "https://github.com/acme/fork.git"}, Mismatch},
+		{"same remote over ssh", Step{"tool": "git", "action": "remote", "repo": "crm-sync", "url": "git@github.com:acme/crm-sync.git"}, Match},
 		{"unknown repo", Step{"tool": "git", "action": "grep", "repo": "payments", "pattern": "x"}, Unreachable},
 		{"no pattern", Step{"tool": "git", "action": "grep", "repo": "crm-sync"}, Unreachable},
 		{"unknown action", Step{"tool": "git", "action": "push", "repo": "crm-sync"}, Unreachable},
@@ -102,9 +103,6 @@ func TestGitFailuresAreUnreachable(t *testing.T) {
 	broken := Recipe{Repo: r.Repo, Git: func(string, ...string) (int, string, error) { return 0, "", errors.New("git not installed") }}
 	if got := broken.Check(Step{"tool": "git", "action": "grep", "repo": "x", "pattern": "y"}, 0); got.Outcome != Unreachable || !strings.Contains(got.Detail, "not installed") {
 		t.Errorf("git missing: %+v", got)
-	}
-	if code, _, err := RunGit(filepath.Join(notRepo, "none")); err != nil || code == 0 {
-		t.Errorf("git in a missing folder: exit %d %v", code, err)
 	}
 }
 

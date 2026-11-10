@@ -51,6 +51,8 @@ type Deps struct {
 	// Observe and Facts are the workspace's knowledge folders (M2); nil outside a workspace.
 	Observe *observe.Store
 	Facts   *facts.Store
+	// RefreshIndex rebuilds the repo index when it is older than repos.StaleAfter (doc 03 step 5).
+	RefreshIndex func() error
 }
 
 // Outcome is a handler's answer plus what the audit line should say about it.
@@ -197,20 +199,32 @@ func userPromptSubmit(req *hookio.Request, d Deps) Outcome {
 		}
 		o.Response.AdditionalContext = fmt.Sprintf("Athel: active change %s (%s, %s).", c.ID, c.State, step)
 	}
-	if change, target, ok := grants.ParsePrompt(req.Prompt); ok && d.Store != nil && req.AgentID == "" {
-		recordGrant(req, d, change, target, &o)
+	if d.Store == nil || req.AgentID != "" {
+		return o
+	}
+	if change, target, ok := grants.ParsePrompt(req.Prompt); ok {
+		recordGrant(req, d, change, target, "", &o)
+	} else if roots, ok := grants.ParseRootsPrompt(req.Prompt); ok {
+		recordGrant(req, d, grants.RootsKey(roots), grants.TargetRoots,
+			" Run `"+grants.RootsCommand(roots)+"` now, exactly as written, to save these repo search roots.", &o)
 	}
 	return o
 }
 
-// recordGrant turns the human's literal /athel:approve or /athel:accept prompt into a one-time
-// grant (M1 plan §4.5). Only this hook sees the human's own words, so only it may create one.
-func recordGrant(req *hookio.Request, d Deps, change, target string, o *Outcome) {
-	g, err := d.Store.Grants().Create(change, target, req.SessionID, req.PromptID)
+// recordGrant turns the human's literal /athel:approve, /athel:accept or /athel:roots prompt into
+// a one-time grant (M1 plan §4.5; M2 plan Q7). Only this hook sees the human's own words, so only
+// it may create one. A roots grant is keyed by its roots, not a change, so its audit record names
+// the grant and leaves the change empty.
+func recordGrant(req *hookio.Request, d Deps, key, target, hint string, o *Outcome) {
+	g, err := d.Store.Grants().Create(key, target, req.SessionID, req.PromptID)
 	if err == nil {
+		var change *string
+		if strings.HasPrefix(key, "CHG-") {
+			change = audit.Str(key)
+		}
 		_, err = d.Store.AuditLog().Append(audit.Record{Kind: audit.KindGrantCreated, Session: audit.Str(req.SessionID),
-			PromptID: audit.Str(req.PromptID), Change: audit.Str(change), To: audit.Str(target), By: audit.Str(state.ByHuman),
-			Reason: audit.Str("grant " + g.ID), Result: audit.ResultOK})
+			PromptID: audit.Str(req.PromptID), Change: change, To: audit.Str(target), By: audit.Str(state.ByHuman),
+			Reason: audit.Str("grant " + g.ID + " for " + key), Result: audit.ResultOK})
 	}
 	if err != nil {
 		o.Result, o.Notes = "error", append(o.Notes, "grant: "+err.Error())
@@ -218,7 +232,7 @@ func recordGrant(req *hookio.Request, d Deps, change, target string, o *Outcome)
 	}
 	o.Rule = RuleGrant
 	o.Response.AdditionalContext = strings.TrimSpace(o.Response.AdditionalContext + fmt.Sprintf(
-		"\nAthel: the developer granted %s → %s (grant %s, usable once for %s by the main agent).", change, target, g.ID, grants.TTL))
+		"\nAthel: the developer granted %s → %s (grant %s, usable once for %s by the main agent).%s", key, target, g.ID, grants.TTL, hint))
 }
 
 func preCompact(req *hookio.Request, d Deps) Outcome {

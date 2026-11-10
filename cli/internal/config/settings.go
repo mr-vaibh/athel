@@ -14,6 +14,7 @@ type Settings struct {
 	Features           map[string]bool
 	FactWindows        map[string]time.Duration // facts.freshness, per class
 	FactArchiveAfter   time.Duration
+	SearchRoots        []string // repos.search_roots as configured (absolute or ~/…)
 }
 
 // Settings extracts typed values. The schema and the built-in layer guarantee every key the
@@ -39,6 +40,8 @@ func (r *Result) Settings() Settings {
 		s.FactWindows[class] = time.Duration(num(minutes)) * time.Minute
 	}
 	s.FactArchiveAfter = time.Duration(num(facts["archive_after_days"])) * 24 * time.Hour
+	repos, _ := v["repos"].(map[string]any)
+	s.SearchRoots = stringList(repos["search_roots"])
 	s.Identity, _ = v["identity"].(string)
 	features, _ := v["features"].(map[string]any)
 	for k, val := range features {
