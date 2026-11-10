@@ -1,6 +1,7 @@
 package investigation
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -301,5 +302,56 @@ facts_created: []
 	confirmed := strings.Replace(strings.Replace(doc, "      - {kind: cluster, ref: kubectl get deploy}\n", "      - {kind: cluster, ref: kubectl get deploy}\n      - {kind: manifest, ref: users/deploy/k8s.yaml:15}\n", 1), "confidence: likely", "confidence: confirmed", 1)
 	if r := Check(decode(t, confirmed), Context{Ask: "ASK-001", Accessed: func(string) bool { return false }, FactStatus: func(string) (string, bool) { return "", false }}, ""); r.Err() != nil || len(r.Hints) != 0 {
 		t.Errorf("a confirmed answer needs no hint: %+v %v", r.Hints, r.Err())
+	}
+}
+
+// TestHintDirectCallBesideRoute: the gateway-hop trap. A direct call next to a route through a
+// hop is pointed out; without the hop's own route there is nothing to point at.
+func TestHintDirectCallBesideRoute(t *testing.T) {
+	claim := func(id, subject, predicate, object string) string {
+		return `  - id: ` + id + `
+    text: ` + subject + ` ` + predicate + ` ` + object + `
+    subject: {kind: service, name: ` + subject + `}
+    predicate: ` + predicate + `
+    object: {kind: service, name: ` + object + `}
+    env: prod
+    confidence: unverified
+    evidence:
+      - {kind: code, ref: ` + subject + `/client.go}
+    facts: []
+`
+	}
+	doc := func(claims ...string) string {
+		return `schema: athel/investigation@1
+ask: ASK-001
+question: How does orders reach payments?
+type: service_path
+scope: {services: [orders], repos: []}
+complete: true
+budget: {max_tool_calls: 60, max_minutes: 10, used_tool_calls: 5, used_minutes: 1}
+claims:
+` + strings.Join(claims, "") + `drift: []
+gaps: []
+active_work: []
+health: []
+suspicious: []
+facts_used: []
+facts_created: []
+`
+	}
+	ctx := Context{Ask: "ASK-001", Accessed: func(string) bool { return false }, FactStatus: func(string) (string, bool) { return "", false }}
+	hinted := func(r Report) bool {
+		return slices.ContainsFunc(r.Hints, func(h string) bool {
+			return strings.Contains(h, "C3 says orders calls payments directly, but C1 and C2 route it through gateway")
+		})
+	}
+	for _, first := range []string{"routes_via", "calls"} {
+		r := Check(decode(t, doc(claim("C1", "orders", first, "gateway"), claim("C2", "gateway", "routes_via", "payments"), claim("C3", "orders", "calls", "payments"))), ctx, "")
+		if !hinted(r) {
+			t.Errorf("orders %s gateway: hints %v", first, r.Hints)
+		}
+	}
+	if r := Check(decode(t, doc(claim("C1", "orders", "calls", "gateway"), claim("C3", "orders", "calls", "payments"))), ctx, ""); hinted(r) {
+		t.Errorf("no route from the hop, no hint: %v", r.Hints)
 	}
 }

@@ -67,13 +67,13 @@ the run-to-run spread.
 
 ## Improvements to try, in order (update as they land)
 
-1. **Measure what is already built.** After run 4, Athel hints at an independent source filed on
+1. **Measure what is already built** (items 1 and 3). After run 4, Athel hints at an independent source filed on
    another claim, and the scout re-saves after hints. This is not yet measured, so it is the
    first thing the next run shows.
 2. **Make hints hard to skip.** `investigation save` could refuse while hints are open, unless
    the scout states why each one does not apply (for example `--hint-reviewed C1:<reason>`).
    This needs an ADR.
-3. **Gateway trap check.** When one block claims both "A routes_via B" (B being the gateway) and
+3. **Built 2026-11-10 (M3 task 00), not yet measured: gateway trap check.** When one block claims both "A routes_via B" (B being the gateway) and
    "A calls C", the CLI flags the direct call for review. That is the only trap still missed.
 4. **Scout model.** It runs on Sonnet (`models.scout`). Try Opus for the scout on one run and
    compare score against cost.

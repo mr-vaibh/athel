@@ -82,6 +82,7 @@ func Check(inv *Investigation, ctx Context, summary string) Report {
 	r.checkClaims(inv)
 	r.addMandatoryGaps(inv)
 	r.hintIndependent(inv)
+	r.hintDirectBesideRoute(inv)
 	r.checkFacts(inv, ctx)
 	if !inv.Complete && len(inv.Gaps) == 0 {
 		r.Problems = append(r.Problems, "an incomplete answer must list what is missing under gaps (FR-DISC-014)")
@@ -191,6 +192,42 @@ func (r *Report) hintIndependent(inv *Investigation) {
 				c.ID, other, s.Kind, s.Ref, c.ID))
 		}
 	}
+}
+
+// hintDirectBesideRoute points at a direct call that the same block also routes through a hop:
+// "orders calls payments" next to "orders routes_via gateway" (or "orders calls gateway") and
+// "gateway routes_via payments". It is the gateway-hop trap the M2 evals still missed in 2 of
+// 12 sessions (docs/plans/EVALS.md item 3). A service may also call directly, so it is a hint.
+func (r *Report) hintDirectBesideRoute(inv *Investigation) {
+	for _, direct := range inv.Claims {
+		if direct.Predicate != "calls" {
+			continue
+		}
+		if first, second, ok := routedThrough(inv, direct); ok {
+			hop := first.Object["name"]
+			r.Hints = append(r.Hints, fmt.Sprintf("%s says %s calls %s directly, but %s and %s route it through %s: if every call goes through %s, drop %s",
+				direct.ID, direct.Subject["name"], direct.Object["name"], first.ID, second.ID, hop, hop, direct.ID))
+		}
+	}
+}
+
+// routedThrough finds claims "from routes_via|calls hop" and "hop routes_via to" for a direct
+// claim "from calls to".
+func routedThrough(inv *Investigation, direct Claim) (Claim, Claim, bool) {
+	from, to := strings.ToLower(direct.Subject["name"]), strings.ToLower(direct.Object["name"])
+	for _, first := range inv.Claims {
+		hop := strings.ToLower(first.Object["name"])
+		if first.ID == direct.ID || strings.ToLower(first.Subject["name"]) != from || hop == to ||
+			(first.Predicate != "routes_via" && first.Predicate != "calls") {
+			continue
+		}
+		for _, second := range inv.Claims {
+			if second.Predicate == "routes_via" && strings.ToLower(second.Subject["name"]) == hop && strings.ToLower(second.Object["name"]) == to {
+				return first, second, true
+			}
+		}
+	}
+	return Claim{}, Claim{}, false
 }
 
 // strongElsewhere finds a strong, supporting source on another claim than c whose system c lacks.
