@@ -102,6 +102,12 @@ func commands() map[string]command {
 		"blast score":            cmdBlastScore,
 		"blast save":             cmdBlastSave,
 		"fact archive":           cmdFactArchive,
+		"prd index":              cmdPRDIndex,
+		"prd show":               cmdPRDShow,
+		"prd scan":               cmdPRDScan,
+		"prd add-version":        cmdPRDAddVersion,
+		"prd diff":               cmdPRDDiff,
+		"prd review save":        cmdPRDReviewSave,
 	}
 }
 
