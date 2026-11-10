@@ -195,6 +195,7 @@
         "env": {"type": "string", "pattern": "^(any|[a-z][a-z0-9_-]{0,62})$"},
         "window": {"type": "string", "pattern": "^[1-9][0-9]*(m|h|d)$"},
         "sampling": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "supports": {"description": "false when this source contradicts the claim (zero traffic, another version): shown to the reader, never raises the claim's confidence, and caps it at unverified (ADR 018)", "type": "boolean"},
         "tool_use_id": {"$ref": "#/$defs/toolUseId"}
       }
     }

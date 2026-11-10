@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/investigation"
+	"github.com/mr-vaibh/athel/cli/internal/observe"
 )
 
 const claimBlock = `schema: athel/investigation@1
@@ -237,5 +239,37 @@ func TestSummaryText(t *testing.T) {
 	}
 	if code, _ := h.runJSON("investigation", "save", "--change", "CHG-001", "--summary", "x", "--summary-text", "y", "-"); code != aerr.ExitUsage {
 		t.Errorf("both summaries: exit %d", code)
+	}
+}
+
+func TestInvestigationTemplate(t *testing.T) {
+	h := newHarness(t)
+	code, out, _ := h.run("investigation", "template")
+	if code != 0 || !strings.HasPrefix(out, "# athel/investigation@1 claim block") || !strings.HasSuffix(out, "facts_created: []\n") {
+		t.Errorf("template: exit %d\n%s", code, out)
+	}
+	if code, _, _ := h.run("investigation", "template", "extra"); code != 2 {
+		t.Errorf("an argument is a usage error, got exit %d", code)
+	}
+}
+
+func TestHelpFlag(t *testing.T) {
+	h := newHarness(t)
+	for _, flagName := range []string{"--help", "-h"} {
+		code, out, errOut := h.run("investigation", "save", flagName)
+		if code != 0 || errOut != "" || !strings.Contains(out, "usage: athel investigation save") || !strings.Contains(out, "-summary-text") {
+			t.Errorf("%s: exit %d\n%s%s", flagName, code, out, errOut)
+		}
+	}
+	if code, out, _ := h.run("--json", "fact", "add", "--help"); code != 0 || !strings.Contains(out, "usage: athel fact add") {
+		t.Errorf("help with --json: exit %d %s", code, out)
+	}
+}
+
+// TestTemplateIsNotSuspicious: the scout reads the template in the session it saves from, so
+// text in it that the injection check flags would block its own save.
+func TestTemplateIsNotSuspicious(t *testing.T) {
+	if flags := observe.Suspicious(investigation.Template); len(flags) != 0 {
+		t.Errorf("the template trips the suspicious-content check: %+v", flags)
 	}
 }

@@ -12,13 +12,13 @@ and never writes to GitHub from the scout.
 
 ## Read queries
 ```sh
-gh pr list --repo acme/users --state open --json number,title,author,headRefName,files
-gh pr view 812 --repo acme/users --json title,author,files,updatedAt
-gh api repos/acme/users/contents/.github/CODEOWNERS
-gh api repos/acme/users/branches --paginate --jq '.[].name'
-gh search code "users.updated.v1" --owner acme --json repository,path
-gh run list --repo acme/users --limit 10 --json name,status,conclusion,headBranch
-gh api repos/acme/users/commits --jq '.[0:20][] | {sha: .sha, author: .commit.author.name, date: .commit.author.date}'
+gh pr list --repo example/billing --state open --json number,title,author,headRefName,files
+gh pr view 42 --repo example/billing --json title,author,files,updatedAt
+gh api repos/example/billing/contents/.github/CODEOWNERS
+gh api repos/example/billing/branches --paginate --jq '.[].name'
+gh search code "invoice.paid.v1" --owner example --json repository,path
+gh run list --repo example/billing --limit 10 --json name,status,conclusion,headBranch
+gh api repos/example/billing/commits --jq '.[0:20][] | {sha: .sha, author: .commit.author.name, date: .commit.author.date}'
 ```
 
 With GitHub's official MCP server (registered as `github`), the same reads are

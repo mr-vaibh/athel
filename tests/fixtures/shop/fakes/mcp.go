@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -28,6 +30,25 @@ type tool struct {
 	Description string         `json:"description"`
 	InputSchema map[string]any `json:"inputSchema"`
 	run         func(args map[string]string) any
+}
+
+// arguments checks a call against the tool's schema the way real servers do: an unknown or
+// missing argument is an error the caller can correct, never silently ignored.
+func (t tool) arguments(in map[string]any) (map[string]string, error) {
+	props, _ := t.InputSchema["properties"].(map[string]any) // schemaOf always sets it
+	out := map[string]string{}
+	for k, v := range in {
+		if _, ok := props[k]; !ok {
+			return nil, fmt.Errorf("unknown argument %q; %s accepts %s", k, t.Name, strings.Join(slices.Sorted(maps.Keys(props)), ", "))
+		}
+		out[k] = fmt.Sprint(v)
+	}
+	for k := range props {
+		if out[k] == "" {
+			return nil, fmt.Errorf("missing required argument %q", k)
+		}
+	}
+	return out, nil
 }
 
 // Serve answers requests from in until it ends.
@@ -85,8 +106,8 @@ func (s Server) answer(req rpcRequest, tools map[string]tool) map[string]any {
 
 func call(params json.RawMessage, tools map[string]tool) map[string]any {
 	var p struct {
-		Name      string            `json:"name"`
-		Arguments map[string]string `json:"arguments"`
+		Name      string         `json:"name"`
+		Arguments map[string]any `json:"arguments"`
 	}
 	if err := json.Unmarshal(params, &p); err != nil {
 		return toolResult("invalid arguments: "+err.Error(), true)
@@ -95,7 +116,15 @@ func call(params json.RawMessage, tools map[string]tool) map[string]any {
 	if !ok {
 		return toolResult("unknown tool "+p.Name, true)
 	}
-	b, _ := json.Marshal(t.run(p.Arguments)) // fixture values: always encode
+	args, err := t.arguments(p.Arguments)
+	if err != nil {
+		return toolResult(err.Error(), true)
+	}
+	got := t.run(args)
+	if err, ok := got.(error); ok {
+		return toolResult(err.Error(), true)
+	}
+	b, _ := json.Marshal(got) // fixture values: always encode
 	return toolResult(string(b), false)
 }
 
@@ -108,7 +137,7 @@ func schemaOf(props ...string) map[string]any {
 	for _, name := range props {
 		p[name] = map[string]any{"type": "string"}
 	}
-	return map[string]any{"type": "object", "properties": p}
+	return map[string]any{"type": "object", "properties": p, "required": append([]string{}, props...)}
 }
 
 func (s Server) tools() map[string]tool {
@@ -138,10 +167,26 @@ func (s Server) tools() map[string]tool {
 	return out
 }
 
-var matcher = regexp.MustCompile(`(\w+)="([^"]*)"`)
+var matcher = regexp.MustCompile(`(\w+)\s*(=~|!~|!=|=)\s*"([^"]*)"`)
+
+// labelMatch applies one PromQL label matcher; a missing label is the empty string, and
+// regular expressions are anchored, as in Prometheus.
+func labelMatch(value, op, want string) (bool, error) {
+	switch op {
+	case "=":
+		return value == want, nil
+	case "!=":
+		return value != want, nil
+	}
+	re, err := regexp.Compile("^(?:" + want + ")$")
+	if err != nil {
+		return false, fmt.Errorf("bad regular expression %q: %w", want, err)
+	}
+	return re.MatchString(value) == (op == "=~"), nil
+}
 
 // prometheus returns the series whose metric appears in the expression and whose labels match
-// every equality matcher in it, as rates per minute over 7 days.
+// every label matcher in it (=, !=, =~, !~), as rates per minute over 7 days.
 func (s Server) prometheus(args map[string]string) any {
 	expr := args["expr"]
 	out := []Series{}
@@ -151,7 +196,11 @@ func (s Server) prometheus(args map[string]string) any {
 		}
 		match := true
 		for _, m := range matcher.FindAllStringSubmatch(expr, -1) {
-			match = match && ser.Labels[m[1]] == m[2]
+			ok, err := labelMatch(ser.Labels[m[1]], m[2], m[3])
+			if err != nil {
+				return err
+			}
+			match = match && ok
 		}
 		if match {
 			out = append(out, ser)
@@ -191,10 +240,15 @@ func (s Server) loki(args map[string]string) any {
 	return lines
 }
 
+// jql returns the issues a JQL query plausibly selects: one naming the issue, its project, its
+// component or a word of its summary (text ~ "phone"). Enough for the fixture's few issues.
 func (s Server) jql(args map[string]string) any {
+	q := strings.ToLower(args["jql"])
 	out := []Issue{}
 	for _, i := range s.Data.Jira.Issues {
-		if strings.Contains(args["jql"], i.Component) || strings.Contains(args["jql"], i.Key) {
+		project, _, _ := strings.Cut(i.Key, "-")
+		terms := append([]string{i.Key, project, i.Component}, strings.Fields(i.Summary)...)
+		if slices.ContainsFunc(terms, func(t string) bool { return len(t) > 3 && strings.Contains(q, strings.ToLower(t)) }) {
 			out = append(out, i)
 		}
 	}

@@ -14,14 +14,14 @@ create, delete, deploy, update, set-iam-policy and every other write is denied.
 Always pass `--project`; prefer `--format=json` with `--filter`.
 
 ```sh
-gcloud run services list --project acme-staging --format=json
-gcloud run services describe users --project acme-staging --region europe-west1 --format=json
-gcloud container clusters list --project acme-staging
-gcloud pubsub subscriptions list --project acme-staging --filter="topic:users.updated.v1" --format=json
-gcloud pubsub topics list --project acme-staging
-gcloud secrets list --project acme-staging --format="value(name)"
-gcloud projects get-iam-policy acme-staging --format=json
-gcloud compute url-maps list --project acme-staging
+gcloud run services list --project example-staging --format=json
+gcloud run services describe billing --project example-staging --region europe-west1 --format=json
+gcloud container clusters list --project example-staging
+gcloud pubsub subscriptions list --project example-staging --filter="topic:invoice.paid.v1" --format=json
+gcloud pubsub topics list --project example-staging
+gcloud secrets list --project example-staging --format="value(name)"
+gcloud projects get-iam-policy example-staging --format=json
+gcloud compute url-maps list --project example-staging
 ```
 
 ## Filtering large output
@@ -35,5 +35,5 @@ output with `athel artifact put`.
 - A subscription is a likely consumer, not proof of traffic: pair it with consumer metrics.
 
 ## Environments
-`environments.yaml` maps projects to environments (for example `acme-prod*` is prod). An unknown
+`environments.yaml` maps projects to environments (for example `example-prod*` is prod). An unknown
 project counts as prod.

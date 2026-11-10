@@ -48,9 +48,10 @@ type Deployment struct {
 
 // GCloud is the GCP projects.
 type GCloud struct {
-	Projects      map[string]string                       `yaml:"projects"`
-	Subscriptions []struct{ Name, Topic, Project string } `yaml:"subscriptions"`
-	Secrets       []string                                `yaml:"secrets"`
+	CurrentProject string                                  `yaml:"current_project"`
+	Projects       map[string]string                       `yaml:"projects"`
+	Subscriptions  []struct{ Name, Topic, Project string } `yaml:"subscriptions"`
+	Secrets        []string                                `yaml:"secrets"`
 }
 
 // GitHub holds open pull requests; code search reads the fixture's sources.

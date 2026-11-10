@@ -83,7 +83,7 @@ func TestOverclaimRejected(t *testing.T) {
 	doc := strings.Replace(example, "      - {kind: metric, ref: \"grafana:kafka-consumer-lag?group=crm-sync\", window: 7d, tool_use_id: toolu_01}\n", "", 1)
 	r := Check(decode(t, doc), okContext(), "")
 	err := r.Err()
-	if !aerr.HasCode(err, aerr.StateConfidence) || len(r.Overclaims) != 1 || !strings.Contains(r.Overclaims[0], "at most unverified") {
+	if !aerr.HasCode(err, aerr.StateConfidence) || len(r.Mislabels) != 1 || !strings.Contains(r.Mislabels[0], "evidence gives unverified") {
 		t.Fatalf("report = %+v err %v", r, err)
 	}
 	lowered := strings.Replace(doc, "confidence: confirmed", "confidence: unverified", 1)
@@ -180,5 +180,126 @@ func TestCreatedFactsNeedNoAccessRecord(t *testing.T) {
 	doc := strings.Replace(example, "    facts: [F-0001]", "    facts: [F-0001, F-0002]", 1)
 	if r := Check(decode(t, doc), okContext(), ""); r.Err() != nil {
 		t.Errorf("a fact the answer created is cited: %+v", r)
+	}
+}
+
+// TestUnderclaimRejected: the CLI decides labels (ADR 018), so a label below what the evidence
+// gives is refused as firmly as one above it.
+func TestUnderclaimRejected(t *testing.T) {
+	doc := strings.Replace(example, "confidence: confirmed", "confidence: likely", 1)
+	r := Check(decode(t, doc), okContext(), "")
+	if err := r.Err(); !aerr.HasCode(err, aerr.StateConfidence) || len(r.Mislabels) != 1 || !strings.Contains(r.Mislabels[0], "C1 is labelled likely but its evidence gives confirmed") {
+		t.Fatalf("report = %+v err %v", r, err)
+	}
+}
+
+// TestContradictingEvidence: a source marked supports: false never raises a claim and caps it at
+// unverified, as when the code calls an endpoint the metrics show gets no traffic.
+func TestContradictingEvidence(t *testing.T) {
+	doc := strings.Replace(example, "window: 7d, tool_use_id: toolu_01}", "window: 7d, tool_use_id: toolu_01, supports: false}", 1)
+	if r := Check(decode(t, doc), okContext(), ""); r.Claims[0].Ceiling.Label != Unverified || !strings.Contains(r.Claims[0].Ceiling.Why, "contradicts") {
+		t.Errorf("report = %+v", r)
+	}
+	honest := strings.Replace(doc, "confidence: confirmed", "confidence: unverified", 1)
+	if r := Check(decode(t, honest), okContext(), ""); r.Err() != nil {
+		t.Errorf("unverified is the contradicted claim's label: %+v", r)
+	}
+	explicit := strings.Replace(example, "window: 7d, tool_use_id: toolu_01}", "window: 7d, tool_use_id: toolu_01, supports: true}", 1)
+	if r := Check(decode(t, explicit), okContext(), ""); r.Err() != nil {
+		t.Errorf("supports: true is the default: %+v", r)
+	}
+}
+
+func TestClaimDirection(t *testing.T) {
+	tests := []struct {
+		name, from, to, want string
+	}{
+		{"backwards event claim", "subject: {kind: event, name: UserUpdated, topic: users.updated.v1}", "subject: {kind: service, name: users}",
+			"C1: consumed_by needs its subject kind to be event or topic, not service"},
+		{"team owner as object", "predicate: consumed_by\n    object: {kind: service, name: crm-sync}", "predicate: owned_by\n    object: {kind: service, name: crm-sync}",
+			"C1: owned_by needs its object kind to be team or person, not service"},
+		{"unconstrained predicate", "predicate: consumed_by", "predicate: exposes", ""},
+	}
+	for _, tt := range tests {
+		doc := strings.Replace(example, tt.from, tt.to, 1)
+		r := Check(decode(t, doc), okContext(), "")
+		got := strings.Join(r.Problems, "; ")
+		if tt.want == "" && strings.Contains(got, "a claim reads subject first") || tt.want != "" && !strings.Contains(got, tt.want) {
+			t.Errorf("%s: problems %q, want %q", tt.name, got, tt.want)
+		}
+	}
+}
+
+// TestHintEvidenceOnAnotherClaim: a mandatory source filed on a side claim is pointed out, and
+// the save is not blocked by it.
+func TestHintEvidenceOnAnotherClaim(t *testing.T) {
+	doc := strings.Replace(example, "      - {kind: metric, ref: \"grafana:kafka-consumer-lag?group=crm-sync\", window: 7d, tool_use_id: toolu_01}\n", "", 1)
+	doc = strings.Replace(doc, "confidence: confirmed", "confidence: unverified", 1)
+	doc = strings.Replace(doc, "drift: []", `  - id: C2
+    text: crm-sync has a consumer group
+    subject: {kind: service, name: crm-sync}
+    predicate: exposes
+    object: {kind: metric, name: lag}
+    env: prod
+    confidence: likely
+    evidence:
+      - {kind: metric, ref: "grafana:lag", window: 7d}
+    facts: []
+drift: []`, 1)
+	r := Check(decode(t, doc), okContext(), "")
+	if r.Err() != nil || len(r.Hints) != 1 || !strings.Contains(r.Hints[0], "C1 answers the question without consumer group or subscription metrics, but C2 cites metric grafana:lag") {
+		t.Errorf("report = %+v err %v", r, r.Err())
+	}
+	if r := Check(decode(t, example), okContext(), ""); len(r.Hints) != 0 {
+		t.Errorf("no hint when nothing is missing: %+v", r.Hints)
+	}
+}
+
+// TestHintIndependentSource: the answer has one source system and a side claim cites another.
+func TestHintIndependentSource(t *testing.T) {
+	doc := `schema: athel/investigation@1
+ask: ASK-001
+question: What version of users runs in prod?
+type: deployed_state
+scope: {services: [users], repos: []}
+complete: true
+budget: {max_tool_calls: 60, max_minutes: 10, used_tool_calls: 5, used_minutes: 1}
+claims:
+  - id: C1
+    text: prod runs users 1.8.2
+    subject: {kind: service, name: users}
+    predicate: deployed_version
+    object: {kind: image, name: "users:1.8.2"}
+    env: prod
+    confidence: likely
+    evidence:
+      - {kind: cluster, ref: kubectl get deploy}
+    facts: []
+  - id: C2
+    text: user-svc is users
+    subject: {kind: service, name: user-svc}
+    predicate: alias_of
+    object: {kind: repo, name: users}
+    env: prod
+    confidence: likely
+    evidence:
+      - {kind: manifest, ref: users/deploy/k8s.yaml:1}
+      - {kind: name, ref: user-svc}
+    facts: []
+drift: []
+gaps: []
+active_work: []
+health: []
+suspicious: []
+facts_used: []
+facts_created: []
+`
+	r := Check(decode(t, doc), Context{Ask: "ASK-001", Accessed: func(string) bool { return false }, FactStatus: func(string) (string, bool) { return "", false }}, "")
+	if r.Err() != nil || len(r.Hints) != 1 || !strings.Contains(r.Hints[0], "C1 is short of confirmed, but C2 cites manifest users/deploy/k8s.yaml:1") {
+		t.Errorf("report = %+v err %v", r, r.Err())
+	}
+	confirmed := strings.Replace(strings.Replace(doc, "      - {kind: cluster, ref: kubectl get deploy}\n", "      - {kind: cluster, ref: kubectl get deploy}\n      - {kind: manifest, ref: users/deploy/k8s.yaml:15}\n", 1), "confidence: likely", "confidence: confirmed", 1)
+	if r := Check(decode(t, confirmed), Context{Ask: "ASK-001", Accessed: func(string) bool { return false }, FactStatus: func(string) (string, bool) { return "", false }}, ""); r.Err() != nil || len(r.Hints) != 0 {
+		t.Errorf("a confirmed answer needs no hint: %+v %v", r.Hints, r.Err())
 	}
 }

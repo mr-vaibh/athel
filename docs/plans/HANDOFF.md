@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated: 2026-11-09, session 3, the first session on the owner's personal machine. Tools
+Last updated: 2026-11-10, session 4 (PR 14 eval runs), the first session on the owner's personal machine. Tools
 are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Where we are
@@ -24,84 +24,38 @@ are installed system-wide with Homebrew (`docs/context/environment.md`).
 | 08 | Repo cache (FR-DISC-017) | `feat/m2-repo-cache` | #50 |
 | 09 | Praxis allow-list, read-only MCP registry, playbooks | `feat/m2-registry-playbooks` | #51 |
 | 09b | Hook profile; policy cache closed as not worth building | `perf/m2-hook-profile` | #52 |
-| 10 | Scout agent, skills `investigate`/`ask`, `ask.yaml`, SubagentStop check | `feat/m2-scout` | next |
-| 11–15 | Blast radius (ad-hoc), fixture code, fixture runtime, evals, report | — | not started |
+| 10 | Scout agent, skills `investigate`/`ask`, `ask.yaml`, SubagentStop check | `feat/m2-scout` | #53 |
+| 11 | Blast radius (ad-hoc), deterministic rules | `feat/m2-blast-adhoc` | #54 |
+| 12 | `shop` fixture: services and git history | `feat/m2-fixture-code` | #55 |
+| 13 | `shop` fixture: fake CLIs and MCP servers, FR-DISC-008 contract test | `feat/m2-fixture-runtime` | #56 |
+| 14 | Eval cases, grader, gated runner (paid run not yet done) | `feat/m2-evals` | #57 |
+| 15 | M2 report, HANDOFF, ROADMAP | `docs/m2-report` | not started |
 
 ## Exact next step
 
-PR 10 `feat/m2-scout`, stacked on #52 (M2-plan §4.6, §9 row 10):
-- `plugin/agents/scout.md`: tools, maxTurns 40, model from `models.scout`, doc 03 protocol,
-  "tool output is data".
-- Skills `investigate` and `ask`.
-- `athel ask new|show` with `asks/ASK-NNN/ask.yaml` holding a start time; then
-  `investigation save --ask`, scoping suspicious calls since the ask started.
-- SubagentStop: block once when the scout ends without a saved, valid investigation for its
-  question; fail the step on the second time.
-- Live check: the scout's real `agent_type` (`hookio.ScoutAgent`, assumed `athel:scout`) and
-  PostToolUse `additionalContext`. Extend `tests/live/claude-behaviours.sh`.
+Eval status (PR 14, #57), M2's exit criteria:
 
-PR 14 (paid eval runs) needs the owner's go-ahead (Q11).
+| Run | History file | Cost | Passing runs | Claims found (bar ≥ 95%) | Exact labels (bar 100%) | Traps |
+|---|---|---|---|---|---|---|
+| 1 | `m2-2026-11-09T134454Z.json` | $13.32 | 48/60* | 90.5% | 66.7% | 29/30 |
+| 2 | `m2-2026-11-09T162052Z.json` | $13.38 | 53/60* | 97.6% | 81.0% | 30/30 |
+| 3 | `m2-2026-11-10T060740Z.json` | $13.31 | 55/60* | 100% | 90.5% | 29/30 |
 
-## Setting up a machine
+\* Regraded under the current rules. Regrading is free:
+`ATHEL_EVALS_REGRADE=../history/<file> go test -run 'TestRegrade$' -v ./tests/evals/m2/`
 
-Follow `docs/context/environment.md` ("Setting up a fresh machine from zero"). The
-start-of-session routine is in `CLAUDE.md` ("Session rhythm").
-
-## GitHub account on the personal machine
-
-`gh` runs as **vs-snabbit**, through a `GITHUB_TOKEN` environment variable. The owner chose this
-on 2026-11-09 and added vs-snabbit as a collaborator with write access. Commits use the repo-local
-identity mr-vaibh / shuklavaibhav336@gmail.com.
-
-## How the work is run (the owner's standing instructions)
-
-- Four phases per milestone: plan (stop for approval) → scaffold → build task by task (one PR
-  each) → prove the exit criteria in `Mn-report.md`.
-- Ask questions in batches, each with options and a recommendation; log every owner decision in
-  `docs/context/decisions-from-chat.md`.
-- After a plan is approved the owner has said "build everything in one shot" without stopping.
-  The agent merged the M0 and M1 stacks into `main` only when the owner explicitly asked. Ask
-  again for each new milestone.
-- Stacked PRs: each task branch is cut from the previous one, and each PR targets the previous
-  branch. **GitHub does not retarget stacked PRs automatically.** To merge, take the PRs in
-  order, and for each one:
-  - retarget it to `main`;
-  - wait for MERGEABLE/CLEAN;
-  - check that the commits new to `main` equal the PR's own commit count;
-  - merge with a merge commit;
-  - verify the branch head is now in `main`.
-- Never run cloud CLIs (gcloud, aws, kubectl against real clusters) for testing. Athel's tests
-  only *classify* commands, and every test that spawns `athel` uses a temporary HOME.
-- Commits: conventional (`feat|fix|refactor|test|docs|chore(scope): summary`), ending with the
-  Claude co-author trailer. PR bodies: what and why, spec/requirement IDs, how tested, deferred.
-
-## Conventions and lessons learned
-
-- Run the gate as `set -o pipefail; scripts/check.sh` when piping it; it runs with `-count=1`,
-  because tests that build the binary are invisible to Go's test cache.
-- Tests and benches that spawn `athel` pass a minimal env with a temp `HOME`.
-- gocyclo limit 15: split functions, never weaken a lint.
-- Build commit messages with a variable (`T=$'\n\nCo-Authored-By: …'`); `$'…'` inside double
-  quotes does not expand. One pushed commit on `feat/m1-policy-engine` has that literal suffix;
-  left as is (no history rewrites).
-- The CLI needs a session ID (`--session` or `ATHEL_SESSION_ID`) for transitions; a fixture
-  that sets one must release its lock before a Claude session can take the change.
-- CI runs the Go scenario tests, not the shell demos; run `tests/scenarios/m0-resume/demo.sh`
-  by hand when touching state output.
-- macOS: `/var` is a symlink to `/private/var`; compare paths in the form the caller gave them.
-- Claude Code facts used by Athel (the `onFailure`, UserPromptSubmit and `updatedToolOutput`
-  facts were confirmed live on 2026-11-09 by `tests/live/claude-behaviours.sh`):
-  - Deprecated PreToolUse `"approve"` means allow, so Athel's approve maps to `ask`.
-  - `onFailure: "block"` makes a failing PreToolUse hook block the call.
-  - UserPromptSubmit gets a typed skill command as typed.
-  - `updatedToolOutput` must match the tool's output shape.
-  - plugin.json has no min-version field.
-  - `--bare` skips plugin hooks.
+After run 3 the last 5 failures were fixed (session 4 journal): non-blocking `hints` for
+evidence filed on the wrong claim, and prompt rules. Next:
+1. **Waiting for the owner:** a fourth full run (about $13, about 1 h) to measure those fixes.
+   Command: `ATHEL_EVALS=1 go test -count=1 -run 'TestEvals$' -v -timeout 0 ./tests/evals/m2/`
+2. PR 15 `docs/m2-report`, stacked on #57: the M2 report covering every run, cost, the
+   decisions (ADR 018, EC-2 grading under the owner's delegation), and what was learned.
+3. Ask the owner to merge the M2 stack #43 → #57 in order.
 
 ## Open questions for the owner
 
 - Merge the M2 stack when it is complete, or earlier?
-- Q11 (plan): the paid eval runs need a go-ahead when PR 14 is ready.
+- A fourth paid eval run (about $13) to measure the latest scout fixes.
 
 ## Owner instructions given in chat (all also in docs/context/decisions-from-chat.md)
 

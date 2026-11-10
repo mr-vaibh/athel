@@ -39,6 +39,12 @@ func (e *usageError) Error() string { return e.msg }
 
 func usagef(format string, args ...any) error { return &usageError{msg: fmt.Sprintf(format, args...)} }
 
+// helpError is -h or --help on a command: its flags are printed and the exit code is 0, so
+// a caller (the scout) can learn a command instead of guessing its flags.
+type helpError struct{ text string }
+
+func (h *helpError) Error() string { return h.text }
+
 // command runs with the remaining arguments and returns the data to print.
 type command func(r *runCtx, args []string) (any, error)
 
@@ -83,6 +89,7 @@ func commands() map[string]command {
 		"fact verify":            cmdFactVerify,
 		"investigation validate": cmdInvestigationValidate,
 		"investigation save":     cmdInvestigationSave,
+		"investigation template": cmdInvestigationTemplate,
 		"repos roots propose":    cmdReposRootsPropose,
 		"repos roots set":        cmdReposRootsSet,
 		"repos index":            cmdReposIndex,
@@ -157,6 +164,10 @@ type usageJSON struct {
 }
 
 func report(env Env, asJSON bool, data any, err error) int {
+	var help *helpError
+	if errors.As(err, &help) {
+		return writeOrInternal(env.Stdout, help.text, aerr.ExitOK)
+	}
 	if raw, ok := data.(rawOutput); ok && err == nil {
 		return writeOrInternal(env.Stdout, string(raw)+"\n", aerr.ExitOK)
 	}
@@ -274,12 +285,25 @@ func (r *runCtx) newFlags(name string) *flag.FlagSet {
 	return fs
 }
 
+// helpFor lists a command's flags in the flag package's own format.
+func helpFor(fs *flag.FlagSet) error {
+	var b strings.Builder
+	b.WriteString("usage: athel " + fs.Name() + " [flags] [arguments]\nflags:\n")
+	fs.SetOutput(&b)
+	fs.PrintDefaults()
+	fs.SetOutput(io.Discard)
+	return &helpError{text: b.String()}
+}
+
 // parse parses flags and positional arguments in any order, requiring exactly wantArgs
 // positional arguments (-1: any number).
 func parse(fs *flag.FlagSet, args []string, wantArgs int) ([]string, error) {
 	var positional []string
 	for {
 		if err := fs.Parse(args); err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil, helpFor(fs)
+			}
 			return nil, usagef("%s: %v", fs.Name(), err)
 		}
 		if fs.NArg() == 0 {
