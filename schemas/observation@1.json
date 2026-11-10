@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/observation@1.json",
+  "title": "athel/observation@1",
+  "description": "One tool call of the scout, captured by the PostToolUse hook in .athel/knowledge/observations/<tool_use_id>.json (M2 plan G2). Facts and recipe checks are judged from these captured outputs, never from text the model reports. Secrets are scrubbed before capture; files expire after a few days.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "tool_use_id", "session", "agent_type", "tool", "input", "output", "output_sha256", "truncated", "suspicious", "at", "expires_at"],
+  "properties": {
+    "schema": {"const": "athel/observation@1"},
+    "tool_use_id": {"$ref": "#/$defs/id"},
+    "session": {"$ref": "#/$defs/id"},
+    "agent_type": {"type": "string", "minLength": 1, "maxLength": 200},
+    "tool": {"type": "string", "minLength": 1, "maxLength": 200},
+    "input": {"description": "The scrubbed tool input as JSON text, cut at 4 KiB.", "type": "string", "maxLength": 4200},
+    "output": {"description": "The scrubbed tool output as JSON text, cut at 256 KiB.", "type": "string", "maxLength": 262200},
+    "output_sha256": {"description": "Hash of the whole scrubbed output, before any cut.", "type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "truncated": {"type": "boolean"},
+    "suspicious": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["phrase", "excerpt"],
+        "properties": {
+          "phrase": {"type": "string", "minLength": 1, "maxLength": 100},
+          "excerpt": {"type": "string", "minLength": 1, "maxLength": 300}
+        }
+      }
+    },
+    "at": {"$ref": "#/$defs/timestamp"},
+    "expires_at": {"$ref": "#/$defs/timestamp"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,200}$"},
+    "timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"}
+  }
+}

@@ -3,13 +3,16 @@ package cli
 import (
 	"errors"
 	"io"
+	"path/filepath"
 	"time"
 
 	athel "github.com/mr-vaibh/athel"
 	"github.com/mr-vaibh/athel/cli/internal/adapters/claudecode"
+	"github.com/mr-vaibh/athel/cli/internal/facts"
 	"github.com/mr-vaibh/athel/cli/internal/fsutil"
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
 	"github.com/mr-vaibh/athel/cli/internal/hooks"
+	"github.com/mr-vaibh/athel/cli/internal/observe"
 	"github.com/mr-vaibh/athel/cli/internal/scrub"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
@@ -89,5 +92,10 @@ func (r *runCtx) hookDeps(req *hookio.Request) hooks.Deps {
 		s.TTLMin, s.HeartbeatEvery, s.WarnRatio = set.LockTTLMin, set.HeartbeatEvery, set.WarnRatio
 	}
 	d.Store, r.store = s, s
+	d.Observe = &observe.Store{Dir: filepath.Join(ws.KnowledgeDir(), "observations"), Reg: r.registry(), Clock: r.env.Clock, TTL: observe.DefaultTTL}
+	if r.cfg != nil {
+		set := r.cfg.Settings()
+		d.Facts = &facts.Store{Dir: ws.KnowledgeDir(), Reg: r.registry(), Clock: r.env.Clock, Windows: set.FactWindows, ArchiveAfter: set.FactArchiveAfter}
+	}
 	return d
 }

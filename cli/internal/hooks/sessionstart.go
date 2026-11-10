@@ -39,7 +39,23 @@ func sessionStart(req *hookio.Request, d Deps) Outcome {
 	}
 	lines = append(lines, summaryLines(changes, req.SessionID)...)
 	o.Response.AdditionalContext = strings.Join(lines, "\n")
+	housekeeping(d, &o)
 	return o
+}
+
+// housekeeping drops expired observations and archives idle facts (doc 03 §Size and cleanup).
+// It never holds up the session: a failure is recorded in the audit line and nothing else.
+func housekeeping(d Deps, o *Outcome) {
+	if d.Observe != nil {
+		if _, err := d.Observe.Prune(); err != nil {
+			o.Result, o.Notes = "error", append(o.Notes, "prune observations: "+err.Error())
+		}
+	}
+	if d.Facts != nil {
+		if _, err := d.Facts.Archive(false); err != nil {
+			o.Result, o.Notes = "error", append(o.Notes, "archive facts: "+err.Error())
+		}
+	}
 }
 
 func summaryLines(changes []*state.Change, session string) []string {
