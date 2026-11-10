@@ -232,7 +232,7 @@ func TestKubectlGcloudAwsVerbs(t *testing.T) {
 		{"argocd app sync x", R1, ""}, {"flux reconcile ks x", W3, ""}, {"vercel deploy --prod", W3, ""}, {"vercel logs x", R1, ""},
 		{"fly deploy", W3, ""}, {"heroku releases", R1, ""}, {"firebase deploy", W3, ""}, {"oc get pods", R1, ""}, {"oc delete pod x", W3, ""},
 		{"docker ps", R0, ""}, {"docker build -t x .", W0, ""}, {"docker push x", W3, ""}, {"podman run x", W0, ""},
-		{"sam build", R1, ""}, {"serverless deploy", W3, ""}, {"praxis environments list", R1, ""},
+		{"sam build", R1, ""}, {"serverless deploy", W3, ""}, {"praxis environments list", W3, ""},
 	}, Options{})
 	r := bash(t, pol, "KUBECONFIG=/k/prod.yaml kubectl --context gke_acme-prod_x delete pod y", Options{})
 	if e := r.Actions[0].Env; e.Kube != "gke_acme-prod_x" || e.KubeCfg != "/k/prod.yaml" {
@@ -405,5 +405,46 @@ func TestSplitMCP(t *testing.T) {
 	}
 	if R0.max(W1) != W1 || W3.max(R0) != W3 {
 		t.Error("max")
+	}
+}
+
+func TestPraxisAllowList(t *testing.T) {
+	// From `praxis --help` and each subcommand's help (M2 plan Q10, 2026-11-09). Reads are what the
+	// built-in tools.yaml lists; any other subcommand reaches the org's systems and counts as W3.
+	pol := testPolicy(t, nil)
+	tests := []struct {
+		cmd  string
+		tier Tier
+	}{
+		{"praxis status", R1}, {"praxis status --refresh", R1}, {"praxis version", R1}, {"praxis profiles", R1},
+		{"praxis agents", R1}, {"praxis list-skills", R1}, {"praxis duty list", R1}, {"praxis duty findings nightly", R1},
+		{"praxis memory recall phone number", R1}, {"praxis memory list", R1}, {"praxis ig list", R1},
+		{"praxis ig status shop", R1}, {"praxis ig claims --git https://github.com/acme/users", R1}, {"praxis mcp", R1},
+		{"praxis mcp --json", R1},
+		{"praxis mcp cloud_cli run_cloud_cli --arg command=ec2-describe", W3}, {"praxis memory add --title x", W3},
+		{"praxis ig sync shop", W3}, {"praxis ig publish dir --catalog c --member m", W3}, {"praxis login", W3},
+		{"praxis logout --all", W3}, {"praxis update", W3}, {"praxis refresh-skills", W3}, {"praxis report", W3},
+		{"praxis something-new", W3},
+	}
+	for _, tt := range tests {
+		a := bash(t, pol, tt.cmd, Options{}).Actions[0]
+		if a.Tier != tt.tier || a.ToolID != "praxis" {
+			t.Errorf("%s: tier %s tool %q, want %s", tt.cmd, a.Tier, a.ToolID, tt.tier)
+		}
+	}
+	if a := bash(t, pol, "praxis git-credential get", Options{}).Actions[0]; a.Tier != X {
+		t.Errorf("git-credential brokers tokens: %+v", a)
+	}
+}
+
+func TestMCPForbiddenPatterns(t *testing.T) {
+	pol := testPolicy(t, nil)
+	for tool, want := range map[string]Tier{
+		"mcp__github__merge_pull_request": X, "mcp__github__delete_repository": X,
+		"mcp__github__search_code": R1, "mcp__github__push_files": W2, "mcp__grafana__query_sql": W2,
+	} {
+		if a := Classify(Call{Tool: tool, Input: []byte(`{}`)}, pol, Options{}).Actions[0]; a.Tier != want {
+			t.Errorf("%s: tier %s, want %s", tool, a.Tier, want)
+		}
 	}
 }

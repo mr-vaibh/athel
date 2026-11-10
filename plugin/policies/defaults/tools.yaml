@@ -1,8 +1,13 @@
 # Built-in tool registry (layer 1), doc 03 §Tool registry. Policy values per environment are
 # allow | approve | deny and only matter for rules 8 (W2) and 11 (R1): prod writes, deploys,
 # infrastructure changes, secret reads and forbidden git actions are denied by the fixed rules
-# before tools.yaml is consulted. MCP tools are not registered by default: an unregistered MCP
-# tool is denied (FR-DISC-007, decision Q3) until the org or project registers it.
+# before tools.yaml is consulted. An unregistered MCP tool is denied (FR-DISC-007, decision Q3);
+# a registered server's tool that is not on its read list counts as a write. Built-in MCP entries
+# (M2, Q12) cover servers whose official docs list their tools: GitHub, Grafana, Atlassian (Jira).
+# Read lists are tight on purpose (a lower layer can only remove reads): tools whose read or
+# write effect depends on server flags or a method argument are listed as writes. Rename `server`
+# in your own layer if you named the server differently. Linear and Slack publish no complete
+# tool list, so their playbooks give an entry to add in your own tools.yaml.
 schema: athel/tools@1
 tools:
   - id: git
@@ -64,14 +69,20 @@ tools:
       staging: {read: allow, write: deny}
       dev: {read: allow, write: deny}
     forbidden_patterns: ["secretsmanager get-secret-value", "ssm get-parameters?\\b.*--with-decryption", "kms decrypt", "sts get-session-token", "ecr get-login-password"]
+  # Facets through Praxis (doc 03 §Facets layer). Kept in its own entry so removing Facets means
+  # deleting it. Read allow-list from `praxis --help` and its subcommands' help (M2 plan Q10,
+  # 2026-11-09); every other subcommand reaches the org's systems and counts as a write.
   - id: praxis
     kind: cli
     match: {command: praxis}
-    purpose: [facets_read]
-    read: []
-    write: []
+    purpose: [facets_read, deployed_state, org_memory]
+    read: [status, version, profiles, agents, list-skills, help, duty, "memory recall", "memory list", "ig list", "ig status", "ig claims", "mcp list"]
+    write: [login, logout, update, refresh-skills, report, git-credential, "memory add", "ig sync", "ig publish", "ig manifest", "mcp call"]
     policy:
-      prod: {read: approve, write: deny}
+      prod: {read: allow, write: deny}
+      staging: {read: allow, write: deny}
+      dev: {read: allow, write: deny}
+    forbidden_patterns: ["git-credential"]
     playbook: skills/integrations/praxis/SKILL.md
   - id: raptor
     kind: cli
@@ -83,3 +94,69 @@ tools:
       prod: {read: deny, write: deny}
       staging: {read: deny, write: deny}
       dev: {read: deny, write: deny}
+  # GitHub's official MCP server (github/github-mcp-server @99d6d65, readOnlyHint annotations,
+  # read 2026-11-09). Excluded from reads: secret-scanning alerts (they contain the secret,
+  # FR-DISC-012), CI job logs (can leak values), method-dispatch tools (actions_get, ui_get).
+  - id: github-mcp
+    kind: mcp
+    match: {server: github}
+    purpose: [code, active_work, owners, ci]
+    read: [get_me, get_teams, get_team_members, search_orgs, search_users, search_repositories, search_code, search_commits,
+      search_issues, search_pull_requests, get_file_contents, get_repository_tree, get_commit, list_commits, list_branches,
+      list_tags, get_tag, list_releases, get_latest_release, get_release_by_tag, list_issues, issue_read, get_label, list_label,
+      list_issue_types, list_pull_requests, pull_request_read, list_repository_collaborators, actions_list,
+      list_code_scanning_alerts, get_code_scanning_alert, list_dependabot_alerts, get_dependabot_alert,
+      list_discussions, get_discussion, get_discussion_comments, list_discussion_categories, projects_list, projects_get]
+    write: [actions_get, actions_run_trigger, get_job_logs, get_secret_scanning_alert, list_secret_scanning_alerts, ui_get,
+      add_issue_comment, add_comment_to_pending_review, add_reply_to_pull_request_comment, assign_copilot_to_issue,
+      request_copilot_review, create_branch, create_gist, update_gist, create_or_update_file, create_pull_request,
+      create_repository, delete_file, delete_repository, fork_repository, issue_write, label_write, sub_issue_write,
+      update_issue_comment, merge_pull_request, projects_write, pull_request_review_write, push_files, update_pull_request,
+      update_pull_request_branch, star_repository, unstar_repository, discussion_comment_write, dismiss_notification,
+      mark_all_notifications_read, create_pull_request_with_copilot]
+    policy:
+      prod: {read: allow, write: deny}
+      staging: {read: allow, write: deny}
+      dev: {read: allow, write: deny}
+    forbidden_patterns: ["^merge_pull_request$", "^delete_repository$"] # never merge (doc 04 tier X)
+    playbook: skills/integrations/github/SKILL.md
+  # Grafana's official MCP server (grafana/mcp-grafana @7c71ce1, read 2026-11-09). Tools whose
+  # read or write variant depends on server flags (grafana_api_request, generate_deeplink,
+  # agento11y_manage_*) and tools that run stored SQL or dry-run applies are writes here.
+  - id: grafana-mcp
+    kind: mcp
+    match: {server: grafana}
+    purpose: [health, traffic, logs, traces, alerts, oncall]
+    read: [user_info, search_dashboards, search_folders, get_dashboard_by_uid, get_dashboard_panel_queries,
+      get_dashboard_summary, get_dashboard_property, list_datasources, get_datasource, check_datasources_health,
+      query_prometheus, list_prometheus_metric_metadata, list_prometheus_metric_names, list_prometheus_label_names,
+      list_prometheus_label_values, query_prometheus_histogram, query_loki_logs, list_loki_label_names,
+      list_loki_label_values, query_loki_stats, query_loki_patterns, list_incidents, get_incident, alerting_rules_read,
+      alerting_silences_read, list_oncall_schedules, get_oncall_shift, get_current_oncall_users, list_oncall_teams,
+      list_alert_groups, get_alert_group, search_tempo_traces, get_tempo_trace, query_tempo_metrics,
+      list_tempo_attribute_names, list_tempo_attribute_values, get_annotations, get_annotation_tags, get_assertions]
+    write: [update_dashboard, create_folder, create_datasource, update_datasource, create_incident, add_activity_to_incident,
+      update_incident, query_sql, query_influxdb, run_panel_query, alerting_rules_write, alerting_routing_write,
+      alerting_silences_write, alerting_manage_routing, update_alert_group, create_annotation, update_annotation,
+      delete_annotation, create_snapshot, delete_snapshot, install_plugin, ask_assistant, grafana_api_request,
+      generate_deeplink, validate_provisioning_file]
+    policy:
+      prod: {read: allow, write: deny}
+      staging: {read: allow, write: deny}
+      dev: {read: allow, write: deny}
+    playbook: skills/integrations/grafana/SKILL.md
+  # Atlassian's Rovo MCP server, Jira tools (developer.atlassian.com/cloud/rovo-mcp/guides/
+  # supported-tools, read 2026-11-09). executeRead/Write/Destructive run any catalog operation by
+  # name, which a name list cannot judge, so they are writes; search reaches beyond Jira.
+  - id: atlassian-mcp
+    kind: mcp
+    match: {server: atlassian}
+    purpose: [tickets, owners, active_work]
+    read: [getJiraIssue, listJiraIssueComments, searchJiraIssuesUsingJql, atlassianUserInfo, getAccessibleAtlassianResources]
+    write: [createJiraIssue, editJiraIssue, transitionJiraIssue, addOrEditJiraIssueComment, executeRead, executeWrite,
+      executeDestructive, discover, search]
+    policy:
+      prod: {read: allow, write: deny}
+      staging: {read: allow, write: deny}
+      dev: {read: allow, write: deny}
+    playbook: skills/integrations/jira/SKILL.md
