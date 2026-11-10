@@ -1,0 +1,84 @@
+{
+  "cases": {
+    "phone-e164": [
+      {
+        "run": 1,
+        "grade": {
+          "planned": false,
+          "trace_complete": false,
+          "risk": "",
+          "risk_ok": false,
+          "kinds_ok": false,
+          "expected_items": 5,
+          "found_items": 0,
+          "report_items": 0,
+          "report_items_expected": 0,
+          "expected_card_rules": 1,
+          "card_rules_found": 1,
+          "cards": 5,
+          "cards_on_expected_rules": 1,
+          "review_ok": true,
+          "problems": [
+            "the change is blocked, not planned",
+            "traceability is not complete",
+            "no planned blast radius report",
+            "no plan"
+          ]
+        },
+        "pass": false,
+        "sessions": [
+          {
+            "session_id": "15b0f85e-6688-4d5b-9ee4-a25ae1514fa6",
+            "cost_usd": 0.1455612,
+            "duration_s": 22.416,
+            "turns": 7
+          },
+          {
+            "session_id": "32f074bb-189f-489c-a1a5-6a3d12042a50",
+            "cost_usd": 2.9010434000000025,
+            "duration_s": 438.517,
+            "turns": 10
+          },
+          {
+            "session_id": "c6601e35-98f8-4084-a65b-14a86146c1cc",
+            "cost_usd": 0.099693,
+            "duration_s": 13.483,
+            "turns": 5
+          },
+          {
+            "session_id": "cf05d524-8770-44c6-b6eb-3688f8182f3b",
+            "cost_usd": 0.0724188,
+            "duration_s": 9.314,
+            "turns": 2
+          }
+        ],
+        "artifacts": {
+          "state": "blocked",
+          "prd_review": "# PRD review · CHG-001 · v1\n\n**Missing or partial:** acceptance_criteria (missing), dependencies (missing)\n\n**Ambiguities:** 0 (0 material). **Contradictions:** 0. **Assumptions:** 1.\n\n## Review block (athel/prd-review@1, checked by the athel CLI)\n\n```yaml\nschema: athel/prd-review@1\nchange: CHG-001\nversion: v1\nchecklist:\n  goal: {status: present, prd: [PRD-2.1], note: x}\n  actors: {status: present, prd: [PRD-3.1], note: x}\n  scope: {status: present, prd: [PRD-3.1], note: x}\n  out_of_scope: {status: present, prd: [PRD-4.1], note: x}\n  functional_requirements: {status: present, prd: [PRD-3.1], note: x}\n  acceptance_criteria: {status: missing, prd: [], note: x}\n  non_functional: {status: present, prd: [PRD-3.3], note: x}\n  constraints: {status: present, prd: [PRD-3.2], note: x}\n  dependencies: {status: missing, prd: [], note: x}\nambiguities: []\ncontradictions: []\nassumptions:\n  - text: probe assumption text\n    prd: [PRD-3.1]\n    id: A-1\n```\n",
+          "decisions": "schema: athel/decision@1\nchange: CHG-001\ndecisions:\n    - id: D-1\n      kind: card\n      rule: A4\n      step: spec\n      question: How should CHG-001 relate to the in-flight PR acme/users#812 and Jira SHOP-12 (Normalise phone formats)?\n      context: The investigation (claim C7) found acme/users#812 on branch teammate/profile-phone, touching users/api/user.go, and SHOP-12 In Progress on component users, same assignee. Both normalise the same users.phone field that PRD-3.2 targets. Building in parallel would produce two normalisers and merge conflicts in putUser.\n      options:\n        - key: a\n          label: Build on 812 - land it first, CHG-001 extends it\n          consequence: One normaliser; CHG-001 waits for 812 to merge and must accept its library and region choices or amend them with the teammate.\n        - key: b\n          label: CHG-001 supersedes 812 and SHOP-12\n          consequence: One owner and one design; the teammate's work is closed or folded in, which needs their and @acme/identity's agreement.\n        - key: c\n          label: Pause CHG-001 until SHOP-12 is done, then re-scope\n          consequence: No duplicate work; CHG-001 only adds what remains (self-service change, propagation, backfill), delivery slips.\n      recommendation:\n        option: a\n        reason: the teammate already has code on the exact path; extending it avoids two normalisers and keeps @acme/identity reviewing one design\n      default_if_unanswered: a\n      default_safe: false\n      blocks:\n        - plan\n      presented_at: null\n      answer:\n        option: a\n        by: human\n        at: \"2026-11-10T15:41:31.906Z\"\n        grant: GR-a71e15121e34\n    - id: D-2\n      kind: card\n      rule: A1\n      step: spec\n      question: Which country should the users service assume when a customer enters a local number without a country code?\n      context: PRD-3.2 says accept local formats and store E.164. A number like 020 7946 0958 is only convertible with a default region, and the choice decides which inputs are accepted or rejected (PRD-3.4). The investigation did not find a country field on users; this is unverified.\n      options:\n        - key: a\n          label: One service-wide default region from config\n          consequence: Simple and predictable; customers in other countries must type the + prefix or get the invalid-number error.\n        - key: b\n          label: The client sends a region code with the number\n          consequence: Correct for every market; adds a field to the update request that every client must send.\n        - key: c\n          label: Use the customer's account country, falling back to config\n          consequence: Best for customers; depends on an account country field whose existence and quality are unverified.\n      recommendation:\n        option: a\n        reason: smallest contract change, deterministic tests, and the + prefix always works; can grow to b later additively\n      default_if_unanswered: a\n      default_safe: false\n      blocks:\n        - plan\n      presented_at: null\n      answer:\n        option: a\n        by: human\n        at: \"2026-11-10T15:41:31.906Z\"\n        grant: GR-a71e15121e34\n    - id: D-3\n      kind: card\n      rule: A2\n      step: spec\n      question: What happens to existing users.phone values that are in mixed formats?\n      context: PRD-2.1 says every phone number is stored in E.164. users.phone is TEXT with no validation today (claim C5), so existing rows are probably mixed; the row count and the share that cannot be converted are unknown. A backfill is a data migration and hard to undo without keeping the original value.\n      options:\n        - key: a\n          label: Backfill in batches, keep the original, flag unconvertible rows\n          consequence: Every convertible row becomes E.164 and users.updated.v1 is republished for it; unconvertible rows keep their value with phone_invalid set, the original value is kept in phone_raw for rollback.\n        - key: b\n          label: Normalise only on the next write\n          consequence: No migration; PRD-2.1 is not met for customers who never edit their number, and consumers keep seeing mixed formats.\n        - key: c\n          label: Backfill and clear unconvertible numbers\n          consequence: Fully E.164 table; customers with bad numbers silently lose SMS until they re-enter it.\n      recommendation:\n        option: a\n        reason: meets PRD-2.1 for every convertible row, is reversible via phone_raw, and loses no data\n      default_if_unanswered: a\n      default_safe: false\n      blocks:\n        - plan\n      presented_at: null\n      answer:\n        option: a\n        by: human\n        at: \"2026-11-10T15:41:31.906Z\"\n        grant: GR-a71e15121e34\n    - id: D-4\n      kind: card\n      rule: A7\n      step: spec\n      question: How should the users service guarantee that consumers see a new number within 1 second (PRD-3.3)?\n      context: The propagation path is unproven. putUser does not visibly persist and PublishUserUpdated only logs (users/events/publish.go:7), and no consumer or broker metrics were found for users.updated.v1 (investigation gap). orders reads phone via GET /v1/users/id (about 120 per min, no cache seen) so it sees a committed write at once; notifications caches contacts.phone from the event, so its freshness depends on a real event.\n      options:\n        - key: a\n          label: Persist, then publish users.updated.v1 via a transactional outbox, SLO p99 1s commit-to-delivery\n          consequence: Makes the event real and durable; adds an outbox table, a relay and a broker dependency to verify with the platform team.\n        - key: b\n          label: Publish directly after commit, best effort\n          consequence: Less work; an event can be lost on crash, so notifications may keep an old number indefinitely.\n        - key: c\n          label: Treat 1s as applying to GET readers only\n          consequence: Met by persisting the write; notifications freshness stays unmanaged, which reinterprets PRD-3.3.\n      recommendation:\n        option: a\n        reason: the only option that meets PRD-3.3 for the cached consumer without losing updates; the 1s figure is measured as p99 from commit to delivery\n      default_if_unanswered: a\n      default_safe: false\n      blocks:\n        - plan\n      presented_at: null\n      answer:\n        option: a\n        by: human\n        at: \"2026-11-10T15:41:31.906Z\"\n        grant: GR-a71e15121e34\n    - id: D-5\n      kind: card\n      rule: A5\n      step: spec\n      question: Should the phone field in GET /v1/users/id and users.updated.v1 switch to E.164 in place, or should E.164 be added as a new field first?\n      context: orders reads phone via GET (about 120 per min) and notifications caches contacts.phone from users.updated.v1 for SMS. The SMS provider's format requirements are unknown and changing SMS sending is out of scope (PRD-4.1). notifications is not cloned and its owner is unknown, so its parsing of phone is unverified; a format change needs that team's confirmation.\n      options:\n        - key: a\n          label: Switch phone to E.164 in place after notifications and orders owners confirm\n          consequence: One field and no later cleanup; a consumer that parses local formats, or an SMS provider that rejects the + prefix, breaks on deploy.\n        - key: b\n          label: Add phone_e164 additively, keep phone unchanged, remove later\n          consequence: No consumer breaks; consumers move when ready, and a later contract task removes or redefines phone.\n      recommendation:\n        option: b\n        reason: expand then contract keeps notifications and SMS unaffected (PRD-4.1) while the provider format is unknown\n      default_if_unanswered: b\n      default_safe: true\n      blocks:\n        - plan\n      presented_at: null\n      answer:\n        option: b\n        by: human\n        at: \"2026-11-10T15:41:31.906Z\"\n        grant: GR-a71e15121e34\n    - id: D-6\n      kind: decision\n      step: spec\n      question: What does the clear error for an unconvertible number look like (PRD-3.4)?\n      choice: The users service returns HTTP 422 with error code invalid_phone and a human-readable message naming the phone field, in the existing error body shape, and stores nothing.\n      reason: Not material in the PRD review - one reasonable reading and easy to change later; 422 is the standard validation status and a stable code lets clients localise the message.\n      decided_by: athel\n      at: \"2026-11-10T15:38:26.900Z\"\n",
+          "blast_radius": "",
+          "plan": "",
+          "traceability": ""
+        }
+      }
+    ]
+  },
+  "claude": "2.1.311 (Claude Code)",
+  "commit": "ed656f4b2e6c9f4c6466203950856133e7efa1a6",
+  "model": "",
+  "runs_per_case": 1,
+  "schema": "athel-evals/m3@1",
+  "started": "2026-11-10T15:32:00Z",
+  "summary": {
+    "runs": 1,
+    "runs_valid": 0,
+    "blast_recall": 0,
+    "blast_precision": 1,
+    "card_recall": 1,
+    "card_precision": 0.2,
+    "runs_review_ok": 1,
+    "cost_usd": 3.218716400000002,
+    "duration_s": 483.73,
+    "exit_criteria_met": false
+  }
+}

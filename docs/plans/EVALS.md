@@ -95,3 +95,17 @@ How to run: on `main` with a logged-in `claude`,
 `ATHEL_EVALS=1 go test -count=1 -run 'TestEvals$' -v -timeout 0 ./tests/evals/m2/`.
 Each run needs the owner's go-ahead because it costs money. Then add a row above, regrade older
 runs if the grader changed, and update the target table.
+
+## M3 evals (specs, decisions, plans)
+
+Target (M3 plan EC-1, EC-2): on each of the 3 eval PRDs, every run reaches `planned` through the
+step guards with a complete trace, the expected risk level and the expected task kinds; blast
+radius recall of at least 95%. Card recall and precision and blast precision are reported.
+
+| Run | Date | What ran | Result | Cost | Notes |
+|---|---|---|---|---|---|
+| smoke 1 | 2026-11-10 | `phone-e164`, 1 run (`m3-2026-11-10T153200Z.json`) | not valid: the change ended `blocked` in the spec step | $3.22 | PRD review right (acceptance criteria missing). 5 cards with good questions (A4 for teammate PR #812, A1 for the default region); expected rule A1 found. The scripted `/athel:decide` answer worked through the real grant. No specs, blast report or plan; cards never presented, so the step ended before `decide present`. The cause is unknown: transcripts were in the removed sandbox. Fixed in the harness: `ATHEL_EVALS_KEEP` keeps every run's files, and the history keeps each session's last message, `change.yaml` and the specs |
+
+How to run (owner's go-ahead each time):
+`ATHEL_EVALS=1 ATHEL_EVALS_KEEP=<folder> go test -count=1 -run '^TestEvals$' -v -timeout 0 ./tests/evals/m3/`,
+with `ATHEL_EVALS_CASES` and `ATHEL_EVALS_RUNS` to narrow it.
