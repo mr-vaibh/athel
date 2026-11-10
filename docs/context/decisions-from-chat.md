@@ -40,3 +40,4 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-09 | How to stop the scout under-labelling (10 runs)? | Same delegation (see the row above). Agent decision: the CLI decides labels: evidence gains `supports: false` for contradicting sources (excluded from the ceiling) and the CLI refuses any label other than the ceiling | ADR 018, investigation checks, schema |
 | 2026-11-09 | Re-run the full eval (60 sessions, about $13–15) to measure the fixes? | "Yes, run it (Recommended)" | PR 14 (#57), second full run |
 | 2026-11-10 | Third full eval run (about $13) to measure the scout fixes after run 2? | "Yes, run it (Recommended)". The owner then logged in again; the run uses vaibhav.shukla@snabbit.com, org Snabbit-2, Team plan | PR 14 (#57), third full run |
+| 2026-11-10 | After run 3 (55/60): a fourth full run, then the M2 report, or the report now? | "4th run, then report (Recommended)" | PR 14 (#57) run 4; PR 15 report |
