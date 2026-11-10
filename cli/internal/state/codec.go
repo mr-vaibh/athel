@@ -15,15 +15,15 @@ import (
 
 // Decode validates data against its change schema and decodes it. Validation runs on the
 // generic document first, so a file that does not match its schema never reaches the typed
-// model. A change@1 file is validated as @1 and upgraded in memory to @2.
+// model. An older file is validated against its own version and upgraded in memory.
 func Decode(reg *schema.Registry, data []byte) (*Change, error) {
 	doc, err := schema.DecodeYAML(data)
 	if err != nil {
 		return nil, err
 	}
 	id := SchemaID
-	if m, ok := doc.(map[string]any); ok && m["schema"] == LegacySchemaID {
-		id = LegacySchemaID
+	if v := legacyVersion(doc); v != "" {
+		id = v
 	}
 	if err := reg.Validate(id, doc); err != nil {
 		return nil, err
@@ -41,8 +41,21 @@ func Decode(reg *schema.Registry, data []byte) (*Change, error) {
 // IsLegacy reports whether data is an older change schema that `athel migrate` would rewrite.
 func IsLegacy(data []byte) bool {
 	doc, err := schema.DecodeYAML(data)
-	m, ok := doc.(map[string]any)
-	return err == nil && ok && m["schema"] == LegacySchemaID
+	return err == nil && legacyVersion(doc) != ""
+}
+
+// unsealed reports whether data predates the integrity seal (change@1).
+func unsealed(data []byte) bool {
+	doc, err := schema.DecodeYAML(data)
+	return err == nil && legacyVersion(doc) == SchemaV1
+}
+
+func legacyVersion(doc any) string {
+	m, _ := doc.(map[string]any)
+	if v, _ := m["schema"].(string); v == SchemaV1 || v == SchemaV2 {
+		return v
+	}
+	return ""
 }
 
 // Encode renders c as YAML and validates the result, so an invalid change is never written.
@@ -75,7 +88,7 @@ func Load(reg *schema.Registry, path string) (*Change, error) {
 	if err != nil {
 		return nil, aerr.Wrap(aerr.StateSchema, path+" is invalid", err)
 	}
-	if err := verify(c, data, IsLegacy(data)); err != nil {
+	if err := verify(c, data, unsealed(data)); err != nil {
 		return nil, err
 	}
 	return c, nil

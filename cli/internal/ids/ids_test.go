@@ -80,3 +80,71 @@ func TestNextChangeID(t *testing.T) {
 		})
 	}
 }
+
+func TestFactAndAskIDs(t *testing.T) {
+	tests := []struct {
+		seq     Seq
+		in      string
+		want    int
+		wantErr bool
+	}{
+		{seq: Fact, in: "F-0001", want: 1},
+		{seq: Fact, in: "F-0193", want: 193},
+		{seq: Fact, in: "F-9999", want: 9999},
+		{seq: Fact, in: "F-10000", want: 10000},
+		{seq: Fact, in: "F-0000", wantErr: true},
+		{seq: Fact, in: "F-193", wantErr: true},
+		{seq: Fact, in: "F-00193", wantErr: true},
+		{seq: Fact, in: "F-010000", wantErr: true},
+		{seq: Fact, in: "f-0001", wantErr: true},
+		{seq: Fact, in: "F-0001 ", wantErr: true},
+		{seq: Fact, in: "F-99999999999999999999", wantErr: true},
+		{seq: Fact, in: "ASK-001", wantErr: true},
+		{seq: Ask, in: "ASK-001", want: 1},
+		{seq: Ask, in: "ASK-1000", want: 1000},
+		{seq: Ask, in: "ASK-01", wantErr: true},
+		{seq: Ask, in: "ASK-000", wantErr: true},
+		{seq: Ask, in: "CHG-001", wantErr: true},
+		{seq: Ask, in: "", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.seq.Prefix+tt.in, func(t *testing.T) {
+			got, err := tt.seq.Parse(tt.in)
+			if tt.wantErr {
+				if !aerr.HasCode(err, aerr.StateInvalid) {
+					t.Fatalf("err = %v, want E-STATE-INVALID", err)
+				}
+				return
+			}
+			if err != nil || got != tt.want {
+				t.Fatalf("Parse = %d, %v; want %d", got, err, tt.want)
+			}
+			if tt.seq.Format(got) != tt.in {
+				t.Errorf("Format(%d) = %q, want %q", got, tt.seq.Format(got), tt.in)
+			}
+		})
+	}
+}
+
+func TestNextSeqID(t *testing.T) {
+	tests := []struct {
+		name     string
+		seq      Seq
+		existing []string
+		want     string
+	}{
+		{"first fact", Fact, nil, "F-0001"},
+		{"after highest fact", Fact, []string{"F-0002", "F-0193", "F-0007"}, "F-0194"},
+		{"ignores junk and other kinds", Fact, []string{"F-12", "ASK-009", "x", "F-0003"}, "F-0004"},
+		{"rolls past 9999", Fact, []string{"F-9999"}, "F-10000"},
+		{"first ask", Ask, []string{".lock"}, "ASK-001"},
+		{"after highest ask", Ask, []string{"ASK-001", "ASK-010"}, "ASK-011"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.seq.Next(tt.existing); got != tt.want {
+				t.Errorf("Next = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

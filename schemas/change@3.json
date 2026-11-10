@@ -1,0 +1,696 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/change@3.json",
+  "title": "athel/change@3",
+  "description": "State of one Athel change (.athel/changes/CHG-NNN/change.yaml). Version 2 (M1) binds plan approval to the plan hash and adds the integrity record. Version 3 (M2) fills flags: a fact this change relied on was disputed or superseded (doc 03 FR-DISC-005). Reserved fields must stay empty until the milestone that fills them bumps the version.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "title",
+    "state",
+    "blocked_from",
+    "created_by",
+    "created_at",
+    "updated_at",
+    "prd",
+    "step",
+    "step_attempts",
+    "stop_blocks",
+    "checkpoints",
+    "budget",
+    "lock",
+    "approvals",
+    "waivers",
+    "repos",
+    "change_set",
+    "parent",
+    "flags",
+    "history",
+    "integrity"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/change@3"
+    },
+    "id": {
+      "$ref": "#/$defs/changeId"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "state": {
+      "$ref": "#/$defs/state"
+    },
+    "blocked_from": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/workingState"
+        }
+      ]
+    },
+    "created_by": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "created_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "prd": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "current",
+        "versions"
+      ],
+      "properties": {
+        "current": {
+          "$ref": "#/$defs/prdVersion"
+        },
+        "versions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "path",
+              "sha256",
+              "source",
+              "at"
+            ],
+            "properties": {
+              "version": {
+                "$ref": "#/$defs/prdVersion"
+              },
+              "path": {
+                "type": "string",
+                "pattern": "^prd/v[1-9][0-9]*\\.md$"
+              },
+              "sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "source": {
+                "enum": [
+                  "file",
+                  "text",
+                  "stdin"
+                ]
+              },
+              "at": {
+                "$ref": "#/$defs/timestamp"
+              }
+            }
+          }
+        }
+      }
+    },
+    "step": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "task",
+            "started_at",
+            "ended_at",
+            "attempt",
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/step"
+            },
+            "task": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/taskId"
+                }
+              ]
+            },
+            "started_at": {
+              "$ref": "#/$defs/timestamp"
+            },
+            "ended_at": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/timestamp"
+                }
+              ]
+            },
+            "attempt": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "status": {
+              "enum": [
+                "running",
+                "ok",
+                "blocked",
+                "failed"
+              ]
+            },
+            "reason": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/text"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "step_attempts": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/step"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "stop_blocks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "checkpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "step",
+          "at",
+          "note",
+          "session",
+          "trigger"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/$defs/checkpointName"
+          },
+          "step": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/step"
+              }
+            ]
+          },
+          "at": {
+            "$ref": "#/$defs/timestamp"
+          },
+          "note": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "maxLength": 4000
+              }
+            ]
+          },
+          "session": {
+            "$ref": "#/$defs/sessionId"
+          },
+          "trigger": {
+            "enum": [
+              "manual",
+              "precompact"
+            ]
+          }
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_cost_usd",
+        "max_hours",
+        "max_tool_calls",
+        "used_cost_usd",
+        "used_minutes",
+        "used_tool_calls",
+        "status",
+        "events"
+      ],
+      "properties": {
+        "max_cost_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_hours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_tool_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "used_cost_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "used_minutes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "used_tool_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "$ref": "#/$defs/budgetStatus"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "at",
+              "status",
+              "dimension"
+            ],
+            "properties": {
+              "at": {
+                "$ref": "#/$defs/timestamp"
+              },
+              "status": {
+                "$ref": "#/$defs/budgetStatus"
+              },
+              "dimension": {
+                "enum": [
+                  "cost",
+                  "time",
+                  "tool_calls"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "lock": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "session",
+            "since",
+            "heartbeat_at",
+            "ttl_min"
+          ],
+          "properties": {
+            "session": {
+              "$ref": "#/$defs/sessionId"
+            },
+            "since": {
+              "$ref": "#/$defs/timestamp"
+            },
+            "heartbeat_at": {
+              "$ref": "#/$defs/timestamp"
+            },
+            "ttl_min": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1440
+            }
+          }
+        }
+      ]
+    },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan"
+      ],
+      "properties": {
+        "plan": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "hash",
+                "by",
+                "at",
+                "session",
+                "prompt_id"
+              ],
+              "properties": {
+                "hash": {
+                  "$ref": "#/$defs/hash"
+                },
+                "by": {
+                  "const": "human"
+                },
+                "at": {
+                  "$ref": "#/$defs/timestamp"
+                },
+                "session": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/$defs/sessionId"
+                    }
+                  ]
+                },
+                "prompt_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 200
+                }
+              }
+            }
+          ],
+          "description": "plan approval bound to the plan hash (doc 05 FR-PLAN-004); any change to plan.yaml voids it"
+        }
+      }
+    },
+    "waivers": {
+      "type": "array",
+      "maxItems": 0,
+      "description": "reserved: gate waivers (M4)"
+    },
+    "repos": {
+      "type": "array",
+      "maxItems": 0,
+      "description": "reserved: repos, branches and worktrees (M4)"
+    },
+    "change_set": {
+      "type": "null",
+      "description": "reserved: multi-repo change set (M5)"
+    },
+    "parent": {
+      "type": "null",
+      "description": "reserved: parent change of a split or side-finding change (M3/M6)"
+    },
+    "flags": {
+      "type": "array",
+      "description": "Facts this change used (knowledge/access.jsonl) that verification later disputed or superseded (doc 03 FR-DISC-005). Written only by the CLI.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "fact", "replacement", "at", "reason", "resolved_at"],
+        "properties": {
+          "kind": {"enum": ["fact_disputed", "fact_superseded"]},
+          "fact": {"$ref": "#/$defs/factId"},
+          "replacement": {"oneOf": [{"$ref": "#/$defs/factId"}, {"type": "null"}]},
+          "at": {"$ref": "#/$defs/timestamp"},
+          "reason": {"$ref": "#/$defs/text"},
+          "resolved_at": {"oneOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]}
+        }
+      }
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "seq",
+          "from",
+          "to",
+          "by",
+          "at",
+          "reason",
+          "evidence",
+          "origin"
+        ],
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "from": {
+            "$ref": "#/$defs/state"
+          },
+          "to": {
+            "$ref": "#/$defs/state"
+          },
+          "by": {
+            "enum": [
+              "human",
+              "athel"
+            ]
+          },
+          "at": {
+            "$ref": "#/$defs/timestamp"
+          },
+          "reason": {
+            "$ref": "#/$defs/text"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "sha256": {
+                  "$ref": "#/$defs/hash"
+                }
+              }
+            }
+          },
+          "origin": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "session",
+              "prompt_id"
+            ],
+            "properties": {
+              "session": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/$defs/sessionId"
+                  }
+                ]
+              },
+              "prompt_id": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "integrity": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "hash",
+            "at"
+          ],
+          "properties": {
+            "hash": {
+              "$ref": "#/$defs/hash"
+            },
+            "at": {
+              "$ref": "#/$defs/timestamp"
+            }
+          }
+        }
+      ],
+      "description": "hash of this file as the CLI last wrote it (doc 02 security baseline, E-INTEGRITY)"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "blocked"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "blocked_from": {
+            "$ref": "#/$defs/workingState"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "blocked_from": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "factId": {"type": "string", "pattern": "^F-[0-9]{4,}$"},
+    "changeId": {
+      "type": "string",
+      "pattern": "^CHG-[0-9]{3,}(-F[1-9][0-9]*)?$"
+    },
+    "taskId": {
+      "type": "string",
+      "pattern": "^T-[0-9]{2,}$"
+    },
+    "prdVersion": {
+      "type": "string",
+      "pattern": "^v[1-9][0-9]*$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sessionId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,200}$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "checkpointName": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "budgetStatus": {
+      "enum": [
+        "ok",
+        "warning",
+        "exceeded"
+      ]
+    },
+    "workingState": {
+      "enum": [
+        "draft",
+        "investigating",
+        "specified",
+        "awaiting_decisions",
+        "planned",
+        "plan_approved",
+        "building",
+        "ready_for_pr",
+        "in_review",
+        "verifying",
+        "uat"
+      ]
+    },
+    "state": {
+      "enum": [
+        "draft",
+        "investigating",
+        "specified",
+        "awaiting_decisions",
+        "planned",
+        "plan_approved",
+        "building",
+        "ready_for_pr",
+        "in_review",
+        "verifying",
+        "uat",
+        "done",
+        "blocked",
+        "cancelled"
+      ]
+    },
+    "step": {
+      "enum": [
+        "start",
+        "investigate",
+        "spec",
+        "blast-radius",
+        "decide",
+        "plan",
+        "git-preflight",
+        "build",
+        "review",
+        "verify",
+        "ship",
+        "uat",
+        "learn"
+      ]
+    }
+  }
+}

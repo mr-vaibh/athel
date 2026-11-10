@@ -1,10 +1,11 @@
-// Package ids allocates and parses change IDs. IDs come from the CLI, never from the model.
+// Package ids allocates and parses change, fact and question IDs. IDs come from the CLI, never from the model.
 package ids
 
 import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 )
@@ -61,4 +62,41 @@ func NextChange(existing []string) string {
 		highest = max(highest, id.Number)
 	}
 	return FormatChange(highest + 1)
+}
+
+// Seq is a family of sequential IDs: a prefix and a minimum digit count, zero padded. Like change
+// IDs, only the canonical spelling parses, so one record can never have two IDs.
+type Seq struct {
+	Prefix string
+	Width  int
+}
+
+// ID families from M2: facts (doc 03, F-0193) and ad-hoc questions (M2 plan G3).
+var (
+	Fact = Seq{Prefix: "F-", Width: 4}
+	Ask  = Seq{Prefix: "ASK-", Width: 3}
+)
+
+// Format renders number n of the family.
+func (q Seq) Format(n int) string { return fmt.Sprintf("%s%0*d", q.Prefix, q.Width, n) }
+
+// Parse returns the number of a canonical ID of the family.
+func (q Seq) Parse(s string) (int, error) {
+	digits, ok := strings.CutPrefix(s, q.Prefix)
+	n, err := strconv.Atoi(digits)
+	if !ok || err != nil || n <= 0 || q.Format(n) != s {
+		return 0, aerr.New(aerr.StateInvalid, fmt.Sprintf("%q is not a canonical %sID", s, q.Prefix))
+	}
+	return n, nil
+}
+
+// Next returns the ID after the highest one in existing; anything else is ignored.
+func (q Seq) Next(existing []string) string {
+	highest := 0
+	for _, s := range existing {
+		if n, err := q.Parse(s); err == nil {
+			highest = max(highest, n)
+		}
+	}
+	return q.Format(highest + 1)
 }

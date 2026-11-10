@@ -19,12 +19,18 @@ import (
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 )
 
-// The schema IDs M0 knows about.
+// Schema IDs the CLI refers to by name.
 const (
-	Change    = "athel/change@1"
-	Config    = "athel/config@1"
-	HookEvent = "athel/hook-event@1" // M0 log format, kept to read old files
-	Audit     = "athel/audit@1"
+	Change        = "athel/change@1"
+	Config        = "athel/config@2"
+	ConfigV1      = "athel/config@1"     // read and upgraded in memory; `athel migrate` rewrites it
+	HookEvent     = "athel/hook-event@1" // M0 log format, kept to read old files
+	Audit         = "athel/audit@1"
+	Fact          = "athel/fact@1"
+	FactAccess    = "athel/fact-access@1"
+	Investigation = "athel/investigation@1"
+	RepoIndex     = "athel/repo-index@1"
+	Services      = "athel/services@1"
 )
 
 var idRe = regexp.MustCompile(`^athel/([a-z][a-z0-9-]*@[1-9][0-9]*)$`)

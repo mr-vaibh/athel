@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 
 	athel "github.com/mr-vaibh/athel"
 	"github.com/mr-vaibh/athel/cli/internal/digest"
@@ -31,6 +32,14 @@ var AthelRules = Rules{
 	"locks.heartbeat_min":            {Kind: Min}, // more frequent heartbeats are stricter
 	"identity":                       {Kind: Free},
 	"features.*":                     {Kind: Free},
+	// M2 (config@2). Search roots widen rule 12, so lower layers may only remove roots.
+	"repos.search_roots":                       {Kind: Intersect},
+	"facts.freshness.*":                        {Kind: Min}, // a shorter window re-verifies sooner
+	"facts.archive_after_days":                 {Kind: Free},
+	"discovery.lookback_hours":                 {Kind: Max}, // a longer lookback misses fewer callers
+	"discovery.question_budget.max_tool_calls": {Kind: Min},
+	"discovery.question_budget.max_minutes":    {Kind: Min},
+	"models.scout":                             {Kind: Free},
 }
 
 // reservedFiles are policy files later milestones define; they are not read yet.
@@ -70,10 +79,13 @@ type FileSpec struct {
 	Rules     Rules
 	UserFile  string // file in ATHEL_HOME for the user layer; "" when the file has no user layer
 	Normalize func(map[string]any) (map[string]any, error)
+	// Legacy lists older schema versions still read. Each must be a strict subset of Schema, so
+	// a layer in an older version is validated against it and then treated as current.
+	Legacy []string
 }
 
 // AthelSpec is athel.yaml.
-var AthelSpec = FileSpec{Name: "athel.yaml", Schema: schema.Config, Rules: AthelRules, UserFile: "user.yaml"}
+var AthelSpec = FileSpec{Name: "athel.yaml", Schema: schema.Config, Rules: AthelRules, UserFile: "user.yaml", Legacy: []string{schema.ConfigV1}}
 
 // LoadFile reads every present layer of one file (built-in from the binary, then org, user,
 // project), validates each against its schema, normalises it and merges them tighten-only.
@@ -134,10 +146,15 @@ func readLayer(reg *schema.Registry, spec FileSpec, name, path string, read func
 	if err != nil {
 		return nil, aerr.Wrap(aerr.PolicyConfigInvalid, name+" "+spec.Name+" "+path+" is not valid YAML", err)
 	}
-	if err := reg.Validate(spec.Schema, doc); err != nil {
-		return nil, aerr.Wrap(aerr.PolicyConfigInvalid, name+" "+spec.Name+" "+path+" does not match "+spec.Schema, err)
+	m, _ := doc.(map[string]any)
+	id := spec.Schema
+	if v, _ := m["schema"].(string); slices.Contains(spec.Legacy, v) {
+		id = v
 	}
-	m, _ := doc.(map[string]any) // the schema guarantees an object
+	if err := reg.Validate(id, doc); err != nil {
+		return nil, aerr.Wrap(aerr.PolicyConfigInvalid, name+" "+spec.Name+" "+path+" does not match "+id, err)
+	}
+	m["schema"] = spec.Schema // the schema guarantees an object; a legacy layer is upgraded in memory
 	if spec.Normalize != nil {
 		if m, err = spec.Normalize(m); err != nil {
 			return nil, aerr.Wrap(aerr.PolicyConfigInvalid, name+" "+spec.Name+" "+path, err)

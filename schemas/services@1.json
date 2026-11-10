@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/services@1.json",
+  "title": "athel/services@1",
+  "description": "services.yaml (optional): human hints about services: aliases, repo and path mapping, owners and channels (doc 02 §Files; doc 03 §Human hints). Each entry loads as facts with confidence likely and a recipe, so it is checked like everything else, never taken as truth.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "services"],
+  "properties": {
+    "schema": {"const": "athel/services@1"},
+    "services": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": {"$ref": "#/$defs/name"},
+          "aliases": {"type": "array", "uniqueItems": true, "maxItems": 20, "items": {"$ref": "#/$defs/name"}},
+          "repo": {"type": "string", "pattern": "^[a-z0-9.-]+(:[0-9]+)?/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+$", "maxLength": 300},
+          "path": {"description": "Folder of the service inside a monorepo.", "type": "string", "minLength": 1, "maxLength": 500},
+          "owners": {"type": "array", "uniqueItems": true, "maxItems": 20, "items": {"$ref": "#/$defs/name"}},
+          "channels": {"type": "array", "uniqueItems": true, "maxItems": 20, "items": {"$ref": "#/$defs/name"}}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "name": {"type": "string", "minLength": 1, "maxLength": 300}
+  }
+}

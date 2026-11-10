@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/fact@1.json",
+  "title": "athel/fact@1",
+  "description": "One verified fact in .athel/knowledge/facts.jsonl (doc 03 §Verified knowledge cache). Written only by the CLI, which refuses a fact without sources or recipe and de-duplicates on (subject, predicate, object, env). A fact is never edited: a later record with the same id changes only its status, and a new fact supersedes an old one.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "subject", "predicate", "object", "env", "confidence", "sources", "verify", "freshness_class", "verified_at", "created_at", "status", "supersedes", "derived_from"],
+  "properties": {
+    "schema": {"const": "athel/fact@1"},
+    "id": {"$ref": "#/$defs/factId"},
+    "subject": {"$ref": "#/$defs/entity"},
+    "predicate": {"$ref": "#/$defs/predicate"},
+    "object": {"$ref": "#/$defs/entity"},
+    "env": {"$ref": "#/$defs/env"},
+    "confidence": {"enum": ["confirmed", "likely", "unverified"]},
+    "sources": {"type": "array", "minItems": 1, "maxItems": 50, "items": {"$ref": "#/$defs/source"}},
+    "verify": {
+      "description": "The recipe: cheap, read-only steps that re-derive the fact from its sources (doc 03).",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {"$ref": "#/$defs/recipeStep"}
+    },
+    "freshness_class": {"enum": ["volatile", "runtime", "topology", "structural", "organisational"]},
+    "verified_at": {"$ref": "#/$defs/timestamp"},
+    "created_at": {"$ref": "#/$defs/timestamp"},
+    "status": {"enum": ["active", "superseded", "disputed"]},
+    "supersedes": {"oneOf": [{"$ref": "#/$defs/factId"}, {"type": "null"}]},
+    "derived_from": {
+      "description": "tool_use_ids of the captured tool outputs the fact was built from (anti-poisoning, M2 plan §4.2). Empty for human hints.",
+      "type": "array",
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/toolUseId"}
+    }
+  },
+  "$defs": {
+    "factId": {"type": "string", "pattern": "^F-[0-9]{4,}$"},
+    "timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"},
+    "toolUseId": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,200}$"},
+    "env": {
+      "description": "An environment name from environments.yaml, or any for facts that do not depend on one (M2 plan G7).",
+      "type": "string",
+      "pattern": "^(any|[a-z][a-z0-9_-]{0,62})$"
+    },
+    "entity": {
+      "type": "object",
+      "required": ["kind", "name"],
+      "properties": {
+        "kind": {"enum": ["service", "endpoint", "event", "topic", "table", "column", "field", "repo", "path", "team", "person", "config", "secret", "image", "workload", "alert", "metric", "value", "branch", "pr", "ticket"]},
+        "name": {"type": "string", "minLength": 1, "maxLength": 300}
+      },
+      "additionalProperties": {"type": "string", "minLength": 1, "maxLength": 300}
+    },
+    "predicate": {
+      "enum": ["owns_data", "writes_data", "reads_data", "calls", "consumed_by", "produced_by", "routes_via", "exposes", "deployed_version", "replicas", "health", "owned_by", "on_call", "active_work", "reads_config", "mounts_secret", "alias_of", "maps_to_repo", "maps_to_path", "local_clone"]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {"$ref": "#/$defs/evidenceKind"},
+        "ref": {"type": "string", "minLength": 1, "maxLength": 500},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
+        "env": {"$ref": "#/$defs/env"},
+        "window": {"type": "string", "pattern": "^[1-9][0-9]*(m|h|d)$"},
+        "sampling": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "tool_use_id": {"$ref": "#/$defs/toolUseId"}
+      }
+    },
+    "evidenceKind": {
+      "description": "Grouped into source systems by the CLI: static, runtime, people (M2 plan G8). name means naming similarity only.",
+      "enum": ["code", "schema", "migration", "manifest", "codeowners", "catalog", "docs", "workflow", "hint", "name", "trace", "metric", "log", "mesh", "ingress", "gateway", "cluster", "cloud", "facets", "alert", "deploy", "error_tracker", "incident", "pr", "branch", "commit", "ticket", "chat", "oncall"]
+    },
+    "recipeStep": {
+      "type": "object",
+      "required": ["tool", "action"],
+      "properties": {
+        "tool": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,62}$"},
+        "action": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,62}$"},
+        "expect": {"type": "string", "minLength": 1, "maxLength": 500}
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {"type": "string", "maxLength": 1000},
+          {"type": "number"},
+          {"type": "boolean"},
+          {"type": "array", "maxItems": 50, "items": {"type": "string", "maxLength": 1000}}
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/config@2.json",
+  "title": "athel/config@2",
+  "description": "athel.yaml at any config layer (built-in, org, user, project). Every key is optional except schema; merge rules live in cli/internal/config. Version 2 (M2) adds repos, facts and discovery; every config@1 file is valid content for version 2.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema"],
+  "properties": {
+    "schema": {"const": "athel/config@2"},
+    "overridable": {
+      "description": "Dotted keys that layers below this one may set freely, even looser (decision Q7).",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z_]+(\\.[a-z_]+)*$"}
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_cost_usd": {"type": "number", "minimum": 0},
+            "max_hours": {"type": "number", "minimum": 0},
+            "max_tool_calls": {"type": "integer", "minimum": 0}
+          }
+        },
+        "warn_ratio": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+      }
+    },
+    "locks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ttl_min": {"type": "integer", "minimum": 1, "maximum": 1440},
+        "heartbeat_min": {"type": "integer", "minimum": 1, "maximum": 1440}
+      }
+    },
+    "identity": {"type": "string", "minLength": 1, "maxLength": 200},
+    "features": {"type": "object", "additionalProperties": {"type": "boolean"}},
+    "repos": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "search_roots": {
+          "description": "Folders the developer confirmed for the local repo index (doc 03 §Repo access; doc 04 rule 12 exception). Set only through a human grant (M2 plan Q7).",
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 50,
+          "items": {"type": "string", "pattern": "^(/|~/)", "minLength": 2, "maxLength": 1024}
+        }
+      }
+    },
+    "facts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "freshness": {
+          "description": "Minutes a verified fact may be used before re-verification, per freshness class (doc 03 §Freshness classes). volatile is always re-verified.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "volatile": {"type": "integer", "minimum": 0, "maximum": 0},
+            "runtime": {"type": "integer", "minimum": 0, "maximum": 525600},
+            "topology": {"type": "integer", "minimum": 0, "maximum": 525600},
+            "structural": {"type": "integer", "minimum": 0, "maximum": 525600},
+            "organisational": {"type": "integer", "minimum": 0, "maximum": 525600}
+          }
+        },
+        "archive_after_days": {"type": "integer", "minimum": 1, "maximum": 3650}
+      }
+    },
+    "discovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lookback_hours": {"description": "Traffic lookback (NFR-DISC-04): default 168, never less than 24.", "type": "integer", "minimum": 24, "maximum": 8760},
+        "question_budget": {
+          "description": "Default budget of one scout question (FR-DISC-014).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_tool_calls": {"type": "integer", "minimum": 1, "maximum": 1000},
+            "max_minutes": {"type": "integer", "minimum": 1, "maximum": 240}
+          }
+        }
+      }
+    },
+    "models": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scout": {"description": "Model of the scout subagent (M2 plan Q5).", "enum": ["haiku", "sonnet", "opus", "inherit"]}
+      }
+    }
+  }
+}
