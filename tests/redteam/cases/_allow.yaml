@@ -36,3 +36,5 @@ cases:
   - {name: GitHub MCP code search, tool: mcp__github__search_code, input: {query: users.updated.v1}, expect: {decision: allow, rule: "11"}}
   - {name: Grafana Prometheus query, tool: mcp__grafana__query_prometheus, input: {expr: up}, expect: {decision: allow, rule: "11"}}
   - {name: Jira JQL search, tool: mcp__atlassian__searchJiraIssuesUsingJql, input: {jql: "project = SHOP"}, expect: {decision: allow, rule: "11"}}
+  - {name: scout saves its answer from a heredoc, command: "athel --json investigation save --ask ASK-001 --summary-text x - <<'EOF'\nschema: athel/investigation@1\nEOF", agent: athel:scout, expect: {decision: allow, rule: "7x"}}
+  - {name: scout reads a playbook, command: athel playbook show kubectl, agent: athel:scout, expect: {decision: allow, rule: "7x"}}

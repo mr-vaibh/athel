@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/ask@1.json",
+  "title": "athel/ask@1",
+  "description": ".athel/asks/ASK-NNN/ask.yaml: one ad-hoc question asked outside a change (UC-01, UC-02; M2 plan G3). Written once by `athel ask new`; created_at scopes the suspicious-content check of its investigation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "kind", "question", "created_at", "session"],
+  "properties": {
+    "schema": {"const": "athel/ask@1"},
+    "id": {"type": "string", "pattern": "^ASK-[0-9]{3,}$"},
+    "kind": {"description": "question: a scout investigation (UC-01); blast: an ad-hoc blast radius (UC-02).", "enum": ["question", "blast"]},
+    "question": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "created_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"},
+    "session": {"oneOf": [{"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,200}$"}, {"type": "null"}]}
+  }
+}

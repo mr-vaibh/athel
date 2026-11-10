@@ -15,6 +15,12 @@ var Schemas embed.FS
 //go:embed plugin/policies/defaults/*.yaml
 var Defaults embed.FS
 
+// Playbooks holds the integration playbooks (doc 03 §Playbook contract), served to the scout by
+// `athel playbook show`, so it never needs to read the plugin folder.
+//
+//go:embed plugin/skills/integrations/*/SKILL.md
+var Playbooks embed.FS
+
 // PluginManifest is plugin/.claude-plugin/plugin.json.
 //
 //go:embed plugin/.claude-plugin/plugin.json

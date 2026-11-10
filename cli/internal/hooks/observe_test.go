@@ -3,6 +3,7 @@ package hooks
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -136,5 +137,68 @@ func TestRootsGrantFromHumanPromptOnly(t *testing.T) {
 	recs, err := d.Store.AuditLog().Tail(1)
 	if err != nil || len(recs) != 1 || recs[0].Change != nil || *recs[0].To != grants.TargetRoots || !strings.Contains(*recs[0].Reason, key) {
 		t.Errorf("audit = %+v %v", recs, err)
+	}
+}
+
+func scoutSave(agent, id, stdout string) *hookio.Request {
+	return &hookio.Request{Event: hookio.PostToolUse, SessionID: sess, ToolName: "Bash", ToolUseID: "toolu_s", AgentType: agent, AgentID: id,
+		ToolInput:    []byte(`{"command":"athel --json investigation save --ask ASK-001 /tmp/c.yaml"}`),
+		ToolResponse: []byte(`{"stdout":` + strconv.Quote(stdout) + `,"stderr":""}`)}
+}
+
+func scoutStopReq(id string, active bool) *hookio.Request {
+	return &hookio.Request{Event: hookio.SubagentStop, SessionID: sess, AgentType: hookio.ScoutAgent, AgentID: id, StopHookActive: active}
+}
+
+func TestSubagentStopBlocksInvalidOnce(t *testing.T) {
+	d := withKnowledge(t, func() Deps { d, _ := newDeps(t); return d }())
+	o := Handle(scoutStopReq("agent-1", false), d)
+	if !o.Response.BlockStop || o.Response.BlockReason != ScoutUnsaved {
+		t.Fatalf("unanswered scout stop = %+v", o)
+	}
+	if o := Handle(scoutStopReq("agent-1", true), d); o.Response.BlockStop || o.Result != "error" {
+		t.Errorf("second stop must be let through and recorded: %+v", o)
+	}
+	Handle(scoutSave(hookio.ScoutAgent, "agent-2", `{"ok":false,"error":{"code":"E-STATE-CONFIDENCE"}}`), d)
+	if o := Handle(scoutStopReq("agent-2", false), d); !o.Response.BlockStop {
+		t.Error("a failed save does not answer the question")
+	}
+	Handle(scoutSave(hookio.ScoutAgent, "agent-3", `{"ok":true,"data":{}}`), d)
+	if o := Handle(scoutStopReq("agent-3", false), d); o.Response.BlockStop || o.Result != "ok" {
+		t.Errorf("answered scout stop = %+v", o)
+	}
+	if o := Handle(scoutStopReq("agent-3", false), d); !o.Response.BlockStop {
+		t.Error("the marker answers one run only")
+	}
+	Handle(scoutSave("athel:developer", "agent-4", `{"ok":true}`), d)
+	if _, ok := scoutMarker(d, "agent-4"); ok {
+		if _, err := os.Stat(filepath.Join(d.Store.WS.StateDir(), "scout", "agent-4.saved")); err == nil {
+			t.Error("another agent's save marked a scout run")
+		}
+	}
+	other := scoutSave(hookio.ScoutAgent, "agent-5", `{"ok":true}`)
+	other.ToolInput = []byte(`{"command":"echo investigation save"}`)
+	Handle(other, d)
+	if o := Handle(scoutStopReq("agent-5", false), d); !o.Response.BlockStop {
+		t.Error("a look-alike command answered the question")
+	}
+	if o := Handle(scoutStopReq("", false), d); o.Response.BlockStop || len(o.Notes) == 0 {
+		t.Errorf("no agent_id: %+v", o)
+	}
+	if o := Handle(&hookio.Request{Event: hookio.SubagentStop, SessionID: sess, AgentType: "athel:developer", AgentID: "a"}, d); o.Response.BlockStop {
+		t.Error("only the scout is checked")
+	}
+}
+
+func TestScoutMarkerWriteError(t *testing.T) {
+	d := withKnowledge(t, func() Deps { d, _ := newDeps(t); return d }())
+	if err := os.MkdirAll(d.Store.WS.StateDir(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(d.Store.WS.StateDir(), "scout"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if o := Handle(scoutSave(hookio.ScoutAgent, "agent-1", `{"ok":true}`), d); o.Result != "error" {
+		t.Errorf("marker write failure = %+v", o)
 	}
 }
