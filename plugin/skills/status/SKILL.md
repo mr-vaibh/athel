@@ -10,6 +10,8 @@ Read-only. Do not change any state. Never read or edit files under `.athel/` dir
 `athel` CLI, which prints one JSON object per command.
 
 1. If `$ARGUMENTS` names a change (`CHG-NNN`), run `athel --json state show $ARGUMENTS`.
+   Also run `athel --json decide list $ARGUMENTS --open`, and list the open cards (ID,
+   question, recommendation) with the `/athel:decide` line to answer them.
    Otherwise run `athel --json change list` and then `athel --json state show <ID>` for each
    change in the list.
 2. If a command fails with `E-STATE-NOT-INITIALISED`, say "No Athel workspace here; run
