@@ -42,3 +42,5 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-10 | Third full eval run (about $13) to measure the scout fixes after run 2? | "Yes, run it (Recommended)". The owner then logged in again; the run uses vaibhav.shukla@snabbit.com, org Snabbit-2, Team plan | PR 14 (#57), third full run |
 | 2026-11-10 | After run 3 (55/60): a fourth full run, then the M2 report, or the report now? | "4th run, then report (Recommended)" | PR 14 (#57) run 4; PR 15 report |
 | 2026-11-10 | Close M2: accept with the measured shortfall, one more run, or keep working to 100%? | "Accept it (Recommended)" | M2-report §7, ROADMAP, backlog (label accuracy into M3) |
+| 2026-11-10 | Merge the M2 stack #43 → #58 into main now? | "Merge them now (Recommended)" | Merged in order with merge commits |
+| 2026-11-10 | After a plain explanation of the tests (deterministic suites at 100%; AI evals non-deterministic; label misses are under-confidence), merge the M2 stack? | "Yes, merge (Recommended)" | Merged #43 → #58 in order |
