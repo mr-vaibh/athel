@@ -1,6 +1,9 @@
 package state
 
 import (
+	"errors"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -12,7 +15,7 @@ import (
 
 // changeFiles are the step outputs the CLI writes into a change folder for its steps; nothing
 // else may be written there this way (doc 04: .athel/changes/<id>/ is written only by the CLI).
-var changeFiles = regexp.MustCompile(`^(investigation\.md|blast-radius\.md|prd/v[1-9][0-9]*\.index\.yaml|prd/review-v[1-9][0-9]*\.md)$`)
+var changeFiles = regexp.MustCompile(`^(investigation\.md|blast-radius\.md|decisions\.yaml|prd/v[1-9][0-9]*\.index\.yaml|prd/review-v[1-9][0-9]*\.md)$`)
 
 // IsChangeFile reports whether name is a step output the CLI may write into a change folder.
 func IsChangeFile(name string) bool { return changeFiles.MatchString(name) }
@@ -35,6 +38,36 @@ func (s *Store) SaveChangeFile(id, session, name string, data []byte) (*Change, 
 			return err
 		}
 		return fsutil.WriteFileAtomic(filepath.Join(s.WS.ChangeDir(c.ID), name), data)
+	})
+}
+
+// UpdateChangeFile reads a change file (nil when it does not exist yet), lets fn compute its new
+// content, and writes it, all under the change lock, so two sessions never overwrite each
+// other's edits (decisions.yaml is read, changed and written back).
+func (s *Store) UpdateChangeFile(id, session, name string, fn func(old []byte) ([]byte, error)) (*Change, error) {
+	if err := CheckSession(session); err != nil {
+		return nil, err
+	}
+	if !IsChangeFile(name) {
+		return nil, aerr.New(aerr.StateInvalid, name+" is not a change file the CLI writes")
+	}
+	return s.Update(id, func(c *Change) error {
+		if IsTerminal(c.State) {
+			return aerr.New(aerr.StateInvalid, c.ID+" is "+string(c.State)+"; its files cannot change")
+		}
+		if err := s.claim(c, session, s.Clock.Now()); err != nil {
+			return err
+		}
+		path := filepath.Join(s.WS.ChangeDir(c.ID), name)
+		old, err := os.ReadFile(path) //nolint:gosec // a change file named by the allow-list
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return aerr.Wrap(aerr.StateIO, "read "+name, err)
+		}
+		data, err := fn(old)
+		if err != nil {
+			return err
+		}
+		return fsutil.WriteFileAtomic(path, data)
 	})
 }
 

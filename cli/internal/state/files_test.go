@@ -88,3 +88,47 @@ func TestAddPRDVersion(t *testing.T) {
 		t.Errorf("cancelled change: %v", err)
 	}
 }
+
+func TestUpdateChangeFile(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "x")
+	appendLine := func(line string) func([]byte) ([]byte, error) {
+		return func(old []byte) ([]byte, error) { return append(old, []byte(line+"\n")...), nil }
+	}
+	for _, line := range []string{"a", "b"} {
+		if _, err := s.UpdateChangeFile(c.ID, "sess-1", "decisions.yaml", appendLine(line)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if b, err := os.ReadFile(filepath.Join(s.WS.ChangeDir(c.ID), "decisions.yaml")); err != nil || string(b) != "a\nb\n" {
+		t.Errorf("file = %q %v", b, err)
+	}
+	failing := func([]byte) ([]byte, error) { return nil, aerr.New(aerr.StateInvalid, "nope") }
+	if _, err := s.UpdateChangeFile(c.ID, "sess-1", "decisions.yaml", failing); !aerr.HasCode(err, aerr.StateInvalid) {
+		t.Errorf("fn error: %v", err)
+	}
+	for name, tt := range map[string]struct {
+		session, file string
+		code          aerr.Code
+	}{
+		"no session":    {"", "decisions.yaml", aerr.StateNoSession},
+		"unknown file":  {"sess-1", "change.yaml", aerr.StateInvalid},
+		"other session": {"sess-2", "decisions.yaml", aerr.StateLockHeld},
+	} {
+		if _, err := s.UpdateChangeFile(c.ID, tt.session, tt.file, appendLine("x")); !aerr.HasCode(err, tt.code) {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	if err := os.Mkdir(filepath.Join(s.WS.ChangeDir(c.ID), "investigation.md"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.UpdateChangeFile(c.ID, "sess-1", "investigation.md", appendLine("x")); !aerr.HasCode(err, aerr.StateIO) {
+		t.Errorf("unreadable file: %v", err)
+	}
+	if _, err := s.Update(c.ID, func(c *Change) error { c.State = Cancelled; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.UpdateChangeFile(c.ID, "sess-1", "decisions.yaml", appendLine("x")); !aerr.HasCode(err, aerr.StateInvalid) {
+		t.Errorf("cancelled change: %v", err)
+	}
+}
