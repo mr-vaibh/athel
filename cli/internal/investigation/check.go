@@ -81,6 +81,7 @@ func Check(inv *Investigation, ctx Context, summary string) Report {
 	}
 	r.checkClaims(inv)
 	r.addMandatoryGaps(inv)
+	r.hintIndependent(inv)
 	r.checkFacts(inv, ctx)
 	if !inv.Complete && len(inv.Gaps) == 0 {
 		r.Problems = append(r.Problems, "an incomplete answer must list what is missing under gaps (FR-DISC-014)")
@@ -167,6 +168,44 @@ func (r *Report) addMandatoryGaps(inv *Investigation) {
 			r.AddedGaps = append(r.AddedGaps, g)
 		}
 	}
+}
+
+// hintIndependent points an answering claim short of confirmed at a strong source on another
+// claim from a source system it lacks: the second, independent source that would confirm it,
+// filed elsewhere (the fourth eval run's prod version: cluster on the answer, manifest on an
+// alias claim). A claim already hinted about a mandatory source gets no second hint.
+func (r *Report) hintIndependent(inv *Investigation) {
+	answering := questionTypes[inv.Type].predicates
+	for _, c := range inv.Claims {
+		hinted := slices.ContainsFunc(r.Hints, func(h string) bool { return strings.HasPrefix(h, c.ID+" ") })
+		if hinted || !slices.Contains(answering, c.Predicate) || CeilingOf(c, inv.Type).Label == Confirmed ||
+			slices.ContainsFunc(c.Evidence, Source.contradicts) {
+			continue
+		}
+		have := map[string]bool{}
+		for _, e := range c.Evidence {
+			have[systemOf[e.Kind]] = true
+		}
+		if s, other, ok := strongElsewhere(inv, c, have); ok {
+			r.Hints = append(r.Hints, fmt.Sprintf("%s is short of confirmed, but %s cites %s %s from another source system: if it also supports %s, list it there",
+				c.ID, other, s.Kind, s.Ref, c.ID))
+		}
+	}
+}
+
+// strongElsewhere finds a strong, supporting source on another claim than c whose system c lacks.
+func strongElsewhere(inv *Investigation, c Claim, have map[string]bool) (Source, string, bool) {
+	for _, other := range inv.Claims {
+		if other.ID == c.ID {
+			continue
+		}
+		for _, s := range other.Evidence {
+			if !weak[s.Kind] && !s.contradicts() && !have[systemOf[s.Kind]] {
+				return s, other.ID, true
+			}
+		}
+	}
+	return Source{}, "", false
 }
 
 // citedElsewhere finds a source of the named mandatory group on another claim than c.

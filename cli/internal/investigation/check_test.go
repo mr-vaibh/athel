@@ -254,3 +254,52 @@ drift: []`, 1)
 		t.Errorf("no hint when nothing is missing: %+v", r.Hints)
 	}
 }
+
+// TestHintIndependentSource: the answer has one source system and a side claim cites another.
+func TestHintIndependentSource(t *testing.T) {
+	doc := `schema: athel/investigation@1
+ask: ASK-001
+question: What version of users runs in prod?
+type: deployed_state
+scope: {services: [users], repos: []}
+complete: true
+budget: {max_tool_calls: 60, max_minutes: 10, used_tool_calls: 5, used_minutes: 1}
+claims:
+  - id: C1
+    text: prod runs users 1.8.2
+    subject: {kind: service, name: users}
+    predicate: deployed_version
+    object: {kind: image, name: "users:1.8.2"}
+    env: prod
+    confidence: likely
+    evidence:
+      - {kind: cluster, ref: kubectl get deploy}
+    facts: []
+  - id: C2
+    text: user-svc is users
+    subject: {kind: service, name: user-svc}
+    predicate: alias_of
+    object: {kind: repo, name: users}
+    env: prod
+    confidence: likely
+    evidence:
+      - {kind: manifest, ref: users/deploy/k8s.yaml:1}
+      - {kind: name, ref: user-svc}
+    facts: []
+drift: []
+gaps: []
+active_work: []
+health: []
+suspicious: []
+facts_used: []
+facts_created: []
+`
+	r := Check(decode(t, doc), Context{Ask: "ASK-001", Accessed: func(string) bool { return false }, FactStatus: func(string) (string, bool) { return "", false }}, "")
+	if r.Err() != nil || len(r.Hints) != 1 || !strings.Contains(r.Hints[0], "C1 is short of confirmed, but C2 cites manifest users/deploy/k8s.yaml:1") {
+		t.Errorf("report = %+v err %v", r, r.Err())
+	}
+	confirmed := strings.Replace(strings.Replace(doc, "      - {kind: cluster, ref: kubectl get deploy}\n", "      - {kind: cluster, ref: kubectl get deploy}\n      - {kind: manifest, ref: users/deploy/k8s.yaml:15}\n", 1), "confidence: likely", "confidence: confirmed", 1)
+	if r := Check(decode(t, confirmed), Context{Ask: "ASK-001", Accessed: func(string) bool { return false }, FactStatus: func(string) (string, bool) { return "", false }}, ""); r.Err() != nil || len(r.Hints) != 0 {
+		t.Errorf("a confirmed answer needs no hint: %+v %v", r.Hints, r.Err())
+	}
+}

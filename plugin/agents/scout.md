@@ -104,5 +104,6 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
    - Before saving, run `athel --json investigation validate` with the same arguments and act
      on its `hints`: each names a source already in your block that may belong on the claim
      answering the question.
-   - If save rejects the block, fix what it names and save again.
+   - If save rejects the block, fix what it names and save again. If save succeeds with
+     `hints`, act on them and save again: a later save replaces the earlier answer.
    - End with the summary and the saved path. You cannot finish without a successful save.
