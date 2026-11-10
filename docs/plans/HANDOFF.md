@@ -58,12 +58,13 @@ M3 is approved (2026-11-10) and being built as stacked PRs on `docs/m3-plan` (#6
 | 10 actual blast from the diff (ADR 022) | `feat/m3-blast-actual` | #72 |
 | 11a architect agent, read-only policy, templates | `feat/m3-architect-policy` | #73 |
 | 11b skills spec, decide, plan, signoff; status cards | `feat/m3-skills` | #74 |
+| 13 M3 eval harness: evalkit, grader, runner, regrade (no paid run yet) | `feat/m3-evals` | #75 |
 
 Next:
-1. 13: M3 evals (`feat/m3-evals`, on #74). Grader: blast recall ≥95%, spec and plan validity,
-   card recall and precision. Multi-prompt runner (spec, decide, plan) and regrade. Smoke one
-   PRD first (about $5), then at most 2 full runs, each asked first (owner). Check the
-   account's remaining usage before any paid run.
+1. 13, paid runs (owner's go-ahead each; check `/usage` first): smoke run of one PRD,
+   `ATHEL_EVALS=1 ATHEL_EVALS_CASES=phone-e164 ATHEL_EVALS_RUNS=1 go test -run TestEvals -timeout 0 -v ./tests/evals/m3`
+   from a frozen worktree of `feat/m3-evals` (as for M2). Then at most 2 full runs. Record
+   each in `EVALS.md` and `tests/evals/history/`.
 2. 14: the M3 report (`docs/m3-report`), EVALS.md, HANDOFF, ROADMAP.
 3. Ask the owner to merge the M3 stack #60 → #74 in order.
 
