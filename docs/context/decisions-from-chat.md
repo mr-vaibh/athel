@@ -50,3 +50,4 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-10 | Run the M3 smoke trial (one PRD, one run, about $5–8)? | "Yes, run the trial (Recommended)" | Smoke run of `phone-e164` from a frozen worktree of `feat/m3-evals` |
 | 2026-11-10 | Repeat the M3 smoke trial with logs kept (about $3–8, not counted toward the 2 full runs)? | "Yes, repeat it (Recommended)" | Smoke run 2 of `phone-e164`, ATHEL_EVALS_KEEP set |
 | 2026-11-10 | Run M3 smoke trial 3 after the sandbox fix (about $3–8)? | "Yes, run it (Recommended)" | Smoke run 3 of `phone-e164`, run folder kept |
+| 2026-11-10 | Run M3 smoke trial 4 after the template fixes (about $3–8)? | "Yes, run it (Recommended)" | Smoke run 4 of `phone-e164`, run folder kept |
