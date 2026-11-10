@@ -76,6 +76,15 @@ func (r *runCtx) checkSpec(s *state.Store, id string, data []byte) (*specpkg.Spe
 			}
 			return false
 		}})
+	conv, err := r.conventionsOf(sp.Repo)
+	switch {
+	case aerr.HasCode(err, aerr.StateNotFound):
+		problems = append(problems, "no conventions for "+sp.Repo+" yet: onboard the repo first (athel repos survey, then athel conventions save; FR-SPEC-006)")
+	case err != nil:
+		return nil, nil, err
+	case !conv.Fresh:
+		problems = append(problems, "the conventions of "+sp.Repo+" are stale ("+conv.Stale+"): survey and save them again")
+	}
 	if problems == nil {
 		problems = []string{}
 	}
