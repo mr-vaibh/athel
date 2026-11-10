@@ -7,6 +7,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
+	"github.com/mr-vaibh/athel/cli/internal/decisions"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/plan"
 	specpkg "github.com/mr-vaibh/athel/cli/internal/spec"
@@ -171,4 +172,24 @@ func encodeSpec(sp *specpkg.Spec) ([]byte, error) {
 		return nil, aerr.Wrap(aerr.StateInvalid, "encode spec "+sp.Service, err)
 	}
 	return b, nil
+}
+
+// Templates the architect starts from (M3 plan §4.1b): valid examples with every allowed value.
+func cmdSpecTemplate(r *runCtx, args []string) (any, error) {
+	return printTemplate(r, args, "spec template", specpkg.Template)
+}
+
+func cmdDecideTemplate(r *runCtx, args []string) (any, error) {
+	return printTemplate(r, args, "decide template", decisions.Template)
+}
+
+func cmdPlanTemplate(r *runCtx, args []string) (any, error) {
+	return printTemplate(r, args, "plan template", plan.Template)
+}
+
+func printTemplate(r *runCtx, args []string, name, tmpl string) (any, error) {
+	if _, err := parse(r.newFlags(name), args, 0); err != nil {
+		return nil, err
+	}
+	return rawOutput(strings.TrimRight(tmpl, "\n")), nil
 }

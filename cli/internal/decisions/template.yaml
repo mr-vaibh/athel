@@ -1,0 +1,27 @@
+# A decision card draft for `athel decide add CHG-NNN -`. The CLI adds the ID, the presentation
+# time and the answer; never set them. Raise a card only when an ask rule fires:
+# A1 product meaning | A2 irreversible | A3 risk HIGH or CRITICAL | A4 conflict | A5 ownership
+# | A6 budget | A7 low confidence. Otherwise decide alone with `athel decide record`.
+rule: A1
+# step: spec | blast | plan | build | review | verify | uat
+step: spec
+question: Which invoice formats should the download offer?
+context: PRD-2.1 says "download an invoice". Customers today get HTML by email.
+options:
+  # 2 to 4 options, keys a, b, c, d in order, each with its consequence.
+  - key: a
+    label: PDF only
+    consequence: One renderer to keep; customers who print get a fixed layout.
+  - key: b
+    label: PDF and HTML
+    consequence: Friendlier on small screens; two outputs to test.
+recommendation:
+  option: a
+  reason: the PRD names downloads, and PDF is what accounting asks for
+default_if_unanswered: a
+# true only when the default is safe to apply after 4 hours without an answer.
+default_safe: true
+# tasks (T-nn) or steps (spec, blast, plan, build) that wait for the answer.
+blocks:
+  - plan
+new_blocker: false

@@ -273,3 +273,21 @@ func TestTemplateIsNotSuspicious(t *testing.T) {
 		t.Errorf("the template trips the suspicious-content check: %+v", flags)
 	}
 }
+
+// TestM3TemplatesPrintCleanly: every template prints, and none trips the injection check the
+// architect's session runs on tool output (the M2 lesson, TestTemplateIsNotSuspicious).
+func TestM3TemplatesPrintCleanly(t *testing.T) {
+	h := newHarness(t)
+	for _, name := range []string{"spec", "decide", "plan"} {
+		code, out, _ := h.run(name, "template")
+		if code != 0 || !strings.HasPrefix(out, "#") {
+			t.Errorf("%s template: exit %d %q", name, code, out)
+		}
+		if flags := observe.Suspicious(out); len(flags) != 0 {
+			t.Errorf("%s template trips the suspicious-content check: %+v", name, flags)
+		}
+	}
+	if code, _, _ := h.run("plan", "template", "extra"); code != 2 {
+		t.Errorf("an argument is a usage error: %d", code)
+	}
+}

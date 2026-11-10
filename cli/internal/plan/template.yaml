@@ -1,0 +1,51 @@
+# athel/plan@2. Every write later must match a task. Each acceptance criterion is covered by a
+# task, and each task covers one. hash is set by the CLI.
+schema: athel/plan@2
+change: CHG-001
+hash: null
+tasks:
+  # kind: expand (a provider adds a backward-compatible contract) | migrate (a data step) |
+  #   consume (a consumer moves to the new contract; depends on an expand) | contract (removes
+  #   the old one; deferred: true, after every consume and migrate) | internal (none of these)
+  # verbs: edit | create | delete | test | commit | push | pr | comment; a task that edits or
+  #   creates code carries test. size: S < 100 lines, M < 250, L < 400 (L needs size_reason).
+  # rollback: required for migrate, expand and contract at HIGH or CRITICAL risk.
+  # env_actions: shared actions approved with the plan (a ticket comment); never a deploy.
+  - id: T-01
+    title: Add pdf_rendered_at to invoices
+    repo: billing
+    kind: migrate
+    paths:
+      - migrations/**
+    verbs:
+      - create
+      - test
+      - commit
+    covers:
+      - AC-1
+    depends_on: []
+    size: S
+    gates:
+      - build
+      - unit
+    rollback: drop the new nullable column
+  - id: T-02
+    title: Serve invoices as PDF
+    repo: billing
+    kind: internal
+    paths:
+      - invoice/**
+      - test/invoice/**
+    verbs:
+      - edit
+      - test
+      - commit
+    covers:
+      - AC-1
+    depends_on:
+      - T-01
+    size: M
+    gates:
+      - build
+      - unit
+      - lint

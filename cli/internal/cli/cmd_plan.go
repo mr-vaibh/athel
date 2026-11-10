@@ -28,9 +28,9 @@ func cmdPlanSet(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, err := readFile(pos[1])
+	data, err := r.readBlock(pos[1]) // a file, or "-" for stdin (the architect writes no files)
 	if err != nil {
-		return nil, aerr.Wrap(aerr.StateIO, "read plan file "+pos[1], err)
+		return nil, err
 	}
 	s, session, err := r.mutating()
 	if err != nil {
@@ -119,7 +119,7 @@ func (r *runCtx) lintPlan(s *state.Store, id string, data []byte) error {
 	}
 	if p.Schema != plan.SchemaID {
 		return aerr.New(aerr.StateInvalid, id+" has specs, so its plan must be "+plan.SchemaID+" with a kind per task").
-			WithNextAction("give every task a kind (expand, migrate, consume, contract, internal); schemas/plan@2.json has the format")
+			WithNextAction("run athel plan template for the format")
 	}
 	risk, err := r.blastRisk(s, id)
 	if err != nil {
