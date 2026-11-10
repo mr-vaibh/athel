@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -111,10 +112,6 @@ func TestPRDReviewSave(t *testing.T) {
 	if code, env := h.runJSON("prd", "review", "save", "CHG-001", "-"); code == 0 || errCode(env) != string(aerr.StateInvalid) {
 		t.Errorf("unknown PRD ID: %v", env)
 	}
-	h.stdin = "schema: nope\n"
-	if code, env := h.runJSON("prd", "review", "save", "CHG-001", "-"); code == 0 || errCode(env) != string(aerr.StateSchema) {
-		t.Errorf("bad block: %v", env)
-	}
 	if code, env := h.runJSON("prd", "review", "save", "CHG-001", filepath.Join(h.root, "missing.yaml")); code == 0 || errCode(env) != string(aerr.StateIO) {
 		t.Errorf("missing file: %v", env)
 	}
@@ -155,4 +152,50 @@ func asJSON(t *testing.T, v any) string {
 		t.Fatal(err)
 	}
 	return string(b)
+}
+
+// TestPRDReviewSaveBadBlock: a malformed draft is the architect's to fix, not a reason to stop
+// the step.
+func TestPRDReviewSaveBadBlock(t *testing.T) {
+	h := prdSetup(t)
+	for _, bad := range []string{"schema: nope\n", "vague: [x]\n"} {
+		h.stdin = bad
+		if code, env := h.runJSON("prd", "review", "save", "CHG-001", "-"); code == 0 || errCode(env) != string(aerr.StateSchema) ||
+			!strings.Contains(asJSON(t, env), "run athel prd review template for the format") {
+			t.Errorf("bad block %q: %v", bad, env)
+		}
+	}
+}
+
+// TestDraftErrorsPointToTheTemplate: every document the architect sends is its own to fix, so a
+// malformed one says how, never "stop the step".
+func TestDraftErrorsPointToTheTemplate(t *testing.T) {
+	h := prdSetup(t)
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"spec", "validate", "CHG-001", "-"}, "run athel spec template for the format"},
+		{[]string{"spec", "save", "CHG-001", "-"}, "run athel spec template for the format"},
+		{[]string{"decide", "add", "CHG-001", "-"}, "run athel decide template for the format"},
+		{[]string{"decide", "record", "CHG-001", "-"}, "fix the document and send it again"},
+		{[]string{"conventions", "save", "github.com/example/svc", "-", "--new"}, "fix the document and send it again"},
+	} {
+		h.stdin = "unknown_field: 1\n"
+		code, env := h.runJSON(tc.args...)
+		if code == 0 || errCode(env) != string(aerr.StateSchema) || !strings.Contains(asJSON(t, env), tc.want) {
+			t.Errorf("%v: %v", tc.args, env)
+		}
+	}
+}
+
+func TestDraftErrorKeepsOtherErrors(t *testing.T) {
+	other := aerr.New(aerr.StateInvalid, "x")
+	if got := draftError(other, "spec template"); !errors.Is(got, other) || other.NextAction == "fix the document and send it again" {
+		t.Errorf("only schema errors change: %v", got)
+	}
+	plain := errors.New("plain")
+	if !errors.Is(draftError(plain, ""), plain) {
+		t.Error("a plain error is returned as it is")
+	}
 }

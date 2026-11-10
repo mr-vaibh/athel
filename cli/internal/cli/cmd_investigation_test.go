@@ -278,8 +278,8 @@ func TestTemplateIsNotSuspicious(t *testing.T) {
 // architect's session runs on tool output (the M2 lesson, TestTemplateIsNotSuspicious).
 func TestM3TemplatesPrintCleanly(t *testing.T) {
 	h := newHarness(t)
-	for _, name := range []string{"spec", "decide", "plan"} {
-		code, out, _ := h.run(name, "template")
+	for _, name := range []string{"spec", "decide", "plan", "prd review"} {
+		code, out, _ := h.run(append(strings.Fields(name), "template")...)
 		if code != 0 || !strings.HasPrefix(out, "#") {
 			t.Errorf("%s template: exit %d %q", name, code, out)
 		}

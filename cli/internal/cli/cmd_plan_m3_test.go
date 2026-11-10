@@ -30,6 +30,9 @@ func TestPlanSetLintsOnceSpecsExist(t *testing.T) {
 	if code, env := h.runJSON("plan", "set", "CHG-001", writeTemp(t, "p1.yaml", v1)); code == 0 || errCode(env) != string(aerr.StateInvalid) || !strings.Contains(asJSON(t, env), "must be athel/plan@2") {
 		t.Errorf("plan@1 after specs: %v", env)
 	}
+	if code, env := h.runJSON("plan", "set", "CHG-001", writeTemp(t, "p0.yaml", "unknown_field: 1\n")); code == 0 || !strings.Contains(asJSON(t, env), "run athel plan template for the format") {
+		t.Errorf("a malformed plan points to the template: %v", env)
+	}
 	uncovered := strings.Replace(planV2Doc, "covers: [AC-1]", "covers: [AC-7]", 1)
 	if code, env := h.runJSON("plan", "set", "CHG-001", writeTemp(t, "p2.yaml", uncovered)); code == 0 || !strings.Contains(asJSON(t, env), "AC-1 is covered by no task") {
 		t.Errorf("coverage: %v", env)

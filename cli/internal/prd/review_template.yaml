@@ -1,0 +1,28 @@
+# A PRD review for `athel prd review save CHG-NNN -` (athel/prd-review@1). Cite the IDs from
+# `athel prd show`; every checklist item lists the PRD IDs it rests on ([] when none).
+schema: athel/prd-review@1
+change: CHG-001
+version: v1
+# status: present | partial | missing. note is optional: say what is lacking.
+checklist:
+  goal: {status: present, prd: [PRD-1.1]}
+  actors: {status: present, prd: [PRD-1.1]}
+  scope: {status: partial, prd: [PRD-1], note: Which invoice types are included is not said.}
+  out_of_scope: {status: missing, prd: []}
+  functional_requirements: {status: present, prd: [PRD-1.1, PRD-2.1]}
+  acceptance_criteria: {status: missing, prd: []}
+  non_functional: {status: partial, prd: [PRD-1.2], note: Fast has no number.}
+  constraints: {status: present, prd: [PRD-2.1]}
+  dependencies: {status: missing, prd: []}
+# One entry per vague phrase from `athel prd scan`. prd is one ID. resolution: card | assumption
+# | none; ref names the card (D-n) or assumption (A-n). A material phrase never has none.
+ambiguities:
+  - {prd: PRD-1.2, phrase: fast, material: true, resolution: card, ref: D-1}
+  - {prd: PRD-1.1, phrase: their invoices, material: false, resolution: assumption, ref: A-1}
+  - {prd: PRD-2.1, phrase: seven years, material: false, resolution: none}
+# Two or more statements that cannot all hold, and the card (D-n) that settles them.
+contradictions:
+  - {prd: [PRD-2.1, PRD-2.2], text: Invoices must stay downloadable for seven years but are archived after five., card: D-2}
+# Stated assumptions for gaps that are not material. id is A-n.
+assumptions:
+  - {id: A-1, text: Their invoices means invoices billed to the signed-in customer's account., prd: [PRD-1.1]}

@@ -19,7 +19,8 @@ var fixtureNames = []string{"acme", "user-svc", "user-service", "users.updated",
 
 func TestPluginNeverHintsAtTheFixture(t *testing.T) {
 	roots := []string{"../../../plugin/agents", "../../../plugin/skills", "../../../cli/internal/investigation/template.yaml",
-		"../../../cli/internal/spec/template.yaml", "../../../cli/internal/decisions/template.yaml", "../../../cli/internal/plan/template.yaml"}
+		"../../../cli/internal/spec/template.yaml", "../../../cli/internal/decisions/template.yaml", "../../../cli/internal/plan/template.yaml",
+		"../../../cli/internal/prd/review_template.yaml"}
 	for _, root := range roots {
 		err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {

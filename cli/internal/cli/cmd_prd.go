@@ -187,7 +187,7 @@ func cmdPRDReviewSave(r *runCtx, args []string) (any, error) {
 	}
 	rev, err := prdpkg.DecodeReview(r.registry(), data)
 	if err != nil {
-		return nil, err
+		return nil, draftError(err, "prd review template")
 	}
 	s, session, err := r.mutating()
 	if err != nil {
@@ -213,6 +213,25 @@ func cmdPRDReviewSave(r *runCtx, args []string) (any, error) {
 }
 
 // readBlock reads a YAML block from stdin ("-") or a file.
+// draftError makes a schema error in a document the agent sent retryable. The family's default,
+// "stop the step; never auto-fix state", is for state on disk; a draft is the sender's to fix,
+// and the template shows the format (the second M3 smoke run spent 12 turns guessing it).
+func draftError(err error, template string) error {
+	e, ok := aerr.As(err)
+	if !ok || e.Code != aerr.StateSchema {
+		return err
+	}
+	action := "fix the document and send it again"
+	if template != "" {
+		action += "; run athel " + template + " for the format"
+	}
+	return e.WithNextAction(action)
+}
+
+func cmdPRDReviewTemplate(r *runCtx, args []string) (any, error) {
+	return printTemplate(r, args, "prd review template", prdpkg.ReviewTemplate)
+}
+
 func (r *runCtx) readBlock(from string) ([]byte, error) {
 	var data []byte
 	var err error

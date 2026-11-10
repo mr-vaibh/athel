@@ -117,6 +117,7 @@ func commands() map[string]command {
 		"prd add-version":        cmdPRDAddVersion,
 		"prd diff":               cmdPRDDiff,
 		"prd review save":        cmdPRDReviewSave,
+		"prd review template":    cmdPRDReviewTemplate,
 		"decide add":             cmdDecideAdd,
 		"decide record":          cmdDecideRecord,
 		"decide list":            cmdDecideList,
