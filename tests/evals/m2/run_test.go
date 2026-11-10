@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -186,8 +187,9 @@ func (s *sandbox) writePlugin(*shop.Layout) error {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("copy plugin: %w: %s", err, out)
 	}
+	// A fresh checkout has no built bin/athel (it is ignored by git); a developer's may.
 	wrapper := filepath.Join(s.plugin, "bin", "athel")
-	if err := os.Remove(wrapper); err != nil {
+	if err := os.Remove(wrapper); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
 	body := fmt.Sprintf("#!/bin/sh\nexec env HOME=%q ATHEL_HOME=%q PATH=%q %q \"$@\"\n", s.home, s.athelHome, s.sessionPath(), s.tl.athel)
