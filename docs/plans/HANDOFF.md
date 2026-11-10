@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated: 2026-11-10, session 4 (M2 merged), on the owner's personal machine. Tools
+Last updated: 2026-11-11, session 4 (M2 merged; M3 full run 1 recorded), on the owner's personal machine. Tools
 are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Where we are
@@ -61,17 +61,19 @@ M3 is approved (2026-11-10) and being built as stacked PRs on `docs/m3-plan` (#6
 | 13 M3 eval harness, plus fixes the smoke runs found (review and blast templates, draft errors, sandbox SSH mapping, E.164 split, architect maxTurns 60) | `feat/m3-evals` | #75 |
 
 Paid runs so far (each approved by the owner; details in `EVALS.md`): smokes 1–3 not valid,
-and each found a cause that was fixed; smoke 4 valid ($3.70). Smokes total $12.11.
+and each found a cause that was fixed; smoke 4 valid ($3.70). Smokes total $12.11. Full run 1
+($28.27): 8 of 9 valid, so EC-1 is not met; blast recall 100%, so EC-2 is met. The failed run's
+cause (a card option "re-investigate first", which no lifecycle step can follow) is fixed in
+the architect's instructions at `0e7ee85`. Card precision is 20%, reported only. Total paid
+for M3 so far: $40.38.
 
 Next:
-1. 13: **full run 1 is in progress** (owner chose 3 runs per PRD, about $33). It runs from the
-   frozen worktree `.worktrees/m3-eval` (code identical to smoke 4) with run folders kept in
-   the session scratchpad. If the session ended mid-run, the history file under
-   `.worktrees/m3-eval/tests/evals/history/` is written only at the end. Without it, the run
-   is lost: ask the owner before re-running. When it finishes: copy the history file into
-   `tests/evals/history/`, record it in `EVALS.md`, look at card precision (smoke 4 raised 8
-   cards for one PRD), and fix what it shows. Full run 2 (the last allowed) needs the owner's
-   go-ahead.
+1. 13: **full run 2 (the last allowed) needs the owner's go-ahead.** It checks the fix:
+   3 PRDs × 3 runs, about $30 and 80–90 minutes. Freeze the code in a worktree first
+   (`git worktree add .worktrees/m3-eval HEAD`), run from it with `ATHEL_EVALS_KEEP` set to a
+   scratchpad folder, then copy the history file into `tests/evals/history/`, record it in
+   `EVALS.md` and remove the worktree. If the owner declines, report EC-1 as measured (8/9)
+   in the M3 report.
 2. 14: the M3 report (`docs/m3-report`), EVALS.md, HANDOFF, ROADMAP.
 3. Ask the owner to merge the M3 stack #60 → #75 in order.
 
