@@ -46,18 +46,15 @@ The whole stack is green in CI. Four full eval runs (about $57 in all), history 
 `tests/evals/history/`. The last fix (independent-source hint, re-save on hints) is not yet
 measured.
 
-1. **Waiting for the owner** on the report's section 7:
-   - accept M2 with the measured shortfall and carry label accuracy into M3 (recommended);
-   - or one more run (about $13);
-   - or keep going toward 100%.
-2. Then ask whether to merge the stack #43 → #57 → report PR, in order: retarget each to
+1. Done: the owner accepted M2 with the measured shortfall (2026-11-10).
+2. **Waiting for the owner:** whether to merge the stack #43 → #58, in order: retarget each to
    `main`, wait for CLEAN, merge commit, verify.
 3. After merge, M3 planning (doc 08 M3 row): write `M3-plan.md` and stop for approval.
 
 ## Open questions for the owner
 
 - Merge the M2 stack when it is complete, or earlier?
-- Accept M2 as measured (report §7), or run again?
+- Merge the M2 stack #43 → #58 now?
 
 ## Owner instructions given in chat (all also in docs/context/decisions-from-chat.md)
 

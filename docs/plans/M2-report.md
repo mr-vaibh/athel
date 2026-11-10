@@ -141,6 +141,9 @@ Remaining misses in run 4 (7 of 60):
 
 ## 7. Decision for the owner
 
+**Decided 2026-11-10: option 1, accept M2 with the measured shortfall.** The owner's answer was
+"Accept it (Recommended)". Label accuracy is carried into M3 as a tracked metric (backlog).
+
 M2's code is complete and green. Three options:
 1. **Accept M2 with the measured shortfall.** Exact labels 85.7–90.5%; trap misses 1 in 30
    per run, always at `likely`, never `confirmed`. Carry label accuracy into M3 as a tracked

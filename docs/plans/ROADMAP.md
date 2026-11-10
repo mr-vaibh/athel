@@ -10,7 +10,7 @@ and records where the build stands.
 |---|---|---|---|
 | **M0 Skeleton** | Plugin manifest, helper CLI (state, locks, schemas, IDs), `/athel:start`, `/athel:status`, `/athel:resume`, config validation | Create, pause and resume a change in a new session; 90% CLI coverage; hook latency < 50 ms | ✅ Done. PRs #1–#23 merged. `docs/plans/M0-report.md` |
 | **M1 Guardrails** | Policy engine, shell parser, environment detection, scrubber, hash-chained audit log, `tools.yaml`, `environments.yaml` | Red-team suite 100% blocked; 0 false allows; audit verify passes | ✅ Done. PRs #24–#38 merged. `docs/plans/M1-report.md` |
-| M2 Understand | Scout agent, local repo index and repo cache, investigation protocol, fact cache with verification, integration playbooks (GitHub, kubectl, gcloud, Praxis/Facets, Grafana, Jira or Linear, Slack), ad-hoc blast radius | All 10 question types pass on fixtures with traps; confidence labelling 100% correct | **Built, awaiting the owner's decision** (`M2-report.md`): claims 100%, traps 29/30, exact labels 85.7–90.5%. PRs #43–#57 and the report PR, not merged |
+| M2 Understand | Scout agent, local repo index and repo cache, investigation protocol, fact cache with verification, integration playbooks (GitHub, kubectl, gcloud, Praxis/Facets, Grafana, Jira or Linear, Slack), ad-hoc blast radius | All 10 question types pass on fixtures with traps; confidence labelling 100% correct | **Done**, accepted by the owner 2026-11-10 with the measured shortfall (`M2-report.md`): claims 100%, traps 29/30, exact labels 85.7–90.5%. PRs #43–#58, not yet merged |
 | M3 Specify | PRD intake, spec writer, traceability, decision cards, blast radius (planned and actual), plan and approval, brownfield onboarding | 3 eval PRDs produce valid specs, reports and plans; blast radius recall 95% on fixtures | Not started |
 | M4 Build | Git preflight, worktrees, developer, QA, security and reviewer agents, gates, iterative review, side findings, draft PRs | One-repo eval changes reach a PR with all gates green; reviewer catches 90% of seeded defects | Not started |
 | M5 Multi-service | Change sets, expand-and-contract ordering, linked PRs, cross-repo status | A 3-service fixture change merges in order with every intermediate state compatible | Not started |
@@ -47,7 +47,7 @@ Each milestone runs the same four phases as M0 and M1:
 3. **Build task by task**, one PR each, gated by `scripts/check.sh`.
 4. **Prove the exit criteria** in `docs/plans/Mn-report.md`, then update the handoff.
 
-### M2 Understand (built; see `M2-report.md`)
+### M2 Understand (done; see `M2-report.md`)
 - Read first: doc 08 M2 row; doc 03 (discovery and integrations) in full; doc 02 (agents, fact
   model); doc 04 rule 12's exception (repo search roots, read-only git commands in the
   developer's clones).
