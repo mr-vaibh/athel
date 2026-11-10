@@ -52,3 +52,4 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-10 | Run M3 smoke trial 3 after the sandbox fix (about $3–8)? | "Yes, run it (Recommended)" | Smoke run 3 of `phone-e164`, run folder kept |
 | 2026-11-10 | Run M3 smoke trial 4 after the template fixes (about $3–8)? | "Yes, run it (Recommended)" | Smoke run 4 of `phone-e164`, run folder kept |
 | 2026-11-10 | M3 full run 1: 3 runs per PRD (~$33) or 2 (~$22)? | "3 runs each, ~$33 (Recommended)" | Full run 1, all 3 PRDs × 3 runs, from the frozen worktree used for smoke 4 |
+- 2026-11-11 — Q: run M3 full run 2 (the last allowed), about $30, to check the fix for full run 1's failure? A: "Yes, run it (Recommended)". Applied: full run 2 from a frozen worktree at the current `feat/m3-evals` head; recorded in `docs/plans/EVALS.md`.
