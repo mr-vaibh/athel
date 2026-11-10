@@ -57,3 +57,9 @@ Doc 05's sign-off of a CRITICAL blast radius report uses the same mechanism:
   (`blast-signoff@1`), bound to the report's hash;
 - `plan_approved` is refused at CRITICAL risk unless the current report is signed off. A
   changed report voids the sign-off.
+
+## Follow-up (2026-11-10, M3 task 11b)
+The decide skill runs `athel decide tick` after recording the developer's answers, not before.
+Ticking first could apply a due default to the very card the developer is answering, and the
+answer would then be refused as already answered. The plan skill still ticks first. Pinned by
+`TestDecideTicksAfterAnswering`.

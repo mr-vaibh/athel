@@ -18,6 +18,8 @@ Never read or edit `.athel/` files; use the `athel` CLI.
 2. On `E-POLICY-HUMAN-ORIGIN`, say the answers must be typed by the developer in this session,
    and expire after 10 minutes, and stop. On `E-STATE-INVALID`, show the message (an unknown
    card, an option a card does not offer, a card already answered) and stop.
-3. Run `athel --json decide list <CHG-NNN> --open`. If cards remain, show them. If none remain
+3. Run `athel --json --session ${CLAUDE_SESSION_ID} decide tick <CHG-NNN>` (after the answers,
+   so a due default never overrides what the developer just typed), and show its reminders.
+   Then run `athel --json decide list <CHG-NNN> --open`. If cards remain, show them. If none remain
    and the change is in `awaiting_decisions`, say the next step is `/athel:plan <CHG-NNN>`.
 4. Do this from the main conversation only, never from a subagent.

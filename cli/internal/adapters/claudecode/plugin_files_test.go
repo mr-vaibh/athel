@@ -189,3 +189,13 @@ func TestHumanSkillsAreHumanOnly(t *testing.T) {
 		}
 	}
 }
+
+// TestDecideTicksAfterAnswering (ADR 019 follow-up): a due default must never override the
+// answers the developer just typed, so the decide skill ticks only after recording them.
+func TestDecideTicksAfterAnswering(t *testing.T) {
+	body := readSkill(t, "decide").body
+	answer, tick := strings.Index(body, "decide answer"), strings.Index(body, "decide tick")
+	if answer < 0 || tick < answer {
+		t.Errorf("decide answer at %d, decide tick at %d: tick only after the answers", answer, tick)
+	}
+}
