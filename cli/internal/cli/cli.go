@@ -76,6 +76,11 @@ func commands() map[string]command {
 		"plan show":        cmdPlanShow,
 		"migrate":          cmdMigrate,
 		"integrity accept": cmdIntegrityAccept,
+		"fact add":         cmdFactAdd,
+		"fact find":        cmdFactFind,
+		"fact show":        cmdFactShow,
+		"fact use":         cmdFactUse,
+		"fact archive":     cmdFactArchive,
 	}
 }
 

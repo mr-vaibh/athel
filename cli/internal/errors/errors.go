@@ -38,6 +38,9 @@ const (
 	StateNoSession         Code = "E-STATE-NO-SESSION"
 	StateInvalid           Code = "E-STATE-INVALID"
 	StateIO                Code = "E-STATE-IO"
+	StateFactNoSource      Code = "E-STATE-FACT-NO-SOURCE" // M2: a fact without sources or recipe
+	StateFactStale         Code = "E-STATE-FACT-STALE"     // M2: decision use outside the freshness window
+	StateFactDisputed      Code = "E-STATE-FACT-DISPUTED"  // M2: decision use of a disputed or superseded fact
 	PolicyHumanRequired    Code = "E-POLICY-HUMAN-REQUIRED"
 	PolicyConfigLoosens    Code = "E-POLICY-CONFIG-LOOSENS"
 	PolicyConfigInvalid    Code = "E-POLICY-CONFIG-INVALID"
