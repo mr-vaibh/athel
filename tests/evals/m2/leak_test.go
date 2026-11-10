@@ -11,9 +11,11 @@ import (
 // fixtureNames are names only the shop fixture uses. The plugin the scout reads (agents, skills,
 // playbooks) and the CLI's claim block template must never contain them: an example that matches
 // a trap would hand the scout the answer and inflate the eval (the first paid run found the
-// playbooks citing `user-svc` vs `users`, PR 812 and users.updated.v1).
+// playbooks citing `user-svc` vs `users`, PR 812 and users.updated.v1). The last line holds the
+// M3 eval PRDs' expected answers: the architect reads the same plugin and templates.
 var fixtureNames = []string{"acme", "user-svc", "user-service", "users.updated", "phone", "legacy-profile",
-	"812", "SHOP-", "shopmetrics", "commerce", "identity", "notifications", "teammate"}
+	"812", "SHOP-", "shopmetrics", "commerce", "identity", "notifications", "teammate",
+	"PaymentsHighErrorRate", "e164", "E.164", "phone_number", "payments", "orders"}
 
 func TestPluginNeverHintsAtTheFixture(t *testing.T) {
 	roots := []string{"../../../plugin/agents", "../../../plugin/skills", "../../../cli/internal/investigation/template.yaml",
