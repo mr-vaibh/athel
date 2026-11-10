@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/schema"
@@ -134,5 +135,77 @@ func checkNewBlocker(t *testing.T, f *File) {
 	}
 	if open := f.Open(""); len(open) != 4 {
 		t.Errorf("open across steps: %d", len(open))
+	}
+}
+
+func TestApplyAnswers(t *testing.T) {
+	f := New("CHG-001")
+	for _, q := range []string{"Q one?", "Q two?", "Q three?"} {
+		if _, err := f.Add(card(q)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	err := f.Apply([]Reply{{Card: "D-1", Option: "a"}, {Card: "D-2", Text: "only E.164"}, {Card: "D-2", Skip: true}}, "GR-1", at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c1, _ := f.Card("D-1")
+	c2, _ := f.Card("D-2")
+	if c1.Answer.Option != "a" || c1.Answer.By != "human" || c1.Answer.Grant != "GR-1" || c1.Answer.Checked != nil {
+		t.Errorf("D-1: %+v", c1.Answer)
+	}
+	if c2.Answer.Text != "only E.164" || c2.Answer.Checked == nil || *c2.Answer.Checked || c2.ShouldNotHaveAsked == nil || !*c2.ShouldNotHaveAsked {
+		t.Errorf("D-2: %+v %v", c2.Answer, c2.ShouldNotHaveAsked)
+	}
+	checkApplyRejects(t, f)
+}
+
+// checkApplyRejects: one bad answer rejects the whole batch and changes nothing.
+func checkApplyRejects(t *testing.T, f *File) {
+	t.Helper()
+	for name, tt := range map[string]struct {
+		r    Reply
+		want string
+	}{
+		"unknown card":     {Reply{Card: "D-9", Option: "a"}, "D-9 is not a card"},
+		"already answered": {Reply{Card: "D-1", Option: "b"}, "D-1 is already answered"},
+		"no such option":   {Reply{Card: "D-3", Option: "d"}, "D-3 offers no option d"},
+	} {
+		if err := f.Apply([]Reply{{Card: "D-3", Option: "a"}, tt.r}, "GR-2", at); !aerr.HasCode(err, aerr.StateInvalid) || !strings.Contains(err.Error(), tt.want) {
+			t.Errorf("%s: %v", name, err)
+		}
+		if c3, _ := f.Card("D-3"); c3.Answer != nil {
+			t.Fatalf("%s: a rejected batch changes nothing", name)
+		}
+	}
+	if err := f.Apply([]Reply{{Card: "D-1", Skip: true}}, "GR-3", at); err != nil {
+		t.Errorf("feedback on an answered card: %v", err)
+	}
+}
+
+func TestTick(t *testing.T) {
+	f := New("CHG-001")
+	safe, _ := f.Add(card("Safe?"))
+	unsafe := card("Unsafe?")
+	unsafe.DefaultSafe = false
+	u, _ := f.Add(unsafe)
+	if _, err := f.Add(card("Never shown?")); err != nil {
+		t.Fatal(err)
+	}
+	presented := "2026-11-10T08:00:00.000Z"
+	safe.PresentedAt, u.PresentedAt = &presented, &presented
+	at := func(h, m int) time.Time { return time.Date(2026, 11, 10, h, m, 0, 0, time.UTC) }
+	if applied, remind := f.Tick(at(9, 59)); len(applied)+len(remind) != 0 {
+		t.Errorf("under 2 h: %v %v", applied, remind)
+	}
+	if applied, remind := f.Tick(at(10, 0)); len(applied) != 0 || strings.Join(remind, ",") != "D-1,D-2" {
+		t.Errorf("at 2 h: %v %v", applied, remind)
+	}
+	applied, remind := f.Tick(at(12, 0))
+	if strings.Join(applied, ",") != "D-1" || strings.Join(remind, ",") != "D-2" {
+		t.Errorf("at 4 h: %v %v", applied, remind)
+	}
+	if safe.Answer == nil || safe.Answer.By != "default" || safe.Answer.Option != "b" || u.Answer != nil {
+		t.Errorf("safe default applied, unsafe still blocked: %+v %+v", safe.Answer, u.Answer)
 	}
 }

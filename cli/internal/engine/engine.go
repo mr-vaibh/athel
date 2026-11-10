@@ -200,6 +200,8 @@ func (ctx Context) humanOrigin(call *classify.AthelCall) string {
 		return "a subagent cannot act as the human (" + ctx.Agent + ")"
 	case ctx.HumanGrant != nil && ctx.HumanGrant(call.Change, call.To):
 		return ""
+	case call.To == grants.TargetDecide:
+		return "answering decision cards needs the developer's own prompt /athel:decide CHG-NNN D-1=… with exactly these answers in this session, used once within 10 minutes"
 	case call.To == grants.TargetRoots:
 		return "saving repo search roots needs the developer's own prompt /athel:roots with exactly these folders in this session, used once within 10 minutes"
 	default:

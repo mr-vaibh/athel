@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 )
@@ -108,5 +109,71 @@ func TestDecideCorruptFileAndNoSession(t *testing.T) {
 	delete(h.env, "ATHEL_SESSION_ID")
 	if code, env := h.runJSON("decide", "add", "CHG-001", "-"); code == 0 || errCode(env) != string(aerr.StateNoSession) {
 		t.Errorf("no session: %v", env)
+	}
+}
+
+// decideSetup raises two cards and presents them, as the spec step would.
+func decideSetup(t *testing.T) *harness {
+	t.Helper()
+	h := prdSetup(t)
+	for _, q := range []string{"Which phone formats should the API accept?", "Keep the old field?"} {
+		h.stdin = strings.Replace(cardYAML, "Which phone formats should the API accept?", q, 1)
+		h.mustOK("decide", "add", "CHG-001", "-")
+	}
+	h.stdin = ""
+	h.mustOK("decide", "present", "CHG-001", "--step", "spec")
+	return h
+}
+
+func TestDecideAnswerNeedsTheDevelopersGrant(t *testing.T) {
+	h := decideSetup(t)
+	if code, env := h.runJSON("decide", "answer", "CHG-001", "D-1=a"); code != aerr.ExitPolicy || errCode(env) != string(aerr.PolicyHumanOrigin) {
+		t.Fatalf("answer without the developer's prompt: %d %v", code, env)
+	}
+	h.humanPrompt("/athel:decide CHG-001 D-1=a D-2='keep it for one release' skip=D-2")
+	if code, _ := h.runJSON("decide", "answer", "CHG-001", "D-1=b", "D-2='keep it for one release'", "skip=D-2"); code != aerr.ExitPolicy {
+		t.Errorf("an answer other than the developer's: exit %d", code)
+	}
+	got := h.mustOK("decide", "answer", "CHG-001", "skip=D-2", "D-1=a", "D-2='keep it for one release'")
+	if got["grant"] == "" || !strings.Contains(asJSON(t, got["answers"]), `"option":"a"`) {
+		t.Errorf("answer: %v", got)
+	}
+	d1, d2 := h.mustOK("decide", "show", "CHG-001", "D-1"), h.mustOK("decide", "show", "CHG-001", "D-2")
+	if !strings.Contains(asJSON(t, d1["answer"]), `"by":"human"`) || !strings.Contains(asJSON(t, d2["answer"]), `"checked":false`) || d2["should_not_have_asked"] != true {
+		t.Errorf("recorded: %v / %v", d1, d2)
+	}
+	if code, _ := h.runJSON("decide", "answer", "CHG-001", "D-1=a"); code != aerr.ExitPolicy {
+		t.Errorf("a grant is used once: exit %d", code)
+	}
+}
+
+func TestDecideAnswerErrors(t *testing.T) {
+	h := decideSetup(t)
+	for _, args := range [][]string{{"decide", "answer", "CHG-001"}, {"decide", "answer", "CHG-001", "D-1=z"}, {"decide", "answer", "CHG-001", "please"}} {
+		if code, _ := h.runJSON(args...); code != 2 {
+			t.Errorf("%v: exit %d, want a usage error", args, code)
+		}
+	}
+	h.humanPrompt("/athel:decide CHG-001 D-9=a")
+	if code, env := h.runJSON("decide", "answer", "CHG-001", "D-9=a"); code == 0 || errCode(env) != string(aerr.StateInvalid) {
+		t.Errorf("unknown card: %v", env)
+	}
+	delete(h.env, "ATHEL_SESSION_ID")
+	if code, env := h.runJSON("decide", "answer", "CHG-001", "D-1=a"); code == 0 || errCode(env) != string(aerr.StateNoSession) {
+		t.Errorf("no session: %v", env)
+	}
+}
+
+func TestDecideTick(t *testing.T) {
+	h := decideSetup(t)
+	if got := h.mustOK("decide", "tick", "CHG-001"); asJSON(t, got) != `{"applied_defaults":[],"remind":[]}` {
+		t.Errorf("at once: %v", got)
+	}
+	h.clock.Advance(4 * time.Hour)
+	if got := h.mustOK("decide", "tick", "CHG-001"); asJSON(t, got) != `{"applied_defaults":["D-1","D-2"],"remind":[]}` {
+		t.Errorf("after 4 h: %v", got)
+	}
+	if d := h.mustOK("decide", "show", "CHG-001", "D-1"); !strings.Contains(asJSON(t, d["answer"]), `"by":"default"`) {
+		t.Errorf("default applied: %v", d)
 	}
 }

@@ -29,6 +29,8 @@ cases:
   - {name: read a developer clone, tool: Read, input: {file_path: "{home}/Developer/users/README.md"}, expect: {decision: allow, rule: "12"}}
   - {name: scout records a fact, command: "athel fact add -", agent: athel:scout, expect: {decision: allow, rule: "7x"}}
   - {name: scout queries the fact cache, command: "athel fact find --subject users", agent: athel:scout, expect: {decision: allow, rule: "7x"}}
+  - {name: architect reads the open cards, command: "athel --json decide list CHG-001 --open", agent: athel:architect, expect: {decision: allow, rule: "7x"}}
+  - {name: architect reads the PRD index, command: "athel --json prd show CHG-001", agent: athel:architect, expect: {decision: allow, rule: "7x"}}
   - {name: praxis status, command: praxis status, expect: {decision: allow, rule: "11"}}
   - {name: praxis recalls org memory, command: "praxis memory recall phone number", expect: {decision: allow, rule: "11"}}
   - {name: praxis lists gateway functions, command: praxis mcp, expect: {decision: allow, rule: "11"}}
