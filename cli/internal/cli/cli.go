@@ -115,6 +115,10 @@ func commands() map[string]command {
 		"decide present":         cmdDecidePresent,
 		"decide answer":          cmdDecideAnswer,
 		"decide tick":            cmdDecideTick,
+		"spec validate":          cmdSpecValidate,
+		"spec save":              cmdSpecSave,
+		"spec list":              cmdSpecList,
+		"spec show":              cmdSpecShow,
 	}
 }
 
