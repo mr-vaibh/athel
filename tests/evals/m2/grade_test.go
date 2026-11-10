@@ -219,7 +219,8 @@ func (g *Grade) sections(e Expect, a Answer, text string) {
 		work.WriteString(w.Ref + "\n")
 	}
 	for _, want := range e.Drift {
-		g.need(strings.Contains(drift.String(), strings.ToLower(want)), "no drift mentions "+want)
+		g.need(slices.ContainsFunc(strings.Split(strings.ToLower(want), "|"), func(w string) bool { return strings.Contains(drift.String(), w) }),
+			"no drift mentions "+want)
 	}
 	g.need(!e.DriftEmpty || len(a.Drift) == 0, "drift reported where there is none")
 	for _, want := range e.ActiveWork {
@@ -411,5 +412,14 @@ func TestGraderQualifiedNames(t *testing.T) {
 	a := answer(t, "claims: [{id: C1, subject: {kind: repo, name: github.com/acme/users}, predicate: owned_by, object: {kind: team, name: '@acme/identity'}, env: any, confidence: likely}]")
 	if g := GradeAnswer(caseByID(t, "service-owner-trap-alias"), a, map[string]string{"C1": "likely"}, nil, ""); !g.Pass() {
 		t.Errorf("a repo path names its service: %+v", g)
+	}
+}
+
+func TestGraderDriftAlternatives(t *testing.T) {
+	c := caseByID(t, "endpoint-callers-trap-dead-endpoint")
+	for text, want := range map[string]bool{"orders calls an endpoint users removed in 2026-09": true, "orders still calls legacy-profile": true, "versions differ": false} {
+		if g := GradeAnswer(c, answer(t, "drift: [{text: '"+text+"'}]"), nil, nil, ""); g.TrapHandled != want {
+			t.Errorf("%q: handled %v, want %v", text, g.TrapHandled, want)
+		}
 	}
 }

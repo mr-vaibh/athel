@@ -40,7 +40,7 @@ cases:
     trap: orders still references /legacy-profile, which users removed; it gets no traffic
     question: Who calls /v1/users/{id}/legacy-profile?
     expect:
-      drift: [legacy-profile]
+      drift: ["legacy-profile|removed"]   # the drift may name the endpoint or say users removed it
       forbidden: [{subject: [orders], predicate: calls, object: ["/v1/users/{id}/legacy-profile", "GET /v1/users/{id}/legacy-profile", legacy-profile], above: unverified}]
   - id: event-consumers-clean
     type: event_consumers
