@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/prd-review@1.json",
+  "title": "athel/prd-review@1",
+  "description": "prd/review-<version>.md's block: the completeness checklist (FR-SPEC-001), the ambiguity scan and contradictions (FR-SPEC-002). Material items become decision cards, the rest stated assumptions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "change",
+    "version",
+    "checklist",
+    "ambiguities",
+    "contradictions",
+    "assumptions"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/prd-review@1"
+    },
+    "change": {
+      "type": "string",
+      "pattern": "^CHG-[0-9]{3,}(-F[1-9][0-9]*)?$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^v[1-9][0-9]*$"
+    },
+    "checklist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "goal",
+        "actors",
+        "scope",
+        "out_of_scope",
+        "functional_requirements",
+        "acceptance_criteria",
+        "non_functional",
+        "constraints",
+        "dependencies"
+      ],
+      "properties": {
+        "goal": {
+          "$ref": "#/$defs/item"
+        },
+        "actors": {
+          "$ref": "#/$defs/item"
+        },
+        "scope": {
+          "$ref": "#/$defs/item"
+        },
+        "out_of_scope": {
+          "$ref": "#/$defs/item"
+        },
+        "functional_requirements": {
+          "$ref": "#/$defs/item"
+        },
+        "acceptance_criteria": {
+          "$ref": "#/$defs/item"
+        },
+        "non_functional": {
+          "$ref": "#/$defs/item"
+        },
+        "constraints": {
+          "$ref": "#/$defs/item"
+        },
+        "dependencies": {
+          "$ref": "#/$defs/item"
+        }
+      }
+    },
+    "ambiguities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "prd",
+          "phrase",
+          "material",
+          "resolution"
+        ],
+        "properties": {
+          "prd": {
+            "type": "string",
+            "pattern": "^PRD-[0-9]+(\\.[0-9]+)?$"
+          },
+          "phrase": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "material": {
+            "type": "boolean"
+          },
+          "resolution": {
+            "enum": [
+              "card",
+              "assumption",
+              "none"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "pattern": "^(D|A)-[0-9]+$"
+          }
+        }
+      }
+    },
+    "contradictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "prd",
+          "text",
+          "card"
+        ],
+        "properties": {
+          "prd": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "string",
+              "pattern": "^PRD-[0-9]+(\\.[0-9]+)?$"
+            }
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "card": {
+            "type": "string",
+            "pattern": "^D-[0-9]+$"
+          }
+        }
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/assumption"
+      }
+    }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "prd"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "present",
+            "partial",
+            "missing"
+          ]
+        },
+        "prd": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^PRD-[0-9]+(\\.[0-9]+)?$"
+          }
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      }
+    },
+    "assumption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "text",
+        "prd"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^A-[0-9]+$"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "prd": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^PRD-[0-9]+(\\.[0-9]+)?$"
+          }
+        }
+      }
+    }
+  }
+}

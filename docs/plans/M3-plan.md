@@ -82,6 +82,7 @@ Features: **F-07 spec-linked** (planned and actual blast radius), **F-08** PRD i
 | G10 | Architect model tier is "strongest" (doc 02) | `models.architect` in `config@3`, default the strongest model. The evals use the same setting (cost: Q1) |
 | G11 | Two acceptance tests need M4 actors: "`conventions.md` … is cited by the developer agent" (FR-SPEC-006) and "both reports exist for every change that reached PR" (FR-BLAST-001) | M3 proves the parts it owns: conventions exist, are fresh and are required before a spec; both report modes exist and are checked. The developer-agent citation and the per-PR check are M4 acceptance items, listed in the M4 plan |
 | G12 | Ask rule A4 includes "conflicts with … a lesson"; lessons are M6 (doc 07) | A4 fires in M3 for conflicts with existing behaviour, policy or active work. The lesson part comes with M6 |
+| G14 | Each service has its own spec, but plans cite acceptance criteria by bare ID (`AC-1`), so per-spec numbering would collide | REQ and AC numbers are unique across the change; `spec save` refuses a duplicate. Plans keep citing `AC-n` |
 | G13 | Safety: the architect is a new subagent that reads code and writes Athel files | Same as the scout (ADR 015 follow-up): it is denied every file write and every direct read of `.athel/`. Its outputs go only through the CLI (stdin and arguments). Red-team cases cover writes, `.athel/` reads, answering its own cards and forging `--by human` |
 
 ## 4. Design
@@ -326,7 +327,7 @@ None new. EARS and AC lints are regular expressions and word lists in Go. Diff p
 | # | Branch | What | Key tests |
 |---|---|---|---|
 | 00 | `feat/m3-eval-carry` | EVALS.md item 3: gateway-trap check. CLI flags a direct "calls" claim when the same block routes it via a gateway. Then a re-run of the M2 evals (Q2) | `TestHintDirectCallBesideRoute` |
-| 01 | `feat/m3-schemas` | `prd-index`, `prd-review`, `spec`, `decision`, `plan@2` plus migrate, `config@3`, `change@4` | `TestM3Schemas`, `TestMigratePlan1To2` |
+| 01 | `feat/m3-schemas` | New formats `prd-index`, `prd-review`, `spec`, `decision`. *As built:* the version bumps land with their first user, so each PR carries its own migration: `plan@2` with task 07, `change@4` with tasks 04/09, `config@3` with task 11a | `TestM3SchemasValidExamples`, `TestM3SchemasRejectInvalid` |
 | 02 | `feat/m3-prd` | `prd index`, `add-version`, `diff`, ambiguity pre-scan, review save | `TestPRDIDsStable`, `TestReviewNamesMissingAC`, `TestConflictingLimits` |
 | 03 | `feat/m3-decisions` | Store, lint, present (batching), feedback | `TestCardLint`, `TestOneInterruptionPerStep` |
 | 04 | `feat/m3-decide-human` | `/athel:decide` grant (ADR 019), answer, tick (reminder, safe default), red-team cases | `TestAnswerNeedsHumanGrant`, `TestSafeDefaultAfter4h` |

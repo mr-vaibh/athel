@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/prd-index@1.json",
+  "title": "athel/prd-index@1",
+  "description": "prd/<version>.index.yaml: stable IDs for a PRD's headings and requirement-like sentences (doc 05 FR-SPEC-003), assigned by `athel prd index`, never by the model. Unchanged sentences keep their IDs across versions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "change",
+    "version",
+    "source_sha256",
+    "items"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/prd-index@1"
+    },
+    "change": {
+      "type": "string",
+      "pattern": "^CHG-[0-9]{3,}(-F[1-9][0-9]*)?$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^v[1-9][0-9]*$"
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "line",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^PRD-[0-9]+(\\.[0-9]+)?$"
+          },
+          "kind": {
+            "enum": [
+              "heading",
+              "statement"
+            ]
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    }
+  }
+}

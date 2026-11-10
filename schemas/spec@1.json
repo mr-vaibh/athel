@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/spec@1.json",
+  "title": "athel/spec@1",
+  "description": "spec/<service>.md's block: one service's requirements (EARS), interfaces and data changed, design notes and testable acceptance criteria (doc 05 §Spec format; FR-SPEC-003/004/005). REQ and AC numbers are unique across the change, so plans can cite them alone. The CLI renders the Markdown and checks traceability.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "change",
+    "service",
+    "repo",
+    "requirements",
+    "interfaces_changed",
+    "data_changes",
+    "design_notes",
+    "acceptance_criteria",
+    "out_of_scope",
+    "assumptions"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/spec@1"
+    },
+    "change": {
+      "type": "string",
+      "pattern": "^CHG-[0-9]{3,}(-F[1-9][0-9]*)?$"
+    },
+    "service": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,100}$"
+    },
+    "repo": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "prd",
+          "text",
+          "decisions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^REQ-[0-9]+$"
+          },
+          "prd": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "pattern": "^PRD-[0-9]+(\\.[0-9]+)?$"
+            }
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^D-[0-9]+$"
+            }
+          }
+        }
+      }
+    },
+    "interfaces_changed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "name",
+          "change",
+          "description"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "endpoint",
+              "event",
+              "schema",
+              "config",
+              "cli",
+              "library"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "change": {
+            "enum": [
+              "new",
+              "additive",
+              "behavioural",
+              "breaking"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "data_changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "table",
+          "change",
+          "description"
+        ],
+        "properties": {
+          "table": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "change": {
+            "enum": [
+              "add_column",
+              "add_table",
+              "backfill",
+              "switch_reads",
+              "drop",
+              "rename",
+              "type_change",
+              "index"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "design_notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      }
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "req",
+          "given",
+          "when",
+          "then"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^AC-[0-9]+$"
+          },
+          "req": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "pattern": "^REQ-[0-9]+$"
+            }
+          },
+          "given": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "when": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "then": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "out_of_scope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^A-[0-9]+$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    }
+  }
+}
