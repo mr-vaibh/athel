@@ -1,0 +1,45 @@
+# M3 exit criteria (doc 08 M3 row; M3 plan EC-1, EC-2): 3 eval PRDs produce valid specs, blast
+# radius reports and plans on the shop fixture, with blast radius recall of at least 95%.
+#
+# expect.affected lists what the planned blast radius report must name, by section; an item
+# matches when any alias appears in the report's entry (recall = found / listed, EC-2).
+# expect.risk is the exact level, or risk_at_least the minimum when a safe plan (expand and
+# contract) legitimately lowers it. expect.card_rules are the ask rules a card must be raised
+# for (card recall); expect.review_missing are checklist items the PRD review must mark missing
+# or partial. expect.ordering names task kinds the plan must have (FR-PLAN-003).
+cases:
+  - id: phone-e164
+    prd: prds/01-phone-e164.md
+    kind: single-service brownfield
+    expect:
+      affected:
+        direct: [[users, user-svc, user-service]]
+        consumers: [[notifications], [orders]]
+        data: [[users.phone, users]]
+        people: [["812", teammate/profile-phone]]
+      risk: HIGH            # migration on users (2.1M rows)
+      card_rules: [A1]      # which local formats to accept
+      review_missing: []
+      ordering: [migrate]
+  - id: rename-event-field
+    prd: prds/02-rename-event-field.md
+    kind: multi-service, breaking contract
+    expect:
+      affected:
+        direct: [[users.updated, users.updated.v1, users]]
+        consumers: [[notifications]]
+      risk_at_least: MEDIUM
+      card_rules: [A2]      # the event's contract shape is hard to undo
+      review_missing: [acceptance_criteria]
+      ordering: [expand, consume, contract]
+  - id: payments-reliable
+    prd: prds/03-payments-reliable.md
+    kind: ambiguous one-liner
+    expect:
+      affected:
+        direct: [[payments]]
+        runtime: [[payments, PaymentsHighErrorRate]]
+      risk: CRITICAL        # a critical alert is firing on payments
+      card_rules: [A1]      # "more reliable" has several readings
+      review_missing: [acceptance_criteria, scope, non_functional]
+      ordering: []

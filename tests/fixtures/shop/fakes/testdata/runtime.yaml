@@ -51,6 +51,9 @@ grafana:
     - {metric: http_request_errors_ratio, labels: {service: payments, env: prod}, value: 0.18}
     - {metric: http_request_errors_ratio, labels: {service: user-service, env: prod}, value: 0.002}
     - {metric: kafka_consumergroup_lag, labels: {group: notifications, topic: users.updated.v1, env: prod}, value: 3}
+    # Table sizes as the Postgres exporter reports them (M3: "migration on a table over 1M rows").
+    - {metric: pg_stat_user_tables_n_live_tup, labels: {service: user-service, relname: users, env: prod}, value: 2100000}
+    - {metric: pg_stat_user_tables_n_live_tup, labels: {service: notifications, relname: contacts, env: prod}, value: 48000}
   traces:                                  # trap: traces are sampled at 1%
     sampling: 0.01
     spans:
