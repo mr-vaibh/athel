@@ -201,3 +201,15 @@ func TestWriteHistory(t *testing.T) {
 		t.Error("an unencodable record must fail")
 	}
 }
+
+func TestLastYAMLBlock(t *testing.T) {
+	md := "# Investigation\n\n```yaml\nold: 1\n```\n\n## Claim block\n\n```yaml\nclaims: []\n```\n"
+	if b, ok := LastYAMLBlock([]byte(md)); !ok || string(b) != "claims: []\n" {
+		t.Errorf("the last yaml block: %q %v", b, ok)
+	}
+	for _, bad := range []string{"no block", "```yaml\nunterminated"} {
+		if _, ok := LastYAMLBlock([]byte(bad)); ok {
+			t.Errorf("%q has no complete block", bad)
+		}
+	}
+}

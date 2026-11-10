@@ -1,7 +1,6 @@
 package m2
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -25,17 +24,7 @@ import (
 
 // claimBlock is the last yaml block of investigation.md, as the CLI's Extract reads it.
 func claimBlock(md []byte) ([]byte, bool) {
-	const start, end = "```yaml\n", "\n```\n"
-	i := bytes.LastIndex(md, []byte(start))
-	if i < 0 {
-		return nil, false
-	}
-	body := md[i+len(start):]
-	j := bytes.Index(body, []byte(end))
-	if j < 0 {
-		return nil, false
-	}
-	return body[:j+1], true
+	return evalkit.LastYAMLBlock(md)
 }
 
 // ceilings asks the CLI for each claim's ceiling, so the grader and the CLI never disagree.

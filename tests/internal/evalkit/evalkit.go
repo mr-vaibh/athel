@@ -348,6 +348,22 @@ func (s *Sandbox) Actions() ([]string, error) {
 	return out, nil
 }
 
+// LastYAMLBlock is the last fenced yaml block of a Markdown file the CLI rendered, as its own
+// Extract reads it: investigation.md's claims, blast-radius.md's report, a PRD review's block.
+func LastYAMLBlock(md []byte) ([]byte, bool) {
+	const start, end = "```yaml\n", "\n```\n"
+	i := bytes.LastIndex(md, []byte(start))
+	if i < 0 {
+		return nil, false
+	}
+	body := md[i+len(start):]
+	j := bytes.Index(body, []byte(end))
+	if j < 0 {
+		return nil, false
+	}
+	return body[:j+1], true
+}
+
 // Ratio is a/b, and 1 when nothing was expected.
 func Ratio(a, b int) float64 {
 	if b == 0 {
