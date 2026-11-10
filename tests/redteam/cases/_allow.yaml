@@ -32,6 +32,7 @@ cases:
   - {name: architect reads the open cards, command: "athel --json decide list CHG-001 --open", agent: athel:architect, expect: {decision: allow, rule: "7x"}}
   - {name: architect reads the PRD index, command: "athel --json prd show CHG-001", agent: athel:architect, expect: {decision: allow, rule: "7x"}}
   - {name: architect reads the review template, command: "athel prd review template", agent: athel:architect, expect: {decision: allow, rule: "7x"}}
+  - {name: architect reads the blast template, command: "athel blast template", agent: athel:architect, expect: {decision: allow, rule: "7x"}}
   - {name: praxis status, command: praxis status, expect: {decision: allow, rule: "11"}}
   - {name: praxis recalls org memory, command: "praxis memory recall phone number", expect: {decision: allow, rule: "11"}}
   - {name: praxis lists gateway functions, command: praxis mcp, expect: {decision: allow, rule: "11"}}

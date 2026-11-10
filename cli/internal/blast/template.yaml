@@ -1,0 +1,76 @@
+# A blast radius report for `athel blast save`. A planned report (the spec step) names the change
+# and cites each changed item's requirement: `athel blast save --change CHG-NNN -`. An ad-hoc one
+# (/athel:blast-radius) uses `ask: ASK-NNN` instead of change, `mode: adhoc`, and its own evidence:
+# `athel blast save --ask ASK-NNN -`. Every list may be [] when nothing applies.
+schema: athel/blast@1
+change: CHG-001
+# mode: adhoc | planned | actual
+mode: planned
+proposal: Customers download their invoices as PDF from the account page.
+services_changed: [billing]
+# kind: interface | event | schema | config | code | dependency
+# change: additive | behavioural | breaking | internal
+direct:
+  - item: GET /v1/invoices/{id}/pdf
+    kind: interface
+    change: additive
+    service: billing
+    evidence: [{kind: spec, ref: REQ-1}]
+  - item: invoice.downloaded.v1
+    kind: event
+    change: additive
+    service: billing
+    evidence: [{kind: spec, ref: REQ-2}]
+# One entry per consumer of a changed contract and environment. traffic is null when none was
+# observed; unit: calls_per_min | events_per_min | calls_per_day; window like 15m, 24h, 7d.
+consumers:
+  - consumer: mailer
+    of: invoice.downloaded.v1
+    env: prod
+    in_change_set: false
+    traffic: {rate: 40, unit: events_per_min, window: 24h, sampling: 1}
+    evidence: [{kind: code, ref: mailer/subscribe.go:12}]
+    facts: []
+# operation: add | backfill | index | drop | rename | narrow | other. rows is null when unknown.
+data:
+  - table: invoices
+    service: billing
+    operation: add
+    rows: 52000
+    online: true
+    reversible: true
+    evidence: [{kind: spec, ref: REQ-1}, {kind: metric, ref: billing_invoices_rows}]
+# kind: env_var | secret | resource | ingress | mesh | scaling | external_dependency. Names only,
+# never secret values.
+infra:
+  - item: PDF_RENDER_TIMEOUT
+    kind: env_var
+    new: true
+    evidence: [{kind: spec, ref: REQ-1}]
+people:
+  - service: billing
+    owners: [team-billing]
+    active_work: ["PR #41 invoice layout, touches render/pdf.go"]
+    on_call: [ana]
+# env is prod, staging or any. Rates are null when no metric answered; severity: critical |
+# warning | info.
+runtime:
+  - service: billing
+    env: prod
+    calls_per_sec: 3.5
+    error_rate: 0.002
+    alerts: [{name: BillingLatencyHigh, severity: warning, firing: false}]
+    evidence: [{kind: metric, ref: billing_http_requests_total}]
+flags:
+  touches_auth_payments_pii: false
+  security_review_task: false
+  retry_timeout_or_idempotency_change: false
+# Required: what was checked and ruled out, and how.
+not_affected:
+  - item: ledger
+    why: It reads invoice totals only; no field it uses changes.
+    evidence: [{kind: code, ref: ledger/client.go:30}]
+gaps: [No traffic data for staging.]
+# Computed by the CLI from the findings; always null and [] in what you send.
+risk: null
+rules_fired: []

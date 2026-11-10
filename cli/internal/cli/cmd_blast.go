@@ -98,7 +98,7 @@ func (r *runCtx) scoredBlast(file string) (*blast.Report, error) {
 	}
 	rep, err := blast.Decode(r.registry(), data)
 	if err != nil {
-		return nil, err
+		return nil, draftError(err, "blast template")
 	}
 	paths, err := r.configPaths()
 	if err != nil {

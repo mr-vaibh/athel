@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mr-vaibh/athel/cli/internal/blast"
 	"github.com/mr-vaibh/athel/cli/internal/digest"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	prdpkg "github.com/mr-vaibh/athel/cli/internal/prd"
@@ -226,6 +227,10 @@ func draftError(err error, template string) error {
 		action += "; run athel " + template + " for the format"
 	}
 	return e.WithNextAction(action)
+}
+
+func cmdBlastTemplate(r *runCtx, args []string) (any, error) {
+	return printTemplate(r, args, "blast template", blast.Template)
 }
 
 func cmdPRDReviewTemplate(r *runCtx, args []string) (any, error) {

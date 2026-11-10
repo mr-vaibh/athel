@@ -69,8 +69,9 @@ func TestBlastCommandErrors(t *testing.T) {
 			t.Errorf("%v: exit %d, want %d (%v)", tt.args, code, tt.code, env)
 		}
 	}
-	if code, _ := h.runJSON("blast", "save", "--ask", "ASK-001", writeTemp(t, "bad.yaml", "schema: x\n")); code != aerr.ExitState {
-		t.Errorf("save of an invalid report: exit %d", code)
+	if code, env := h.runJSON("blast", "save", "--ask", "ASK-001", writeTemp(t, "bad.yaml", "schema: x\n")); code != aerr.ExitState ||
+		!strings.Contains(asJSON(t, env), "run athel blast template for the format") {
+		t.Errorf("save of an invalid report points to the template: exit %d %v", code, env)
 	}
 	h.mustOK("lock", "acquire", "CHG-001")
 	h.env["ATHEL_SESSION_ID"] = "sess-B"
