@@ -104,9 +104,15 @@ func TestLoadSettings(t *testing.T) {
 	if err != nil || s.Runs != 3 || s.Timeout != 20*time.Minute || !s.Selected("any") {
 		t.Errorf("defaults: %+v %v", s, err)
 	}
-	s, err = LoadSettings(env(map[string]string{"ATHEL_EVALS_RUNS": "2", "ATHEL_EVALS_TIMEOUT": "5m", "ATHEL_EVALS_CASES": "a, b,", "ATHEL_EVALS_MODEL": "opus"}))
+	if got := s.RunDir("/tmp/t", "a", 2); got != "/tmp/t/a-run2" {
+		t.Errorf("run dir without keep: %s", got)
+	}
+	s, err = LoadSettings(env(map[string]string{"ATHEL_EVALS_RUNS": "2", "ATHEL_EVALS_TIMEOUT": "5m", "ATHEL_EVALS_CASES": "a, b,", "ATHEL_EVALS_MODEL": "opus", "ATHEL_EVALS_KEEP": "/k"}))
 	if err != nil || s.Runs != 2 || s.Timeout != 5*time.Minute || s.Model != "opus" || !s.Selected("b") || s.Selected("c") {
 		t.Errorf("set: %+v %v", s, err)
+	}
+	if got := s.RunDir("/tmp/t", "a", 1); got != "/k/a-run1" {
+		t.Errorf("run dir with keep: %s", got)
 	}
 	for _, bad := range []map[string]string{{"ATHEL_EVALS_RUNS": "0"}, {"ATHEL_EVALS_RUNS": "x"}, {"ATHEL_EVALS_TIMEOUT": "soon"}} {
 		if _, err := LoadSettings(env(bad)); err == nil {

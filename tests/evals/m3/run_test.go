@@ -98,7 +98,7 @@ func decidePrompt(list []byte) (string, error) {
 func runOne(t *testing.T, c Case, run int, tl evalkit.Tools, set evalkit.Settings) Result {
 	t.Helper()
 	res := Result{Run: run, Sessions: []evalkit.Session{}}
-	sb, err := evalkit.NewSandbox(filepath.Join(t.TempDir(), c.ID), tl)
+	sb, err := evalkit.NewSandbox(set.RunDir(t.TempDir(), c.ID, run), tl)
 	if err == nil {
 		err = runSteps(sb, c, set, &res)
 	}
@@ -169,6 +169,11 @@ func collect(ws string) (Artifacts, error) {
 			return a, err
 		}
 	}
+	specs, err := readSpecs(filepath.Join(dir, "spec"))
+	if err != nil {
+		return a, err
+	}
+	a.Specs = specs
 	meta, err := read("change.yaml")
 	if err != nil {
 		return a, err
@@ -179,8 +184,25 @@ func collect(ws string) (Artifacts, error) {
 	if err := yaml.Unmarshal([]byte(meta), &c); err != nil {
 		return a, fmt.Errorf("change.yaml: %w", err)
 	}
-	a.State = c.State
+	a.State, a.Change = c.State, meta
 	return a, nil
+}
+
+// readSpecs reads spec/<service>.md, by file name.
+func readSpecs(dir string) (map[string]string, error) {
+	files, err := filepath.Glob(filepath.Join(dir, "*.md"))
+	if err != nil || len(files) == 0 {
+		return nil, err
+	}
+	out := map[string]string{}
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			return nil, err
+		}
+		out[filepath.Base(f)] = string(b)
+	}
+	return out, nil
 }
 
 func TestEvals(t *testing.T) {

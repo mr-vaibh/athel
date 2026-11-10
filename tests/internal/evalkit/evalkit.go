@@ -33,17 +33,20 @@ var FakeCLIs = []string{"kubectl", "gcloud", "gh", "praxis"}
 
 // Settings are a run's knobs, from the environment: ATHEL_EVALS_RUNS (default 3),
 // ATHEL_EVALS_MODEL (the session's model; default the CLI's own), ATHEL_EVALS_CASES
-// (comma-separated case IDs; default all) and ATHEL_EVALS_TIMEOUT (per session, default 20m).
+// (comma-separated case IDs; default all), ATHEL_EVALS_TIMEOUT (per session, default 20m) and
+// ATHEL_EVALS_KEEP (a folder that keeps every run's sandbox, transcripts and audit log, so a
+// failed run can be diagnosed; default none, the sandbox is removed).
 type Settings struct {
 	Runs    int
 	Model   string
 	Only    map[string]bool
 	Timeout time.Duration
+	Keep    string
 }
 
 // LoadSettings reads Settings through getenv, so tests need no real environment.
 func LoadSettings(getenv func(string) string) (Settings, error) {
-	s := Settings{Runs: 3, Model: getenv("ATHEL_EVALS_MODEL"), Only: map[string]bool{}, Timeout: 20 * time.Minute}
+	s := Settings{Runs: 3, Model: getenv("ATHEL_EVALS_MODEL"), Only: map[string]bool{}, Timeout: 20 * time.Minute, Keep: getenv("ATHEL_EVALS_KEEP")}
 	if v := getenv("ATHEL_EVALS_RUNS"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 1 {
@@ -64,6 +67,16 @@ func LoadSettings(getenv func(string) string) (Settings, error) {
 		}
 	}
 	return s, nil
+}
+
+// RunDir is where a run's sandbox goes: under Keep when set, otherwise under temp, which the
+// test removes.
+func (s Settings) RunDir(temp, caseID string, run int) string {
+	base := temp
+	if s.Keep != "" {
+		base = s.Keep
+	}
+	return filepath.Join(base, fmt.Sprintf("%s-run%d", caseID, run))
 }
 
 // Selected reports whether a case runs under these settings.
@@ -240,7 +253,7 @@ type Session struct {
 	CostUSD  float64 `json:"cost_usd"`
 	Duration float64 `json:"duration_s"`
 	Turns    int     `json:"turns"`
-	Result   string  `json:"-"`
+	Result   string  `json:"result,omitempty"`
 }
 
 // Prompt is one `claude -p` session: the prompt and the transcript file name under the

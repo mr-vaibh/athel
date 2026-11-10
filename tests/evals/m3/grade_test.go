@@ -20,6 +20,10 @@ type Artifacts struct {
 	Blast     string `json:"blast_radius"`
 	Plan      string `json:"plan"`
 	Trace     string `json:"traceability"`
+	// Change and Specs are kept to diagnose a run (why it blocked, what the specs said); the
+	// grade does not read them.
+	Change string            `json:"change"`
+	Specs  map[string]string `json:"specs,omitempty"`
 }
 
 // Grade is one run against its case. EC-1 is Pass; the counts feed EC-2 and the reported

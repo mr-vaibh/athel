@@ -78,7 +78,7 @@ func runOne(t *testing.T, c Case, run int, tl evalkit.Tools, set evalkit.Setting
 		res.Grade.Problems = append(res.Grade.Problems, "run failed: "+err.Error())
 		return res
 	}
-	sb, err := evalkit.NewSandbox(filepath.Join(t.TempDir(), c.ID), tl)
+	sb, err := evalkit.NewSandbox(set.RunDir(t.TempDir(), c.ID, run), tl)
 	if err != nil {
 		return fail(err)
 	}

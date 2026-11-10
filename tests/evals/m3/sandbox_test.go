@@ -52,6 +52,9 @@ func TestM3Sandbox(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(a.Specs) != 1 || !strings.Contains(a.Change, "state: planned") {
+		t.Errorf("diagnosis files: specs %v, change.yaml %q", len(a.Specs), a.Change)
+	}
 	c := Case{Expect: Expect{RiskAtLeast: "LOW", ReviewMissing: []string{"acceptance_criteria"}, Ordering: []string{"internal"}}}
 	g := GradeRun(c, a)
 	if !g.Planned || !g.TraceComplete || !g.KindsOK || !g.ReviewOK || !strings.Contains(strings.Join(g.Problems, ";"), "no planned blast radius report") {
@@ -107,7 +110,7 @@ func TestDecidePrompt(t *testing.T) {
 
 func TestCollectMissing(t *testing.T) {
 	ws := t.TempDir()
-	if a, err := collect(ws); err != nil || a != (Artifacts{}) {
+	if a, err := collect(ws); err != nil || a.State != "" || a.Specs != nil {
 		t.Errorf("an empty workspace has no artifacts: %+v %v", a, err)
 	}
 	dir := filepath.Join(ws, ".athel", "changes", change)
