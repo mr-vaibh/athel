@@ -58,6 +58,8 @@ const (
 	PolicyDefault          Code = "E-POLICY-DEFAULT"
 	PolicyHeadless         Code = "E-POLICY-HEADLESS"
 	PolicyHumanOrigin      Code = "E-POLICY-HUMAN-ORIGIN"
+	PolicyDevClone         Code = "E-POLICY-DEV-CLONE"      // M2: a git command that would change a developer's clone
+	PolicyAgentReadOnly    Code = "E-POLICY-AGENT-READONLY" // M2: a write by a read-only subagent (the scout)
 	IntegrityAudit         Code = "E-INTEGRITY-AUDIT"
 	IntegrityState         Code = "E-INTEGRITY-STATE"
 )

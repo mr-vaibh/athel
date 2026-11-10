@@ -12,6 +12,7 @@ package engine
 
 import (
 	"fmt"
+	"io/fs"
 	"path"
 	"slices"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/envdetect"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/grants"
+	"github.com/mr-vaibh/athel/cli/internal/hookio"
 	"github.com/mr-vaibh/athel/cli/internal/plan"
 	"github.com/mr-vaibh/athel/cli/internal/policy"
 )
@@ -61,6 +63,10 @@ type Context struct {
 	Resolver      *envdetect.Resolver
 	// HumanGrant reports whether the human granted change → target in this session (grants).
 	HumanGrant func(change, target string) bool
+	// SearchRoots are the confirmed repo search roots, absolute (doc 04 rule 12 exception); Stat
+	// looks for .git folders below them (os.Lstat when nil).
+	SearchRoots []string
+	Stat        func(string) (fs.FileInfo, error)
 }
 
 // ActionDecision is the verdict on one action.
@@ -174,6 +180,8 @@ func (ctx Context) forbidden(a classify.Action) (string, aerr.Code, string) {
 		return "12", aerr.PolicySecretPath, a.Forbidden
 	case a.Tier == classify.X:
 		return "3", aerr.PolicyForbidden, a.Forbidden
+	case ctx.Agent == hookio.ScoutAgent && classify.IsWrite(a.Tier) && a.Athel == nil:
+		return "3", aerr.PolicyAgentReadOnly, "the scout is read-only: it reports, it never changes anything (doc 04 injection-defence layer 4)"
 	case a.Athel != nil && a.Athel.Command == "integrity accept":
 		return "H", aerr.PolicyHumanOrigin, "only the developer accepts a hand edit of Athel state, in a terminal"
 	case a.Athel != nil && a.Athel.ByHuman:
@@ -206,6 +214,9 @@ type verdictFn func(Decision, string, aerr.Code, string) ActionDecision
 func (ctx Context) changeRules(d *ActionDecision, a classify.Action, cwd string, verdict verdictFn) ActionDecision {
 	if a.Athel != nil { // rule 7 exception: .athel/changes/<id>/ is written only through the CLI
 		return verdict(Allow, "7x", "", "athel CLI call")
+	}
+	if a.Tool == "git" && ctx.devClone(a.Dir) {
+		return ctx.devCloneGit(a, verdict)
 	}
 	if a.Uncertain != "" {
 		return verdict(Approve, "7u", "", "Athel does not know what this command does ("+a.Uncertain+")")
@@ -258,11 +269,11 @@ func (ctx Context) worktreeWrite(a classify.Action, verdict verdictFn) ActionDec
 // localRead is rule 12: R0 inside the workspace is allowed, anywhere else needs a human.
 func (ctx Context) localRead(a classify.Action, verdict verdictFn) ActionDecision {
 	for _, p := range a.Paths {
-		if !ctx.inWorkspace(p) {
-			return verdict(Approve, "12", "", "reads "+p+" outside the workspace")
+		if !ctx.inWorkspace(p) && !ctx.devClone(p) {
+			return verdict(Approve, "12", "", "reads "+p+" outside the workspace and the developer's confirmed clones")
 		}
 	}
-	return verdict(Allow, "12", "", "local read inside the workspace")
+	return verdict(Allow, "12", "", "local read inside the workspace or a confirmed developer clone")
 }
 
 // toolPolicy applies tools.yaml policy.<env>.<read|write> (allow | approve | deny).
