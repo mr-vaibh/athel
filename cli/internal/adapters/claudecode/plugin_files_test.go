@@ -94,7 +94,7 @@ func readSkill(t *testing.T, name string) skill {
 
 // mutatingCommands are athel commands that change state; skills that run them must pass the
 // session so the CLI can take the change lock for it.
-var mutatingCommands = regexp.MustCompile(`athel [^\n` + "`" + `]*\b(change new|state (transition|enter|exit)|checkpoint set|lock (acquire|release|refresh)|budget add|resume|decide (add|record|present|answer|tick)|blast (save|signoff)|spec save|plan set|trace|conventions save|prd (review save|add-version))\b`)
+var mutatingCommands = regexp.MustCompile(`athel [^\n` + "`" + `]*\b(change new|state (transition|enter|exit)|checkpoint set|lock (acquire|release|refresh)|budget add|resume|decide (add|record|present|answer|tick)|blast (save|signoff)|spec save|plan set|trace|conventions save|prd (index|review save|add-version))\b`)
 
 // checkSkillCommands: every athel command a skill names prints JSON, and every one that changes
 // state carries the session so the CLI can take the change lock for it.
@@ -135,6 +135,9 @@ func TestSkillsCallOnlyCLI(t *testing.T) {
 	if !strings.Contains(status, "athel --json decide list $ARGUMENTS --open") {
 		t.Error("/athel:status must show the change's open decision cards")
 	}
+	if !strings.Contains(readSkill(t, "start").body, "prd index <ID>") {
+		t.Error("/athel:start must index the PRD, so specs can cite its statements (M3 plan §4.1)")
+	}
 	if readSkill(t, "start").frontmatter["disable-model-invocation"] != true {
 		t.Error("/athel:start creates changes and must only run when the user asks")
 	}
@@ -144,7 +147,8 @@ func TestSkillsCallOnlyCLI(t *testing.T) {
 // the change only along doc 02's transitions, ending each step before leaving its states.
 func TestStepSkillsFollowTheStateMachine(t *testing.T) {
 	steps := map[string][]string{
-		"spec": {"state enter $ARGUMENTS spec", "--to specified --by athel", "decide present $ARGUMENTS --step spec",
+		"spec": {"--to investigating --by athel", "state enter $ARGUMENTS investigate", "`athel:scout`",
+			"state exit $ARGUMENTS investigate --result ok", "state enter $ARGUMENTS spec", "--to specified --by athel", "decide present $ARGUMENTS --step spec",
 			"state exit $ARGUMENTS spec --result ok", "--to awaiting_decisions --by athel"},
 		"plan": {"decide tick $ARGUMENTS", "state enter $ARGUMENTS plan", "trace $ARGUMENTS", "--to planned --by athel",
 			"state exit $ARGUMENTS plan --result ok", "plan summary $ARGUMENTS", "/athel:approve", "/athel:signoff"},
