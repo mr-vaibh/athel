@@ -33,29 +33,28 @@ are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Exact next step
 
-Eval status (PR 14, #57), M2's exit criteria:
+M2 is built; `docs/plans/M2-report.md` (PR 15, `docs/m2-report`, stacked on #57) has the full
+results. Exit-criteria status:
 
-| Run | History file | Cost | Passing runs | Claims found (bar ≥ 95%) | Exact labels (bar 100%) | Traps |
-|---|---|---|---|---|---|---|
-| 1 | `m2-2026-11-09T134454Z.json` | $13.32 | 48/60* | 90.5% | 66.7% | 29/30 |
-| 2 | `m2-2026-11-09T162052Z.json` | $13.38 | 53/60* | 97.6% | 81.0% | 30/30 |
-| 3 | `m2-2026-11-10T060740Z.json` | $13.31 | 55/60* | 100% | 90.5% | 29/30 |
+| Criterion | Status |
+|---|---|
+| Expected claims found | 100% (bar ≥ 95%) |
+| Traps | 29/30 |
+| Exact labels | 85.7–90.5% (bar 100%) |
 
-\* Regraded under the current rules. Regrading is free:
-`ATHEL_EVALS_REGRADE=../history/<file> go test -run 'TestRegrade$' -v ./tests/evals/m2/`
+The whole stack is green in CI. Four full eval runs (about $57 in all), history in
+`tests/evals/history/`. The last fix (independent-source hint, re-save on hints) is not yet
+measured.
 
-After run 3 the last 5 failures were fixed (session 4 journal): non-blocking `hints` for
-evidence filed on the wrong claim, and prompt rules. Next:
-1. **Waiting for the owner:** a fourth full run (about $13, about 1 h) to measure those fixes.
-   Command: `ATHEL_EVALS=1 go test -count=1 -run 'TestEvals$' -v -timeout 0 ./tests/evals/m2/`
-2. PR 15 `docs/m2-report`, stacked on #57: the M2 report covering every run, cost, the
-   decisions (ADR 018, EC-2 grading under the owner's delegation), and what was learned.
-3. Ask the owner to merge the M2 stack #43 → #57 in order.
+1. Done: the owner accepted M2 with the measured shortfall (2026-11-10).
+2. **Waiting for the owner:** whether to merge the stack #43 → #58, in order: retarget each to
+   `main`, wait for CLEAN, merge commit, verify.
+3. After merge, M3 planning (doc 08 M3 row): write `M3-plan.md` and stop for approval.
 
 ## Open questions for the owner
 
 - Merge the M2 stack when it is complete, or earlier?
-- A fourth paid eval run (about $13) to measure the latest scout fixes.
+- Merge the M2 stack #43 → #58 now?
 
 ## Owner instructions given in chat (all also in docs/context/decisions-from-chat.md)
 
