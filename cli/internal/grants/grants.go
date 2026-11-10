@@ -57,9 +57,13 @@ type Book struct {
 	LockTimeout time.Duration
 }
 
-var promptRe = regexp.MustCompile(`^\s*/athel:(approve|accept)\s+(CHG-[0-9]{3,})\s*$`)
+var promptRe = regexp.MustCompile(`^\s*/athel:(approve|accept|signoff)\s+(CHG-[0-9]{3,})\s*$`)
 
-var targets = map[string]string{"approve": "plan_approved", "accept": "done"}
+// TargetSignoff is the grant target for signing off a CRITICAL blast radius report (doc 05:
+// "CRITICAL needs explicit human sign-off on the report itself in addition to plan approval").
+const TargetSignoff = "blast_signoff"
+
+var targets = map[string]string{"approve": "plan_approved", "accept": "done", "signoff": TargetSignoff}
 
 // ParsePrompt recognises the two literal grant prompts and returns the change and target state.
 func ParsePrompt(prompt string) (change, target string, ok bool) {

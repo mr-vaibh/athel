@@ -38,6 +38,7 @@ const (
 	Spec          = "athel/spec@1"
 	Decision      = "athel/decision@1"
 	Conventions   = "athel/conventions@1"
+	BlastSignoff  = "athel/blast-signoff@1"
 )
 
 var idRe = regexp.MustCompile(`^athel/([a-z][a-z0-9-]*@[1-9][0-9]*)$`)

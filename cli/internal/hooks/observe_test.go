@@ -224,3 +224,14 @@ func TestDecideGrantFromHumanPromptOnly(t *testing.T) {
 		t.Errorf("grant = %+v %v", g, err)
 	}
 }
+
+func TestSignoffGrantFromHumanPrompt(t *testing.T) {
+	d, _ := newDeps(t)
+	o := Handle(&hookio.Request{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p1", Prompt: "/athel:signoff CHG-001"}, d)
+	if o.Rule != RuleGrant || !strings.Contains(o.Response.AdditionalContext, "athel blast signoff CHG-001") {
+		t.Fatalf("outcome = %+v", o)
+	}
+	if g, err := d.Store.Grants().Valid("CHG-001", grants.TargetSignoff, sess); err != nil || g == nil {
+		t.Errorf("grant = %+v %v", g, err)
+	}
+}

@@ -49,3 +49,11 @@ seen only by the UserPromptSubmit hook, becomes a one-time grant.
 ## Spec references
 Doc 05 FR-DEC-001…004 and the "User never answers" and "User answers … outside the options"
 edge cases; doc 02 §Transition rules; ADR 017; M2 plan Q7.
+
+## Follow-up (2026-11-10, M3 task 09)
+Doc 05's sign-off of a CRITICAL blast radius report uses the same mechanism:
+- the developer types `/athel:signoff CHG-NNN`, which creates a one-time grant;
+- `athel blast signoff` is human-only (rule H). It writes `blast-signoff.yaml`
+  (`blast-signoff@1`), bound to the report's hash;
+- `plan_approved` is refused at CRITICAL risk unless the current report is signed off. A
+  changed report voids the sign-off.

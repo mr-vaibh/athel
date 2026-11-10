@@ -204,7 +204,11 @@ func userPromptSubmit(req *hookio.Request, d Deps) Outcome {
 		return o
 	}
 	if change, target, ok := grants.ParsePrompt(req.Prompt); ok {
-		recordGrant(req, d, change, target, "", &o)
+		hint := ""
+		if target == grants.TargetSignoff {
+			hint = " Run `athel blast signoff " + change + "` now to record the sign-off."
+		}
+		recordGrant(req, d, change, target, hint, &o)
 	} else if roots, ok := grants.ParseRootsPrompt(req.Prompt); ok {
 		recordGrant(req, d, grants.RootsKey(roots), grants.TargetRoots,
 			" Run `"+grants.RootsCommand(roots)+"` now, exactly as written, to save these repo search roots.", &o)

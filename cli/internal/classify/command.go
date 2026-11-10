@@ -285,6 +285,8 @@ func humanOnly(call *AthelCall, pos []shellparse.Word, vals map[string]shellpars
 			roots = append(roots, v)
 		}
 		call.Command, call.Change, call.To, call.ByHuman = "repos roots set", grants.RootsKey(roots), grants.TargetRoots, true
+	case call.Command == "blast signoff" && len(pos) > 2:
+		call.Change, call.To, call.ByHuman = known(pos[2]), grants.TargetSignoff, true
 	case call.Command == "decide answer" && len(pos) > 2:
 		// Only the developer answers cards (ADR 019); the grant binds these exact answers.
 		words := make([]string, 0, len(pos)-3)
