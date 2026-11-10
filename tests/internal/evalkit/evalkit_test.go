@@ -44,11 +44,7 @@ func TestSandbox(t *testing.T) {
 	if err := json.Unmarshal(out, &idx); err != nil || len(idx.Data.Repos) != 4 {
 		t.Fatalf("the index holds the four cloned services: %v %s", err, out)
 	}
-	// notifications has no local clone: Athel's cache clone must come from the fixture's bare
-	// repository through the fake HOME's insteadOf rule, never from the network.
-	if out, err = sb.Athel("", "--json", "repos", "cache", "github.com/acme/notifications"); err != nil || !strings.Contains(string(out), `"cloned":true`) {
-		t.Fatalf("cache clone: %v %s", err, out)
-	}
+	checkClones(t, sb)
 	for _, name := range FakeCLIs {
 		if target, err := os.Readlink(filepath.Join(sb.Path, name)); err != nil || target != tl.Shopctl {
 			t.Errorf("%s on the session PATH is %q (%v), want the fixture's fake", name, target, err)
@@ -58,6 +54,25 @@ func TestSandbox(t *testing.T) {
 		t.Error("a failing CLI call must return its error")
 	}
 	runFakeClaude(t, sb)
+}
+
+// checkClones proves cache clones resolve to the fixture's bare repositories, whatever URL form
+// Athel uses, and never reach the network.
+func checkClones(t *testing.T, sb *Sandbox) {
+	t.Helper()
+	// notifications has no local clone: Athel's cache clone must come from the fixture's bare
+	// repository through the fake HOME's insteadOf rule, never from the network.
+	if out, err := sb.Athel("", "--json", "repos", "cache", "github.com/acme/notifications"); err != nil || !strings.Contains(string(out), `"cloned":true`) {
+		t.Fatalf("cache clone: %v %s", err, out)
+	}
+	// users has a local clone whose origin is SSH: Athel clones from that URL, which must also
+	// resolve to the fixture (the second M3 smoke run found it reaching github.com instead).
+	if out, err := sb.Athel("", "--json", "repos", "cache", "github.com/acme/users"); err != nil || !strings.Contains(string(out), `"cloned":true`) {
+		t.Fatalf("cache clone from the SSH origin: %v %s", err, out)
+	}
+	if out, err := sb.Athel("", "--json", "repos", "cache", "github.com/acme/unknown"); err == nil || !strings.Contains(string(out), "athel-eval-no-network") {
+		t.Errorf("a repo the fixture does not serve must fail locally, never over the network: %v %s", err, out)
+	}
 }
 
 // runFakeClaude runs a stand-in claude that records its arguments and prints a transcript, so

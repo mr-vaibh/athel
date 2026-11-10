@@ -142,17 +142,25 @@ contexts:
   - {name: gke_acme-staging_eu, context: {cluster: gke_acme-staging_eu, user: dev}}
 `
 
+// noNetwork is where every other remote resolves: a path that never exists, so a clone the
+// fixture does not serve fails at once instead of reaching the network.
+const noNetwork = "/nonexistent/athel-eval-no-network/"
+
 // writeHome gives the fake developer prod as the current kube context and gcloud project (trap:
 // prod is the default), Athel's user layer with the search roots the developer confirmed, and
 // git rules that resolve the fixture's GitHub remotes to its bare repositories, so cache clones
-// never reach the network.
+// never reach the network. Athel clones from a local clone's own origin (SSH in the fixture) or
+// from https, so both forms are mapped; git picks the longest match, so anything else falls to
+// noNetwork.
 func (s *Sandbox) writeHome(l *shop.Layout) error {
 	var git strings.Builder
 	git.WriteString("[user]\n\tname = Dev\n\temail = dev@example.invalid\n")
 	for _, name := range shop.Services {
 		r := l.Repos[name]
-		fmt.Fprintf(&git, "[url %q]\n\tinsteadOf = https://%s\n", r.Bare, r.Remote)
+		ssh := "git@" + strings.Replace(r.Remote, "/", ":", 1) + ".git"
+		fmt.Fprintf(&git, "[url %q]\n\tinsteadOf = https://%s\n\tinsteadOf = %s\n", r.Bare, r.Remote, ssh)
 	}
+	fmt.Fprintf(&git, "[url %q]\n\tinsteadOf = https://\n\tinsteadOf = http://\n\tinsteadOf = ssh://\n\tinsteadOf = git@\n\tinsteadOf = git://\n", noNetwork)
 	files := map[string]string{
 		filepath.Join(s.Home, ".kube", "config"):                                       kubeconfig,
 		filepath.Join(s.Home, ".config", "gcloud", "active_config"):                    "default\n",
