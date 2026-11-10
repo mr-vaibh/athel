@@ -1,6 +1,9 @@
 # M3 Specify: plan
 
-Status: **Draft for the owner's review** (2026-11-10). Nothing is built until it is approved.
+Status: **Approved by the owner on 2026-11-10** ("review your plan … if all looks good, then
+start implementing"). The self-review before approval added the architect's read-only policy,
+CLI templates, the fixture-first ordering, leak and prompt-sync guards, the M4/M6 scope notes,
+and a split of the agent task. Q1 and Q2 (cost) are asked when each run is due.
 
 Sources:
 - **Doc 05** (Spec, Blast Radius and Planning) governs M3 and was read in full.
@@ -77,6 +80,9 @@ Features: **F-07 spec-linked** (planned and actual blast radius), **F-08** PRD i
 | G8 | Huge PRDs split into several changes "with a parent record" | `change new --parent CHG-NNN` and a `children` list, read by `/athel:status`. The architect proposes the split as an A1 card. The minimal version is in M3; a test covers it |
 | G9 | "PRD changes mid-build: unaffected completed tasks keep their state" | M3 builds `athel prd add-version`, the spec diff and the plan diff. Keeping the state of completed tasks needs M4's build states and lands there |
 | G10 | Architect model tier is "strongest" (doc 02) | `models.architect` in `config@3`, default the strongest model. The evals use the same setting (cost: Q1) |
+| G11 | Two acceptance tests need M4 actors: "`conventions.md` … is cited by the developer agent" (FR-SPEC-006) and "both reports exist for every change that reached PR" (FR-BLAST-001) | M3 proves the parts it owns: conventions exist, are fresh and are required before a spec; both report modes exist and are checked. The developer-agent citation and the per-PR check are M4 acceptance items, listed in the M4 plan |
+| G12 | Ask rule A4 includes "conflicts with … a lesson"; lessons are M6 (doc 07) | A4 fires in M3 for conflicts with existing behaviour, policy or active work. The lesson part comes with M6 |
+| G13 | Safety: the architect is a new subagent that reads code and writes Athel files | Same as the scout (ADR 015 follow-up): it is denied every file write and every direct read of `.athel/`. Its outputs go only through the CLI (stdin and arguments). Red-team cases cover writes, `.athel/` reads, answering its own cards and forging `--by human` |
 
 ## 4. Design
 
@@ -109,6 +115,19 @@ Features: **F-07 spec-linked** (planned and actual blast radius), **F-08** PRD i
    `traceability.md` and fails on any missing link. The summary is one screen. → planned.
 5. **`/athel:approve`** (exists): hash-bound. If the risk is CRITICAL, `/athel:signoff` comes
    first.
+
+### 4.1b Lessons from M2 built in from the start
+
+- **Templates.** `athel spec template`, `athel decide template` and `athel plan template` print
+  valid examples with every allowed value. They use an unrelated example domain, and their
+  examples are tested against the schemas and the injection check.
+- **`--help`** on every new command (exists since M2).
+- **Leak guard.** `TestPluginNeverHintsAtTheFixture` covers the architect, the new skills and
+  the templates.
+- **Prompt sync.** Tests keep the architect's tables (ask rules, EARS patterns, task kinds)
+  equal to the CLI's.
+- **Hints, not blocks, where the AI may be right:** for example, "AC-3 covers no REQ: link it
+  or drop it".
 
 ### 4.2 PRD intake (FR-SPEC-001/002/003)
 
@@ -315,10 +334,11 @@ None new. EARS and AC lints are regular expressions and word lists in Go. Diff p
 | 06 | `feat/m3-conventions` | Survey, conventions save, freshness, spec gate | `TestSurveyFromCacheOnly`, `TestStaleConventionsBlockSpec` |
 | 07 | `feat/m3-plan-lints` | `plan@2` lints: coverage, ordering, size, rollback, env actions; summary; diff | `TestCoverageBothWays`, `TestExpandContractOrder`, `TestRollbackAtHighRisk` |
 | 08 | `feat/m3-trace` | `trace`, `traceability.md`, step guards in transitions | `TestTraceFailsOnMissingLink`, `TestSpecifiedNeedsTrace` |
+| 08b | `feat/m3-fixture` | Table-row metric (G7), 3 PRDs and expected outcomes, prepared branches for the actual-blast tests (needed by 10) | `TestFixturePRDsExpectedItems`, `TestTableRowsMetric` |
 | 09 | `feat/m3-blast-planned` | Planned mode, spec refs, `no-runtime-evidence` rule, `/athel:signoff` for CRITICAL | `TestPlannedReportLinksREQ`, `TestCriticalNeedsSignoff` |
 | 10 | `feat/m3-blast-actual` | `blast diff` change surface (Go, TS), `blast check` | `TestDiffSurfaceGoRoutes`, `TestExtraConsumerBlocks` |
-| 11 | `feat/m3-architect` | Architect agent; skills `spec`, `decide`, `plan`; `/athel:status` card view | live check of the skill flow; prompt-sync tests as in M2 |
-| 12 | `feat/m3-fixture` | Table-row metric, 3 PRDs and expected outcomes, prepared branches for actual-blast tests | `TestFixturePRDsExpectedItems` |
+| 11a | `feat/m3-architect-policy` | Architect agent definition, read-only policy (G13), templates for spec, decide and plan; red-team cases | `TestArchitectCannotWrite`, `TestArchitectCannotAnswerCards`, `TestTemplatesValidAndClean` |
+| 11b | `feat/m3-skills` | Skills `spec`, `decide`, `plan`, `signoff`; `/athel:status` card view; prompt-sync and leak tests | `TestArchitectTablesMatchCLI`, `TestPluginNeverHintsAtTheFixture` |
 | 13 | `feat/m3-evals` | M3 cases, grader, multi-prompt runner, regrade; shared sandbox package | `TestGraderBlastRecall`, `TestM3Sandbox` |
 | 14 | `docs/m3-report` | M3 report, EVALS.md, HANDOFF, ROADMAP | — |
 
