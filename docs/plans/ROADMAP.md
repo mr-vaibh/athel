@@ -64,6 +64,9 @@ Each milestone runs the same four phases as M0 and M1:
 - Docs 05 (spec, blast radius, planning) and 07 (decision cards). FR-SPEC, FR-BLAST, FR-DEC,
   FR-PLAN.
 - Needs the first eval PRDs in `tests/evals/`.
+- Carries M2's open eval target (`docs/plans/EVALS.md`): 100% exact confidence labels and
+  30/30 traps, in two full runs in a row. Plan an improvement from its list as an early M3
+  task, then re-run with the owner's go-ahead.
 - M1's `plan@1` schema and hash-bound approval are already in place.
 
 ### M4 Build

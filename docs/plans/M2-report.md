@@ -36,6 +36,9 @@ Coverage per package:
 
 ## 2. Eval runs
 
+The living scoreboard, with the open target and the next improvements, is
+`docs/plans/EVALS.md`.
+
 Every run's raw answers are kept, so any run can be graded again under the current rules for
 free: `ATHEL_EVALS_REGRADE=../history/<file> go test -run 'TestRegrade$' -v ./tests/evals/m2/`.
 The scores below are all regraded under the final rules.

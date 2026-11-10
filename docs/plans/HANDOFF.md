@@ -1,16 +1,22 @@
 # HANDOFF
 
-Last updated: 2026-11-10, session 4 (PR 14 eval runs), the first session on the owner's personal machine. Tools
+Last updated: 2026-11-10, session 4 (M2 merged), on the owner's personal machine. Tools
 are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Where we are
 
-- **M0 Skeleton and M1 Guardrails: done.** PRs #1–#38, plus #40 (personal machine), #41 (live
-  checks, 9/9) and #42 (M2 plan), all merged into `main`.
-- **M2 Understand: plan approved 2026-11-09** (all Q1–Q12 recommendations). Phase 3 (build) is
-  running task by task, one stacked PR per task (`docs/plans/M2-plan.md` §9).
+- **M0 Skeleton, M1 Guardrails, M2 Understand: done and merged into `main`.**
+  - M0 and M1: PRs #1–#42.
+  - M2: PRs #43–#58, merged 2026-11-10 in order with merge commits; `main` CI green at
+    `ec12150`.
+  - The owner accepted M2 with a measured shortfall (`docs/plans/M2-report.md` §7).
+- **AI eval target still open: `docs/plans/EVALS.md`.**
+  - The confidence-label target is 100%; it measured 85.7–90.5%.
+  - Traps: 29/30 against 30/30.
+  - The owner: "We won't let it go." Re-run per `EVALS.md` §When to run again, with the
+    owner's go-ahead (each run costs about $13).
 
-## M2 build status (stacked PRs; merge in order only when the owner says so)
+## M2 PRs (all merged 2026-11-10)
 
 | # | Task | Branch | PR |
 |---|---|---|---|
@@ -33,28 +39,16 @@ are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Exact next step
 
-M2 is built; `docs/plans/M2-report.md` (PR 15, `docs/m2-report`, stacked on #57) has the full
-results. Exit-criteria status:
-
-| Criterion | Status |
-|---|---|
-| Expected claims found | 100% (bar ≥ 95%) |
-| Traps | 29/30 |
-| Exact labels | 85.7–90.5% (bar 100%) |
-
-The whole stack is green in CI. Four full eval runs (about $57 in all), history in
-`tests/evals/history/`. The last fix (independent-source hint, re-save on hints) is not yet
-measured.
-
-1. Done: the owner accepted M2 with the measured shortfall (2026-11-10).
-2. **Waiting for the owner:** whether to merge the stack #43 → #58, in order: retarget each to
-   `main`, wait for CLEAN, merge commit, verify.
-3. After merge, M3 planning (doc 08 M3 row): write `M3-plan.md` and stop for approval.
+1. Merge the scoreboard PR (`docs/eval-scoreboard`): `EVALS.md` plus links.
+2. Start M3 Phase 1, planning (doc 08 M3 row; `ROADMAP.md` §M3):
+   - read the M3 spec sections, write `docs/plans/M3-plan.md` with open questions and
+     recommendations, and stop for the owner's approval;
+   - include an `EVALS.md` improvement (items 1–3) as an early M3 task, followed by an eval run
+     with the owner's go-ahead.
 
 ## Open questions for the owner
 
-- Merge the M2 stack when it is complete, or earlier?
-- Merge the M2 stack #43 → #58 now?
+- None open. Each future eval run needs a go-ahead (cost).
 
 ## Owner instructions given in chat (all also in docs/context/decisions-from-chat.md)
 
