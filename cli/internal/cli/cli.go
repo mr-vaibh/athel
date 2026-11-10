@@ -105,6 +105,8 @@ func commands() map[string]command {
 		"blast score":            cmdBlastScore,
 		"blast save":             cmdBlastSave,
 		"blast signoff":          cmdBlastSignoff,
+		"blast diff":             cmdBlastDiff,
+		"blast check":            cmdBlastCheck,
 		"fact archive":           cmdFactArchive,
 		"prd index":              cmdPRDIndex,
 		"prd show":               cmdPRDShow,

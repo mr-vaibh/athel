@@ -1,6 +1,12 @@
 package blast
 
-import "slices"
+import (
+	"bytes"
+	"slices"
+
+	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/schema"
+)
 
 // CheckPlanned lists what a planned report on a change lacks (doc 05 FR-BLAST-001/002; M3 plan
 // §4.5): every changed item and data change cites the spec requirement it comes from (evidence
@@ -28,4 +34,18 @@ func CheckPlanned(r *Report, reqs []string) []string {
 		problems = append(problems, "not_affected is empty; list what was checked and ruled out, and how (doc 05)")
 	}
 	return problems
+}
+
+// Extract reads the report block back from blast-radius.md.
+func Extract(reg *schema.Registry, md []byte) (*Report, error) {
+	const start, end = "```yaml\n", "\n```"
+	i := bytes.LastIndex(md, []byte(start))
+	if i < 0 {
+		return nil, aerr.New(aerr.StateSchema, "blast-radius.md has no report block")
+	}
+	body := md[i+len(start):]
+	if j := bytes.Index(body, []byte(end)); j >= 0 {
+		body = body[:j+1]
+	}
+	return Decode(reg, body)
 }
