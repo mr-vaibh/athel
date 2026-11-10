@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/blast-rules@1.json",
+  "title": "athel/blast-rules@1",
+  "description": "blast.yaml: the thresholds and levels of doc 05's blast radius risk rules. The rules themselves are fixed in the CLI (FR-BLAST-004: deterministic); layers may only lower thresholds and raise levels.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema"],
+  "properties": {
+    "schema": {"const": "athel/blast-rules@1"},
+    "thresholds": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "large_table_rows": {"type": "integer", "minimum": 1},
+        "hot_path_calls_per_sec": {"type": "number", "minimum": 0},
+        "many_services": {"type": "integer", "minimum": 1}
+      }
+    },
+    "levels": {
+      "description": "Level each rule fires at; a layer may only raise it.",
+      "type": "object",
+      "propertyNames": {"pattern": "^[a-z][a-z0-9-]*$"},
+      "additionalProperties": {"enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]}
+    }
+  }
+}

@@ -92,6 +92,8 @@ func commands() map[string]command {
 		"ask show":               cmdAskShow,
 		"playbook list":          cmdPlaybookList,
 		"playbook show":          cmdPlaybookShow,
+		"blast score":            cmdBlastScore,
+		"blast save":             cmdBlastSave,
 		"fact archive":           cmdFactArchive,
 	}
 }

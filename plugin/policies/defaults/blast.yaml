@@ -1,0 +1,23 @@
+# Built-in blast radius risk rules (layer 1), doc 05 §Risk rules. The rules are fixed in the CLI
+# so the same report always gets the same level (FR-BLAST-004); these are their thresholds and
+# levels. Lower layers may only lower a threshold or raise a level.
+schema: athel/blast-rules@1
+thresholds:
+  large_table_rows: 1000000     # HIGH: migration on a table over this
+  hot_path_calls_per_sec: 100   # HIGH: retry, timeout or idempotency change on a hot path
+  many_services: 3              # HIGH: more than this many services changed
+levels:
+  breaking-consumer-outside-set: CRITICAL
+  destructive-migration-with-data: CRITICAL
+  sensitive-without-security-review: CRITICAL
+  critical-alert-firing: CRITICAL
+  breaking-all-in-set: HIGH
+  large-table-migration: HIGH
+  many-services: HIGH
+  new-external-dependency: HIGH
+  hot-path-behaviour-change: HIGH
+  behavioural-with-consumers: MEDIUM
+  any-migration: MEDIUM
+  new-config-or-secret: MEDIUM
+  several-services: MEDIUM
+  no-runtime-evidence: MEDIUM

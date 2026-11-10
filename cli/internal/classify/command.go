@@ -287,6 +287,6 @@ var (
 		"change list": true, "change show": true, "state show": true,
 		"lock status": true, "lock show": true, "checkpoint status": true, "checkpoint show": true,
 		"budget status": true, "budget show": true, "fact find": true, "fact show": true,
-		"investigation validate": true, "repos show": true, "ask show": true,
+		"investigation validate": true, "repos show": true, "ask show": true, "blast score": true,
 	}
 )
