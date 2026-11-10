@@ -323,6 +323,10 @@ func TestReposCacheCommand(t *testing.T) {
 	if code, env := h.runJSON("repos", "cache", "github.com/acme/private"); code != aerr.ExitTool {
 		t.Errorf("unreachable repo: exit %d %v", code, env)
 	}
+	// A repo with no local clone has no short name; the error says how to name it (M3 smoke 3).
+	if _, env := h.runJSON("repos", "cache", "notifications"); !strings.Contains(asJSON(t, env), "name it as host/org/repo") {
+		t.Errorf("an unknown short name says how to name the repo: %v", env)
+	}
 }
 
 func TestReposCacheErrors(t *testing.T) {
