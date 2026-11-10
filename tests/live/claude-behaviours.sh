@@ -94,13 +94,13 @@ athel_plugin "$tmp/p-athel" "$real"
 cli() { env HOME="$tmp/home" ATHEL_HOME="$tmp/athel-home" ATHEL_SESSION_ID=live-fixture "$tmp/athel-real" --json --workspace "$ws" "$@" >/dev/null; }
 cli init
 cli change new --title "Live check" --prd-text "# PRD"
+# The spec step's work, as the M3 step guards require before specified and planned (ADR 021).
+# shellcheck source=../internal/m3docs/m3-prepare.sh
+source "$repo/tests/internal/m3docs/m3-prepare.sh"
+m3_prepare cli "$tmp"
 for to in investigating specified awaiting_decisions planned; do
   cli state transition CHG-001 --to "$to" --by athel --reason "live check fixture"
 done
-printf '%s\n' 'schema: athel/plan@1' 'change: CHG-001' 'hash: null' 'tasks:' \
-  '  - {id: T-01, title: t, repo: svc, paths: ["src/**"], verbs: [edit], covers: [AC-1], depends_on: [], size: S, gates: []}' \
-  >"$tmp/plan.yaml"
-cli plan set CHG-001 "$tmp/plan.yaml"
 cli lock release CHG-001 # the Claude session must be able to take the lock
 # A second plugin records exactly what UserPromptSubmit receives.
 mkdir -p "$tmp/p-capture/.claude-plugin" "$tmp/p-capture/hooks"

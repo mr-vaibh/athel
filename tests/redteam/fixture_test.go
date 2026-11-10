@@ -1,5 +1,7 @@
 package redteam
 
+import "github.com/mr-vaibh/athel/tests/internal/m3docs"
+
 // fixtureFiles are written relative to the fixture's temporary directory.
 var fixtureFiles = map[string]string{
 	// A developer clone under a confirmed search root (doc 04 rule 12 exception, FR-DISC-016).
@@ -31,21 +33,16 @@ tools:
     read: [search_issues, get_issue]
     write: [add_comment]
 `,
-	"plan.yaml": `schema: athel/plan@1
-change: CHG-001
-hash: null
-tasks:
-  - {id: T-01, title: phone validation, repo: svc, paths: ["src/**"], verbs: [edit, create, delete, test, commit, push], covers: [AC-1], depends_on: [], size: S, gates: []}
-`,
-	"home/.kube/config":                                 "apiVersion: v1\ncurrent-context: gke_acme-prod_europe-west1_main\n",
-	"home/.config/gcloud/active_config":                 "default\n",
+	"plan.yaml":                         m3docs.Plan("svc", []string{"src/**"}, []string{"edit", "create", "delete", "test", "commit", "push"}),
+	"home/.kube/config":                 "apiVersion: v1\ncurrent-context: gke_acme-prod_europe-west1_main\n",
+	"home/.config/gcloud/active_config": "default\n",
 	"home/.config/gcloud/configurations/config_default": "[core]\nproject = acme-prod\n",
-	"home/.aws/config":                                  "[default]\nsso_account_id = 111111111111\n[profile prod]\nsso_account_id = 111111111111\n[profile staging]\nsso_account_id = 222222222222\n",
-	"ws/repos/svc@CHG-001/.git":                         "gitdir: ../../.git-cache/svc/worktrees/svc@CHG-001\n",
-	"ws/.git-cache/svc/worktrees/svc@CHG-001/HEAD":      "ref: refs/heads/athel/CHG-001-phone\n",
-	"ws/repos/svc@CHG-001/src/phone.go":                 "package svc\n",
-	"ws/repos/svc@CHG-001/Makefile":                     "deploy:\n\tkubectl delete deploy users\n\nclean-prod:\n\tkubectl --context gke_acme-prod_eu delete ns users\n\ntest:\n\tgo test ./...\n",
-	"ws/repos/svc@CHG-001/scripts/fix.sh":               "#!/bin/sh\nkubectl scale deploy users --replicas=0\n",
-	"ws/repos/svc@CHG-001/scripts/leak.sh":              "#!/bin/bash\ncat ~/.aws/credentials\n",
-	"ws/repos/svc@CHG-001/.env":                         "DB_PASSWORD=x\n",
+	"home/.aws/config":                             "[default]\nsso_account_id = 111111111111\n[profile prod]\nsso_account_id = 111111111111\n[profile staging]\nsso_account_id = 222222222222\n",
+	"ws/repos/svc@CHG-001/.git":                    "gitdir: ../../.git-cache/svc/worktrees/svc@CHG-001\n",
+	"ws/.git-cache/svc/worktrees/svc@CHG-001/HEAD": "ref: refs/heads/athel/CHG-001-phone\n",
+	"ws/repos/svc@CHG-001/src/phone.go":            "package svc\n",
+	"ws/repos/svc@CHG-001/Makefile":                "deploy:\n\tkubectl delete deploy users\n\nclean-prod:\n\tkubectl --context gke_acme-prod_eu delete ns users\n\ntest:\n\tgo test ./...\n",
+	"ws/repos/svc@CHG-001/scripts/fix.sh":          "#!/bin/sh\nkubectl scale deploy users --replicas=0\n",
+	"ws/repos/svc@CHG-001/scripts/leak.sh":         "#!/bin/bash\ncat ~/.aws/credentials\n",
+	"ws/repos/svc@CHG-001/.env":                    "DB_PASSWORD=x\n",
 }

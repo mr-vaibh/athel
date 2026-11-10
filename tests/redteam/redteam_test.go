@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/mr-vaibh/athel/tests/internal/m3docs"
 )
 
 // Groups are doc 04's seven red-team groups; allow is the allow-list suite.
@@ -161,11 +163,15 @@ func newFixture(t *testing.T) *fixture {
 		write(t, filepath.Join(dir, path), body)
 	}
 	f.run(t, "", "init")
-	f.run(t, "", "change", "new", "--title", "Red team", "--prd-text", "# PRD")
+	f.run(t, "", "change", "new", "--title", "Red team", "--prd-text", m3docs.PRD)
+	// The M3 step guards need the spec step's work before specified and planned (ADR 021).
+	f.run(t, m3docs.Review, "prd", "review", "save", "CHG-001", "-")
+	f.run(t, m3docs.Conventions, "conventions", "save", m3docs.Repo, "-", "--new")
+	f.run(t, m3docs.Spec, "spec", "save", "CHG-001", "-")
+	f.run(t, "", "plan", "set", "CHG-001", filepath.Join(dir, "plan.yaml"))
 	for _, to := range []string{"investigating", "specified", "awaiting_decisions", "planned"} {
 		f.run(t, "", "state", "transition", "CHG-001", "--to", to, "--by", "athel", "--reason", "red team")
 	}
-	f.run(t, "", "plan", "set", "CHG-001", filepath.Join(dir, "plan.yaml"))
 	prompt, _ := json.Marshal(map[string]any{"session_id": session, "prompt_id": "p-1", "prompt": "/athel:approve CHG-001", "cwd": f.ws})
 	f.run(t, string(prompt), "hook", "user-prompt-submit")
 	f.run(t, "", "state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "red team")

@@ -51,6 +51,9 @@ func cmdStateTransition(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := r.stepGuard(s, pos[0], state.State(*to)); err != nil {
+		return nil, err
+	}
 	c, err := s.Transition(pos[0], state.TransitionRequest{
 		To: state.State(*to), By: *by, Reason: *reason, Evidence: evidence, Session: &session, PromptID: optional(*prompt),
 	})

@@ -11,6 +11,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/mr-vaibh/athel/tests/internal/m3docs"
 )
 
 type athel struct {
@@ -21,8 +23,15 @@ type athel struct {
 
 func (a *athel) run(session string, args ...string) map[string]any {
 	a.t.Helper()
+	return a.runIn(session, "", args...)
+}
+
+// runIn runs athel with stdin, for the blocks the M3 steps read from it.
+func (a *athel) runIn(session, stdin string, args ...string) map[string]any {
+	a.t.Helper()
 	cmd := exec.Command(a.bin, append([]string{"--json", "--workspace", a.ws}, args...)...)
 	cmd.Env = append(a.env, "ATHEL_SESSION_ID="+session)
+	cmd.Stdin = strings.NewReader(stdin)
 	out, err := cmd.Output()
 	if err != nil {
 		a.t.Fatalf("athel %v: %v\n%s", args, err, out)
@@ -93,6 +102,8 @@ func TestScenarioCreatePauseResume(t *testing.T) {
 	a.run("s1", "state", "enter", "CHG-001", "start")
 	a.run("s1", "checkpoint", "set", "CHG-001", "start.prd-captured", "--note", "PRD captured")
 	a.run("s1", "state", "exit", "CHG-001", "start", "--result", "ok")
+	// The M3 step guards need the spec step's work before specified and planned (ADR 021).
+	a.prepareM3("s1")
 	for _, to := range []string{"investigating", "specified", "awaiting_decisions", "planned"} {
 		a.run("s1", "state", "transition", "CHG-001", "--to", to, "--by", "athel", "--reason", "reached "+to, "--evidence", "prd/v1.md")
 	}
@@ -134,4 +145,17 @@ func TestScenarioCreatePauseResume(t *testing.T) {
 	if third := a.run("s3", "resume", "CHG-001"); third["read_only"] != true {
 		t.Errorf("concurrent session got write access: %v", third)
 	}
+}
+
+// prepareM3 does the spec step's work the M3 step guards need (ADR 021).
+func (a *athel) prepareM3(session string) {
+	a.t.Helper()
+	a.runIn(session, m3docs.Review, "prd", "review", "save", "CHG-001", "-")
+	a.runIn(session, m3docs.Conventions, "conventions", "save", m3docs.Repo, "-", "--new")
+	a.runIn(session, m3docs.Spec, "spec", "save", "CHG-001", "-")
+	planFile := filepath.Join(a.t.TempDir(), "plan.yaml")
+	if err := os.WriteFile(planFile, []byte(m3docs.Plan("svc", []string{"src/**"}, []string{"edit", "test"})), 0o600); err != nil {
+		a.t.Fatal(err)
+	}
+	a.run(session, "plan", "set", "CHG-001", planFile)
 }

@@ -49,14 +49,11 @@ func TestPolicyDecideChangeMode(t *testing.T) {
 	if v := h.decide("Edit", edit, tree); v["decision"] != "deny" || v["code"] != string(aerr.PolicyScope) || v["mode"] != "change" {
 		t.Errorf("edit without a plan = %v", v)
 	}
+	m3Spec(t, h)
+	m3Plan(t, h)
 	for _, to := range []string{"specified", "awaiting_decisions", "planned"} {
 		h.mustOK("state", "transition", "CHG-001", "--to", to, "--by", "athel", "--reason", "r")
 	}
-	planPath := filepath.Join(t.TempDir(), "plan.yaml")
-	if err := os.WriteFile(planPath, []byte("schema: athel/plan@1\nchange: CHG-001\nhash: null\ntasks:\n  - {id: T-01, title: x, repo: r, paths: [src/**], verbs: [edit], covers: [AC-1], depends_on: [], size: S, gates: []}\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	h.mustOK("plan", "set", "CHG-001", planPath)
 	h.humanPrompt("/athel:approve CHG-001")
 	h.mustOK("state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "ok")
 	if v := h.decide("Edit", edit, tree); v["decision"] != "allow" || v["rule"] != "10" {
