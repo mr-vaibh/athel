@@ -182,6 +182,8 @@ func (ctx Context) forbidden(a classify.Action) (string, aerr.Code, string) {
 		return "3", aerr.PolicyForbidden, a.Forbidden
 	case ctx.Agent == hookio.ScoutAgent && classify.IsWrite(a.Tier) && a.Athel == nil:
 		return "3", aerr.PolicyAgentReadOnly, "the scout is read-only: it reports, it never changes anything (doc 04 injection-defence layer 4)"
+	case ctx.Agent == hookio.ArchitectAgent && classify.IsWrite(a.Tier) && a.Athel == nil:
+		return "3", aerr.PolicyAgentReadOnly, "the architect writes specs, cards and plans only through the athel CLI, never a file (M3 plan G13)"
 	case a.Athel != nil && a.Athel.Command == "integrity accept":
 		return "H", aerr.PolicyHumanOrigin, "only the developer accepts a hand edit of Athel state, in a terminal"
 	case a.Athel != nil && a.Athel.ByHuman:

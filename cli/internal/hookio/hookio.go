@@ -27,6 +27,10 @@ var Events = []Event{SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Po
 // are named <plugin>:<agent>). The scout is read-only (doc 04 injection-defence layer 4).
 const ScoutAgent = "athel:scout"
 
+// ArchitectAgent is Athel's architect subagent (doc 02 roles). It writes specs, cards and plans
+// only through the athel CLI, so like the scout it never writes a file (M3 plan G13).
+const ArchitectAgent = "athel:architect"
+
 // Request is one hook invocation. Raw tool input is kept as bytes so it can be hashed without
 // being interpreted; only its scrubbed, classified form is ever logged.
 type Request struct {
