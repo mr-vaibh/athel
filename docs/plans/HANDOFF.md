@@ -56,16 +56,16 @@ M3 is approved (2026-11-10) and being built as stacked PRs on `docs/m3-plan` (#6
 | 08b fixture: eval PRDs, table sizes, prepared branches | `feat/m3-fixture` | #70 |
 | 09 planned blast, /athel:signoff | `feat/m3-blast-planned` | #71 |
 | 10 actual blast from the diff (ADR 022) | `feat/m3-blast-actual` | #72 |
-| 11a architect read-only policy (partial) | `feat/m3-architect-policy` | pushed, no PR yet |
+| 11a architect agent, read-only policy, templates | `feat/m3-architect-policy` | #73 |
+| 11b skills spec, decide, plan, signoff; status cards | `feat/m3-skills` | #74 |
 
-Next, on `feat/m3-architect-policy`:
-1. Finish 11a: `plugin/agents/architect.md` (strongest model, maxTurns 30, read-only, CLI-only
-   outputs) and `athel spec|decide|plan template` (valid examples from an unrelated domain,
-   tested against the schemas and the injection check). Then open the PR on #72.
-2. 11b: skills `spec`, `decide` (runs `decide tick` first), `plan` and `signoff`, plus the
-   `/athel:status` card view and the prompt-sync and leak tests.
-3. 13: M3 evals, at most 2 full runs, each asked first (owner).
-4. 14: the M3 report.
+Next:
+1. 13: M3 evals (`feat/m3-evals`, on #74). Grader: blast recall ≥95%, spec and plan validity,
+   card recall and precision. Multi-prompt runner (spec, decide, plan) and regrade. Smoke one
+   PRD first (about $5), then at most 2 full runs, each asked first (owner). Check the
+   account's remaining usage before any paid run.
+2. 14: the M3 report (`docs/m3-report`), EVALS.md, HANDOFF, ROADMAP.
+3. Ask the owner to merge the M3 stack #60 → #74 in order.
 
 M2 eval run 5 is done and recorded in `EVALS.md`: 51/54 valid, traps 27/27, labels 90.5%. Its
 last 6 sessions hit the usage limit and are excluded. Lesson: check the account's remaining
