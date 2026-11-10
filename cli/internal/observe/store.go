@@ -122,6 +122,37 @@ func (s *Store) Get(id string) (Observation, error) {
 	return o, nil
 }
 
+// Flagged lists the session's captured calls since a time whose output was flagged as
+// suspicious, so an investigation can be checked for listing every one of them.
+func (s *Store) Flagged(session string, since time.Time) ([]string, error) {
+	entries, err := os.ReadDir(s.Dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return []string{}, nil
+	}
+	if err != nil {
+		return nil, aerr.Wrap(aerr.StateIO, "list "+s.Dir, err)
+	}
+	out := []string{}
+	for _, e := range entries {
+		id, ok := strings.CutSuffix(e.Name(), ".json")
+		if !ok || !idRe.MatchString(id) {
+			continue
+		}
+		o, _, err := read(filepath.Join(s.Dir, e.Name()))
+		if err != nil {
+			return nil, err
+		}
+		at, err := clock.Parse(o.At)
+		if err != nil {
+			return nil, aerr.Wrap(aerr.StateSchema, e.Name()+" has an invalid at", err)
+		}
+		if o.Session == session && !at.Before(since) && len(o.Suspicious) > 0 {
+			out = append(out, o.ToolUseID)
+		}
+	}
+	return out, nil
+}
+
 // Prune deletes expired observations and returns how many it deleted. Other files are left alone.
 func (s *Store) Prune() (int, error) {
 	entries, err := os.ReadDir(s.Dir)

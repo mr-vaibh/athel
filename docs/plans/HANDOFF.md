@@ -5,29 +5,34 @@ are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Where we are
 
-- **M0 Skeleton: done** (PRs #1–#23). **M1 Guardrails: done** (PRs #24–#38). `main` was
-  green on this machine at `83445f8`:
-  - gate passes; red-team and allow-list suites pass;
-  - hook latency p95 27.62 ms (budget 50 ms).
-- **M2 Understand: Phase 1 (plan) written, waiting for the owner's approval.**
-  `docs/plans/M2-plan.md` has 15 PRs and questions Q1–Q12, each with a recommendation.
-- What is left overall: `docs/plans/ROADMAP.md`.
+- **M0 Skeleton and M1 Guardrails: done.** PRs #1–#38, plus #40 (personal machine), #41 (live
+  checks, 9/9) and #42 (M2 plan), all merged into `main`.
+- **M2 Understand: plan approved 2026-11-09** (all Q1–Q12 recommendations). Phase 3 (build) is
+  running task by task, one stacked PR per task (`docs/plans/M2-plan.md` §9).
 
-## Open PRs (stacked; merge in order, only when the owner says so)
+## M2 build status (stacked PRs; merge in order only when the owner says so)
 
-| PR | Branch | Base | What |
-|---|---|---|---|
-| #40 | `docs/personal-machine` | `main` | Removes the borrowed-machine setup; rewrites environment.md; fixes `tests/scenarios/m0-resume/demo.sh` (it had failed since #35; it now isolates HOME). CI green |
-| #41 | `test/m1-live-checks` | `docs/personal-machine` | `tests/live/claude-behaviours.sh`: 9/9 live checks pass (onFailure block, literal `/athel:approve`, `updatedToolOutput`); results in ADR 016/017 follow-ups and M1-report §6 |
-| — | `docs/m2-plan` | `test/m1-live-checks` | M2 plan, journal, decision log, backlog, this handoff |
+| # | Task | Branch | PR | Status |
+|---|---|---|---|---|
+| 01 | Schemas, `change@3`, `config@2`, migrate, IDs | `feat/m2-schemas` | #43 | open, base `main` |
+| 02 | Fact store + `athel fact` commands | `feat/m2-facts-store` | #44 | open, base #43 |
+| 03 | Suspicious-content flags, scout capture | `feat/m2-observe` | #45 | open, base #44 |
+| 04 | Recipe verification, supersede, change flags | `feat/m2-fact-verify` | #46 | open, base #45 |
+| 05 | Investigation validation, confidence ceilings | `feat/m2-investigation` | — | in progress |
+| 06–15 | See M2-plan §9 | — | — | not started |
 
 ## Exact next step
 
-1. Get the owner's answer on `docs/plans/M2-plan.md` (approve, or answer Q1–Q12) and log it in
-   `docs/context/decisions-from-chat.md`.
-2. Ask whether to merge #40, #41 and the plan PR into `main` (same procedure as M0/M1, below).
-3. Then M2 Phase 2/3: PR 01 `feat/m2-schemas` from the plan's task list. Ask how to run M2
-   (one shot or with stops), as for M0 and M1.
+Finish PR 05 on `feat/m2-investigation` (stacked on #46):
+- `internal/investigation`: validate `investigation@1`, compute confidence ceilings (M2-plan
+  §4.3, G8, G9), enforce mandatory sources per question type, render `investigation.md`, apply
+  the 2,000-word limit.
+- `athel investigation save` writes facts. It must **refuse cited facts that have no access
+  record** for that change or ask (`fact find/show` do not log uses).
+
+Then continue with PR 06 (repo index) per M2-plan §9. Two things to confirm live in PR 10: the
+scout's real `agent_type` string (`observe.ScoutAgentType`, assumed `athel:scout`) and PostToolUse
+`additionalContext`.
 
 ## Setting up a machine
 
@@ -87,9 +92,8 @@ identity mr-vaibh / shuklavaibhav336@gmail.com.
 
 ## Open questions for the owner
 
-- Approve the M2 plan (Q1–Q12 in `docs/plans/M2-plan.md`).
-- Merge #40, #41 and the M2 plan PR into `main`?
-- How to run M2 after approval (one shot, as M1, or with stops)?
+- Merge the M2 stack when it is complete, or earlier?
+- Q11 (plan): the paid eval runs need a go-ahead when PR 14 is ready.
 
 ## Owner instructions given in chat (all also in docs/context/decisions-from-chat.md)
 

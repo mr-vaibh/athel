@@ -28,6 +28,9 @@ func (w Workspace) ChangesDir() string { return filepath.Join(w.Dir(), "changes"
 // AuditDir holds the append-only event logs.
 func (w Workspace) AuditDir() string { return filepath.Join(w.Dir(), "audit") }
 
+// AskDir is the folder of one ad-hoc question (M2 plan G3); id must already be validated.
+func (w Workspace) AskDir(id string) string { return filepath.Join(w.Dir(), "asks", id) }
+
 // KnowledgeDir holds the verified fact cache and its access log (doc 03).
 func (w Workspace) KnowledgeDir() string { return filepath.Join(w.Dir(), "knowledge") }
 

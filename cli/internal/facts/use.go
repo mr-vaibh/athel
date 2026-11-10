@@ -132,3 +132,28 @@ func optional(s string) *string {
 	}
 	return &s
 }
+
+// UsedFor lists the facts read for a change or question: every logged use except refusals.
+func (s *Store) UsedFor(ref Ref) (map[string]bool, error) {
+	if err := ref.validate(); err != nil {
+		return nil, err
+	}
+	out := map[string]bool{}
+	err := s.locked(func() error {
+		lines, err := readLines(s.accessPath())
+		if err != nil {
+			return err
+		}
+		for _, line := range lines {
+			a, err := decodeAccess(line)
+			if err != nil {
+				return err
+			}
+			if a.Change == ref.Change && a.Ask == ref.Ask && a.Result != RefusedStale && a.Result != RefusedDisputed {
+				out[a.Fact] = true
+			}
+		}
+		return nil
+	})
+	return out, err
+}
