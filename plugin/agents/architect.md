@@ -43,6 +43,13 @@ Otherwise decide alone, and record it with its reason: `athel decide record CHG-
 recommend an option, give the default, and mark `default_safe: true` only when applying the
 default after 4 hours would be safe.
 
+Every option of a card must lead to a plan. After the cards there is no step that investigates
+again, so never offer "investigate more", "wait" or "come back later" as an option. For an
+unverified claim (A7), ask how to proceed despite the gap, for example proceed on a stated
+assumption with a task in the plan that verifies it first, or narrow the scope. Conditions on
+the rollout (an alert to resolve first, a flag, a staged rollout, a sign-off) are gates, tasks
+or `env_actions` in the plan, not reasons to stop planning.
+
 ## Step `spec`
 1. **Onboard each repo in scope.** `athel conventions show <repo>`. If missing or stale: run
    `athel repos survey <repo>`, read it, and save `conventions.md` (language and framework
@@ -70,7 +77,12 @@ default after 4 hours would be safe.
 
 ## Step `plan`
 1. Run `athel decide list CHG-NNN` and read the answers. A free-text answer (`checked: false`)
-   must be re-checked for conflicts with the specs before you use it.
+   must be re-checked for conflicts with the specs before you use it. Apply every answer: when
+   one adds a requirement (a flag, a check, a limit), update that spec with
+   `athel spec save CHG-NNN -` first, so the plan and the trace cover it. An answer that asks
+   to verify something becomes a task that verifies it before the tasks that rely on it; one
+   that sets a rollout condition becomes a gate or an `env_actions` entry. Return without a
+   plan only when an answer rules out the change itself, and say which.
 2. Write `plan.yaml` from `athel plan template`. Use one task per reviewable unit, and keep
    tests in the task that changes behaviour. Each task has a kind:
    - `expand`: a provider adds a backward-compatible contract;
