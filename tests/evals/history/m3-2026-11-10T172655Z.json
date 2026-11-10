@@ -1,0 +1,89 @@
+{
+  "cases": {
+    "phone-e164": [
+      {
+        "run": 1,
+        "grade": {
+          "planned": false,
+          "trace_complete": false,
+          "risk": "",
+          "risk_ok": false,
+          "kinds_ok": false,
+          "expected_items": 5,
+          "found_items": 0,
+          "report_items": 0,
+          "report_items_expected": 0,
+          "expected_card_rules": 1,
+          "card_rules_found": 1,
+          "cards": 1,
+          "cards_on_expected_rules": 1,
+          "review_ok": true,
+          "problems": [
+            "the change is investigating, not planned",
+            "traceability is not complete",
+            "no planned blast radius report",
+            "no plan"
+          ]
+        },
+        "pass": false,
+        "sessions": [
+          {
+            "session_id": "bff5e83f-a4c5-41a5-b47e-954d2ee732fd",
+            "cost_usd": 0.14216720000000002,
+            "duration_s": 15.976,
+            "turns": 7,
+            "result": "I created **CHG-001** (\"Phone numbers in E.164\"). It is in `draft`, and the PRD is captured and split into 10 numbered items.\nNext step: run `/athel:spec CHG-001` to investigate, review the PRD and write the specs."
+          },
+          {
+            "session_id": "161c112d-d732-4ef0-af92-1c7045775206",
+            "cost_usd": 1.6932880000000001,
+            "duration_s": 153.56,
+            "turns": 5,
+            "result": "The spec step is paused because the architect ran out of turns before it finished. It had written the review and specs and was about to raise the decision cards. The CHG-001 spec step is still open and nothing has been marked `specified`.\n\nTo let it finish, I tried to send the architect a message telling it to continue. Athel blocked that message because it doesn't recognise the tool (`SendMessage`), so it needs your approval.\n\nHow do you want to continue?\n1. **Approve the message.** The architect picks up where it stopped and raises the cards, then I present them. This is the cheapest option.\n2. **Start a new architect.** It begins from the saved investigation and redoes the review, which costs more and may produce different specs.\n3. **Stop here.** I end the spec step as blocked, and you can resume later with `/athel:resume`.\n\nThe change lock expires 30 minutes after the last Athel command (at about 17:59 now), so please answer before then."
+          },
+          {
+            "session_id": "fd9ac9cc-26ff-4738-9eef-68b0c6d5a816",
+            "cost_usd": 0.092454,
+            "duration_s": 14.468,
+            "turns": 5,
+            "result": "I recorded your answer **D-1 = b** for CHG-001.\n\n- **Defaults and reminders:** No other card had a due default, so nothing was auto-answered, and there are no reminders.\n- **Open cards:** None. Every decision card for CHG-001 is now answered.\n- **Change state:** CHG-001 is still in `investigating`, with the spec step running. It isn't in `awaiting_decisions`, so it isn't ready for `/athel:plan` yet. The spec step needs to finish first, and once it does the change will move to `specified`."
+          },
+          {
+            "session_id": "b1d3742e-2478-4084-9183-f7719fc1a4e4",
+            "cost_usd": 0.0643696,
+            "duration_s": 5.57,
+            "turns": 2,
+            "result": "CHG-001 isn't ready to plan yet. It's still in `investigating`. The spec step started at 17:29 today and hasn't finished; it's still marked as running. A plan needs the change in `awaiting_decisions` or `planned`.\n\nNext step: `/athel:spec CHG-001`\n\nIf the earlier spec session is gone, run `/athel:resume` first to pick up from its last checkpoint."
+          }
+        ],
+        "artifacts": {
+          "state": "investigating",
+          "prd_review": "# PRD review · CHG-001 · v1\n\n**Missing or partial:** actors (missing), scope (partial), acceptance_criteria (missing), non_functional (partial), constraints (missing), dependencies (missing)\n\n**Ambiguities:** 0 (0 material). **Contradictions:** 0. **Assumptions:** 1.\n\n## Review block (athel/prd-review@1, checked by the athel CLI)\n\n```yaml\nschema: athel/prd-review@1\nchange: CHG-001\nversion: v1\nchecklist:\n  goal: {status: present, prd: [PRD-2.1], note: x}\n  actors: {status: missing, prd: [], note: x}\n  scope: {status: partial, prd: [PRD-3.1], note: x}\n  out_of_scope: {status: present, prd: [PRD-4.1]}\n  functional_requirements: {status: present, prd: [PRD-3.1]}\n  acceptance_criteria: {status: missing, prd: []}\n  non_functional: {status: partial, prd: [PRD-3.3]}\n  constraints: {status: missing, prd: []}\n  dependencies: {status: missing, prd: []}\nambiguities: []\ncontradictions: []\nassumptions:\n  - id: A-1\n    text: x\n    prd: [PRD-3.2]\n```\n",
+          "decisions": "schema: athel/decision@1\nchange: CHG-001\ndecisions:\n    - id: D-1\n      kind: card\n      rule: A1\n      step: spec\n      question: Which region should the users service assume when a customer enters a phone number without a country code?\n      context: PRD-3.2 says accept local formats and store E.164, but names no region. A national number such as 020 7946 0958 maps to different E.164 numbers depending on the region, so the choice changes what is stored and who receives SMS.\n      options:\n        - key: a\n          label: One default region from service config\n          consequence: Simple for clients; numbers entered from other countries without a + prefix are converted with the wrong country code or rejected.\n        - key: b\n          label: Optional region field in the request, falling back to the config default\n          consequence: Correct for multi-country customers when the client sends it; adds an additive field to PUT /v1/users/id that clients must adopt.\n        - key: c\n          label: No default, require a + country code\n          consequence: Never misconverts, but contradicts PRD-3.2 local formats; every national entry is rejected.\n      recommendation:\n        option: b\n        reason: keeps local formats working for the home market while giving clients a way to be correct, and the extra field is additive\n      default_if_unanswered: b\n      default_safe: false\n      blocks:\n        - plan\n      presented_at: null\n      answer:\n        option: b\n        by: human\n        at: \"2026-11-10T17:31:40.450Z\"\n        grant: GR-1acb07333634\n",
+          "blast_radius": "",
+          "plan": "",
+          "traceability": "",
+          "change": "schema: athel/change@3\nid: CHG-001\ntitle: Phone numbers in E.164\nstate: investigating\nblocked_from: null\ncreated_by: unknown\ncreated_at: \"2026-11-10T17:27:09.269Z\"\nupdated_at: \"2026-11-10T17:31:51.449Z\"\nprd:\n  current: v1\n  versions:\n    - version: v1\n      path: prd/v1.md\n      sha256: sha256:f52826c8f667abfd485eec04e1f553803700d6579dd35be2aa4eb25765282919\n      source: file\n      at: \"2026-11-10T17:27:09.269Z\"\nstep:\n  name: spec\n  task: null\n  started_at: \"2026-11-10T17:29:02.898Z\"\n  ended_at: null\n  attempt: 1\n  status: running\n  reason: null\nstep_attempts:\n  investigate: 1\n  spec: 1\n  start: 1\nstop_blocks:\n  count: 0\ncheckpoints:\n  - name: start.prd-captured\n    step: start\n    at: \"2026-11-10T17:27:15.103Z\"\n    note: Customers can change their phone number; users service normalizes to E.164, rejects unconvertible numbers, and propagates to all consumers within 1s\n    session: bff5e83f-a4c5-41a5-b47e-954d2ee732fd\n    trigger: manual\nbudget:\n  max_cost_usd: 40\n  max_hours: 8\n  max_tool_calls: 2000\n  used_cost_usd: 0\n  used_minutes: 0\n  used_tool_calls: 0\n  status: ok\n  events: []\nlock: null\napprovals:\n  plan: null\nwaivers: []\nrepos: []\nchange_set: null\nparent: null\nflags: []\nhistory:\n  - seq: 1\n    from: draft\n    to: investigating\n    by: athel\n    at: \"2026-11-10T17:27:27.120Z\"\n    reason: investigation starts\n    evidence:\n      - path: prd/v1.md\n        sha256: sha256:f52826c8f667abfd485eec04e1f553803700d6579dd35be2aa4eb25765282919\n    origin:\n      session: 161c112d-d732-4ef0-af92-1c7045775206\n      prompt_id: null\nintegrity:\n  hash: sha256:07a5fec6cbbc1f3e8f20e815d8693476588032c6a01808766de6b95287c80897\n  at: \"2026-11-10T17:31:51.449Z\"\n"
+        }
+      }
+    ]
+  },
+  "claude": "2.1.311 (Claude Code)",
+  "commit": "be0a1fda5eba70951523ff16637fce2f2f38dcb6",
+  "model": "",
+  "runs_per_case": 1,
+  "schema": "athel-evals/m3@1",
+  "started": "2026-11-10T17:26:55Z",
+  "summary": {
+    "runs": 1,
+    "runs_valid": 0,
+    "blast_recall": 0,
+    "blast_precision": 1,
+    "card_recall": 1,
+    "card_precision": 1,
+    "runs_review_ok": 1,
+    "cost_usd": 1.9922788000000002,
+    "duration_s": 189.57399999999998,
+    "exit_criteria_met": false
+  }
+}
