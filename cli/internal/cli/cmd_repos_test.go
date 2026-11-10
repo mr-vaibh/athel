@@ -278,3 +278,74 @@ func TestDecideUsesConfirmedRoots(t *testing.T) {
 		t.Errorf("read in a developer clone = %v", read)
 	}
 }
+
+// cacheFixture is a workspace whose developer clones and https remotes resolve offline: git's
+// insteadOf in a temporary HOME maps github.com/acme to local bare repositories.
+func cacheFixture(t *testing.T) (*harness, string, string, func(string, ...string)) {
+	t.Helper()
+	h := setup(t)
+	home := devHome(t)
+	h.userHome = home
+	src := filepath.Join(t.TempDir(), "remotes")
+	if err := os.MkdirAll(src, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	git := func(dir string, args ...string) {
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=" + os.DevNull}
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	git(src, "clone", "-q", "--bare", filepath.Join(home, "Developer", "users"), filepath.Join(src, "users.git"))
+	gitHome := t.TempDir()
+	if err := os.WriteFile(filepath.Join(gitHome, ".gitconfig"), []byte("[url \"file://"+src+"/\"]\n\tinsteadOf = https://github.com/acme/\n\tinsteadOf = git@github.com:acme/\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	h.env["HOME"], h.env["PATH"] = gitHome, os.Getenv("PATH")
+	if err := os.WriteFile(filepath.Join(h.home, "user.yaml"), []byte("schema: athel/config@2\nrepos:\n  search_roots: [~/Developer]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	h.mustOK("repos", "index")
+	return h, home, src, git
+}
+
+func TestReposCacheCommand(t *testing.T) {
+	h, _, _, _ := cacheFixture(t)
+	v := h.mustOK("repos", "cache", "users")
+	if v["remote"] != "github.com/acme/users" || v["cloned"] != true || !strings.HasSuffix(v["seeded_from"].(string), "/Developer/users") ||
+		!strings.HasPrefix(v["path"].(string), filepath.Join(h.root, "cache")) {
+		t.Fatalf("cache = %v", v)
+	}
+	if again := h.mustOK("repos", "cache", "github.com/acme/users"); again["cloned"] != false {
+		t.Errorf("second cache = %v", again)
+	}
+	if code, env := h.runJSON("repos", "cache", "github.com/acme/private"); code != aerr.ExitTool {
+		t.Errorf("unreachable repo: exit %d %v", code, env)
+	}
+}
+
+func TestReposCacheErrors(t *testing.T) {
+	h, home, src, git := cacheFixture(t)
+	for args, code := range map[string]int{"repos cache": aerr.ExitUsage, "repos cache orders-x": aerr.ExitState} {
+		if got, _ := h.runJSON(strings.Fields(args)...); got != code {
+			t.Errorf("%s: exit %d, want %d", args, got, code)
+		}
+	}
+	other := filepath.Join(home, "Developer", "users-fork")
+	git(filepath.Join(home, "Developer"), "clone", "-q", filepath.Join(src, "users.git"), other)
+	git(other, "remote", "set-url", "origin", "https://gitlab.acme.dev/x/users.git")
+	h.mustOK("repos", "index")
+	if code, env := h.runJSON("repos", "cache", "users"); code != aerr.ExitState || !strings.Contains(env["error"].(map[string]any)["message"].(string), "several remotes") {
+		t.Errorf("ambiguous name: exit %d %v", code, env)
+	}
+	if code, _ := newHarness(t).runJSON("repos", "cache", "users"); code != aerr.ExitState {
+		t.Errorf("outside a workspace: exit %d", code)
+	}
+	if err := os.WriteFile(filepath.Join(h.root, ".athel", "repos", "index.yaml"), []byte("schema: x\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, _ := h.runJSON("repos", "cache", "users"); code != aerr.ExitState {
+		t.Errorf("corrupt index: exit %d", code)
+	}
+}

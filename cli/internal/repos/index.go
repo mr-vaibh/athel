@@ -139,11 +139,25 @@ func (idx Index) Resolve(repo string) (string, error) {
 		}
 		return "", aerr.New(aerr.StateNotFound, repo+" is not a git checkout")
 	}
+	_, local, err := idx.Lookup(repo)
+	if err != nil {
+		return "", err
+	}
+	if local == "" {
+		return "", aerr.New(aerr.StateNotFound, "repo "+repo+" is not in the repo index").
+			WithNextAction("run athel repos index, or clone it into Athel's cache")
+	}
+	return local, nil
+}
+
+// Lookup finds the remote a name means (a host/org/repo remote, or the last part of exactly one
+// indexed remote) and its newest local clone, "" when there is none.
+func (idx Index) Lookup(name string) (remote, local string, err error) {
 	var match *Entry
 	remotes := map[string]bool{}
 	for i := range idx.Repos {
 		e := &idx.Repos[i]
-		if e.Remote == nil || (*e.Remote != repo && !strings.HasSuffix(*e.Remote, "/"+repo)) {
+		if e.Remote == nil || (*e.Remote != name && !strings.HasSuffix(*e.Remote, "/"+name)) {
 			continue
 		}
 		remotes[*e.Remote] = true
@@ -153,12 +167,13 @@ func (idx Index) Resolve(repo string) (string, error) {
 	}
 	switch {
 	case len(remotes) > 1:
-		return "", aerr.New(aerr.StateNotFound, "repo "+repo+" matches several remotes; name it as host/org/repo")
-	case match == nil:
-		return "", aerr.New(aerr.StateNotFound, "repo "+repo+" is not in the repo index").
-			WithNextAction("run athel repos index, or clone it into Athel's cache")
+		return "", "", aerr.New(aerr.StateNotFound, "repo "+name+" matches several remotes; name it as host/org/repo")
+	case match != nil:
+		return *match.Remote, match.Path, nil
+	case gitro.NormaliseRemote("https://"+name) == name:
+		return name, "", nil
 	}
-	return match.Path, nil
+	return "", "", nil
 }
 
 func newer(a, b *Entry) bool {

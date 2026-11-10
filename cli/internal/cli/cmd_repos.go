@@ -7,6 +7,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/config"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/facts"
+	"github.com/mr-vaibh/athel/cli/internal/gitro"
 	"github.com/mr-vaibh/athel/cli/internal/grants"
 	"github.com/mr-vaibh/athel/cli/internal/repos"
 	"github.com/mr-vaibh/athel/cli/internal/state"
@@ -173,4 +174,43 @@ func (r *runCtx) repoResolver() (func(string) (string, error), error) {
 		return nil, err
 	}
 	return idx.Resolve, nil
+}
+
+type cacheReady struct {
+	Remote string `json:"remote"`
+	Path   string `json:"path"`
+	Cloned bool   `json:"cloned"`
+	Seeded string `json:"seeded_from,omitempty"`
+}
+
+// cmdReposCache makes sure Athel's own clone of a repo exists and is current (FR-DISC-017): cloned
+// with the developer's credentials, seeded from their local clone when there is one, fetched
+// before every use.
+func cmdReposCache(r *runCtx, args []string) (any, error) {
+	pos, err := parse(r.newFlags("repos cache"), args, 1)
+	if err != nil {
+		return nil, err
+	}
+	ws, err := r.workspaceDir()
+	if err != nil {
+		return nil, err
+	}
+	idx, _, err := repos.Load(r.registry(), ws.RepoIndexFile())
+	if err != nil {
+		return nil, err
+	}
+	remote, local, err := idx.Lookup(pos[0])
+	if err != nil {
+		return nil, err
+	}
+	if remote == "" {
+		return nil, aerr.New(aerr.StateNotFound, pos[0]+" is neither an indexed repo nor a host/org/repo remote")
+	}
+	env := gitro.NetworkEnv(r.env.Getenv)
+	c := repos.Cache{Dir: ws.CacheDir(), Git: func(dir string, a ...string) (int, string, error) { return gitro.RunEnv(env, dir, a...) }}
+	p, cloned, err := c.Ensure(remote, repos.CloneURL(remote, local), local)
+	if err != nil {
+		return nil, err
+	}
+	return cacheReady{Remote: remote, Path: p, Cloned: cloned, Seeded: local}, nil
 }

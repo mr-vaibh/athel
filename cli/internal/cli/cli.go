@@ -87,6 +87,7 @@ func commands() map[string]command {
 		"repos roots set":        cmdReposRootsSet,
 		"repos index":            cmdReposIndex,
 		"repos show":             cmdReposShow,
+		"repos cache":            cmdReposCache,
 		"fact archive":           cmdFactArchive,
 	}
 }

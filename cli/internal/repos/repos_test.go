@@ -256,3 +256,22 @@ func TestOddFoldersSkipped(t *testing.T) {
 		t.Errorf("a .git folder without config = %+v", e)
 	}
 }
+
+func TestLookup(t *testing.T) {
+	users := "github.com/acme/users"
+	idx := Index{Repos: []Entry{{Remote: &users, Path: "/d/users"}}}
+	tests := []struct{ name, remote, local string }{
+		{"users", users, "/d/users"},
+		{"github.com/acme/orders", "github.com/acme/orders", ""},
+		{"orders", "", ""},
+	}
+	for _, tt := range tests {
+		remote, local, err := idx.Lookup(tt.name)
+		if err != nil || remote != tt.remote || local != tt.local {
+			t.Errorf("Lookup(%s) = %q %q %v", tt.name, remote, local, err)
+		}
+	}
+	if _, err := idx.Resolve("github.com/acme/orders"); !aerr.HasCode(err, aerr.StateNotFound) {
+		t.Errorf("a remote with no local clone: %v", err)
+	}
+}

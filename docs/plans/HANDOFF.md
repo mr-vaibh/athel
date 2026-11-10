@@ -12,27 +12,30 @@ are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## M2 build status (stacked PRs; merge in order only when the owner says so)
 
-| # | Task | Branch | PR | Status |
-|---|---|---|---|---|
-| 01 | Schemas, `change@3`, `config@2`, migrate, IDs | `feat/m2-schemas` | #43 | open, base `main` |
-| 02 | Fact store + `athel fact` commands | `feat/m2-facts-store` | #44 | open, base #43 |
-| 03 | Suspicious-content flags, scout capture | `feat/m2-observe` | #45 | open, base #44 |
-| 04 | Recipe verification, supersede, change flags | `feat/m2-fact-verify` | #46 | open, base #45 |
-| 05 | Investigation validation, confidence ceilings | `feat/m2-investigation` | — | in progress |
-| 06–15 | See M2-plan §9 | — | — | not started |
+| # | Task | Branch | PR |
+|---|---|---|---|
+| 01 | Schemas, `change@3`, `config@2`, migrate, IDs | `feat/m2-schemas` | #43 (base `main`) |
+| 02 | Fact store + `athel fact` commands | `feat/m2-facts-store` | #44 |
+| 03 | Suspicious-content flags, scout capture | `feat/m2-observe` | #45 |
+| 04 | Recipe verification, supersede, change flags | `feat/m2-fact-verify` | #46 |
+| 05 | Investigation checks, confidence ceilings | `feat/m2-investigation` | #47 |
+| 06 | Repo index, human-only roots (`/athel:roots`) | `feat/m2-repo-index` | #48 |
+| 07 | Developer-clone protection, read-only scout, knowledge reads | `feat/m2-policy` | #49 |
+| 08 | Repo cache (FR-DISC-017) | `feat/m2-repo-cache` | in progress |
+| 09–15 | See M2-plan §9 | — | not started |
 
 ## Exact next step
 
-Finish PR 05 on `feat/m2-investigation` (stacked on #46):
-- `internal/investigation`: validate `investigation@1`, compute confidence ceilings (M2-plan
-  §4.3, G8, G9), enforce mandatory sources per question type, render `investigation.md`, apply
-  the 2,000-word limit.
-- `athel investigation save` writes facts. It must **refuse cited facts that have no access
-  record** for that change or ask (`fact find/show` do not log uses).
+Finish PR 08 on `feat/m2-repo-cache` (stacked on #49): `athel repos cache <repo>`.
+- A bare partial clone (`--filter=blob:none`) into `workspace/cache/<host>__<org>__<repo>.git`,
+  seeded from a local clone with `--reference-if-able … --dissociate`.
+- `git fetch` before every use.
+- No access gives `E-TOOL-UNREACHABLE`.
+- Test FR-DISC-016: the checksums of each local `.git` are unchanged.
 
-Then continue with PR 06 (repo index) per M2-plan §9. Two things to confirm live in PR 10: the
-scout's real `agent_type` string (`observe.ScoutAgentType`, assumed `athel:scout`) and PostToolUse
-`additionalContext`.
+Then PR 09 (registry and playbooks; run only `praxis --help` and `praxis <sub> --help`, per Q10)
+and onwards. Two things to confirm live in PR 10: the scout's `agent_type` (`hookio.ScoutAgent`)
+and PostToolUse `additionalContext`.
 
 ## Setting up a machine
 
@@ -92,6 +95,8 @@ identity mr-vaibh / shuklavaibhav336@gmail.com.
 
 ## Open questions for the owner
 
+- Hook p95 on this machine is 28–31 ms, at the backlog trigger (> 30 ms) for the policy cache.
+  Add the cache to M2, or keep it in the backlog?
 - Merge the M2 stack when it is complete, or earlier?
 - Q11 (plan): the paid eval runs need a go-ahead when PR 14 is ready.
 
