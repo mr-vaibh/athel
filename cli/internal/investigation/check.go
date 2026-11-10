@@ -32,12 +32,14 @@ type ClaimCheck struct {
 
 // Report is the outcome of the checks. Gaps lists the gaps the CLI added for missing mandatory
 // sources. Problems are rule violations; Mislabels are labels other than the one the evidence
-// gives (ADR 018: the CLI decides labels, the scout states them).
+// gives (ADR 018: the CLI decides labels, the scout states them). Hints never block a save:
+// they point at evidence already in the block that may belong on another claim.
 type Report struct {
 	Claims    []ClaimCheck `json:"claims"`
 	AddedGaps []Gap        `json:"added_gaps"`
 	Mislabels []string     `json:"mislabels"`
 	Problems  []string     `json:"problems"`
+	Hints     []string     `json:"hints"`
 }
 
 // Err turns a report with violations into one error naming all of them: E-STATE-CONFIDENCE when
@@ -73,7 +75,7 @@ func Decode(reg *schema.Registry, data []byte) (*Investigation, error) {
 // Check applies every rule the schema cannot express and adds the gaps the CLI owes the reader.
 // It changes inv only by appending those gaps.
 func Check(inv *Investigation, ctx Context, summary string) Report {
-	r := Report{Claims: []ClaimCheck{}, AddedGaps: []Gap{}, Mislabels: []string{}, Problems: []string{}}
+	r := Report{Claims: []ClaimCheck{}, AddedGaps: []Gap{}, Mislabels: []string{}, Problems: []string{}, Hints: []string{}}
 	if inv.Change != ctx.Change || inv.Ask != ctx.Ask {
 		r.Problems = append(r.Problems, fmt.Sprintf("the claim block is for %s%s, not %s%s", inv.Change, inv.Ask, ctx.Change, ctx.Ask))
 	}
@@ -146,10 +148,16 @@ func direction(c Claim) string {
 	return ""
 }
 
-// addMandatoryGaps records, once per source, the mandatory sources no answering claim used.
+// addMandatoryGaps records, once per source, the mandatory sources no answering claim used, and
+// hints where another claim already cites one (the eval runs showed the scout filing the second
+// source of an answer on a side claim, which leaves the answer a label lower).
 func (r *Report) addMandatoryGaps(inv *Investigation) {
 	for _, c := range inv.Claims {
 		for _, name := range missingMandatory(c, inv.Type) {
+			if s, other, ok := citedElsewhere(inv, c, name); ok {
+				r.Hints = append(r.Hints, fmt.Sprintf("%s answers the question without %s, but %s cites %s %s: if it also supports %s, list it there",
+					c.ID, name, other, s.Kind, s.Ref, c.ID))
+			}
 			if slices.ContainsFunc(inv.Gaps, func(g Gap) bool { return g.Source == name }) {
 				continue
 			}
@@ -159,6 +167,27 @@ func (r *Report) addMandatoryGaps(inv *Investigation) {
 			r.AddedGaps = append(r.AddedGaps, g)
 		}
 	}
+}
+
+// citedElsewhere finds a source of the named mandatory group on another claim than c.
+func citedElsewhere(inv *Investigation, c Claim, group string) (Source, string, bool) {
+	var kinds []string
+	for _, g := range questionTypes[inv.Type].mandatory {
+		if g.name == group {
+			kinds = g.kinds
+		}
+	}
+	for _, other := range inv.Claims {
+		if other.ID == c.ID {
+			continue
+		}
+		for _, s := range other.Evidence {
+			if slices.Contains(kinds, s.Kind) && !s.contradicts() {
+				return s, other.ID, true
+			}
+		}
+	}
+	return Source{}, "", false
 }
 
 // checkFacts makes the access log complete (FR-DISC-004): every fact the answer relies on must

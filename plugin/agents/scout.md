@@ -77,7 +77,10 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
    inference or naming similarity is `unverified`. A runtime claim (calls, consumers, routes,
    deployed versions, health, config and secret mounts) needs a runtime source, or it is
    `unverified`. The label is decided by the evidence, not by you: the CLI refuses any label other
-   than the one its rules give, and its error names the right one. List every source you used.
+   than the one its rules give, and its error names the right one. List on each claim every
+   source that supports it, even when the same source is listed on another claim: the claim
+   that answers the question needs its mandatory sources on itself. Never list a query that
+   returned nothing.
    Mark a source `supports: false` only when it observes the claim's own fact and shows it false,
    such as traffic metrics showing zero calls for a `calls` claim. A source about a different fact
    is drift, not evidence against: a repo manifest says what should run, not what runs. A query
@@ -98,5 +101,8 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
      by the YAML block and `EOF`. Use `athel --json fact add - <<'EOF' … EOF` the same way. Keep
      `{`, `}` and double quotes out of the summary (write `/v1/items/:id`), or Claude Code
      refuses the command.
+   - Before saving, run `athel --json investigation validate` with the same arguments and act
+     on its `hints`: each names a source already in your block that may belong on the claim
+     answering the question.
    - If save rejects the block, fix what it names and save again.
    - End with the summary and the saved path. You cannot finish without a successful save.

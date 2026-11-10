@@ -229,3 +229,28 @@ func TestClaimDirection(t *testing.T) {
 		}
 	}
 }
+
+// TestHintEvidenceOnAnotherClaim: a mandatory source filed on a side claim is pointed out, and
+// the save is not blocked by it.
+func TestHintEvidenceOnAnotherClaim(t *testing.T) {
+	doc := strings.Replace(example, "      - {kind: metric, ref: \"grafana:kafka-consumer-lag?group=crm-sync\", window: 7d, tool_use_id: toolu_01}\n", "", 1)
+	doc = strings.Replace(doc, "confidence: confirmed", "confidence: unverified", 1)
+	doc = strings.Replace(doc, "drift: []", `  - id: C2
+    text: crm-sync has a consumer group
+    subject: {kind: service, name: crm-sync}
+    predicate: exposes
+    object: {kind: metric, name: lag}
+    env: prod
+    confidence: likely
+    evidence:
+      - {kind: metric, ref: "grafana:lag", window: 7d}
+    facts: []
+drift: []`, 1)
+	r := Check(decode(t, doc), okContext(), "")
+	if r.Err() != nil || len(r.Hints) != 1 || !strings.Contains(r.Hints[0], "C1 answers the question without consumer group or subscription metrics, but C2 cites metric grafana:lag") {
+		t.Errorf("report = %+v err %v", r, r.Err())
+	}
+	if r := Check(decode(t, example), okContext(), ""); len(r.Hints) != 0 {
+		t.Errorf("no hint when nothing is missing: %+v", r.Hints)
+	}
+}
