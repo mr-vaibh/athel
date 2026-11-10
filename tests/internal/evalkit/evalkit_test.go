@@ -70,6 +70,10 @@ func checkClones(t *testing.T, sb *Sandbox) {
 	if out, err := sb.Athel("", "--json", "repos", "cache", "github.com/acme/users"); err != nil || !strings.Contains(string(out), `"cloned":true`) {
 		t.Fatalf("cache clone from the SSH origin: %v %s", err, out)
 	}
+	// The architect's onboarding survey takes the same path (M3 smoke run 2).
+	if out, err := sb.Athel("", "--json", "--session", "eval-check", "repos", "survey", "github.com/acme/orders"); err != nil {
+		t.Fatalf("survey from the SSH origin: %v %s", err, out)
+	}
 	if out, err := sb.Athel("", "--json", "repos", "cache", "github.com/acme/unknown"); err == nil || !strings.Contains(string(out), "athel-eval-no-network") {
 		t.Errorf("a repo the fixture does not serve must fail locally, never over the network: %v %s", err, out)
 	}
