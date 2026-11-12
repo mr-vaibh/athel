@@ -68,7 +68,7 @@ the architect's instructions at `0e7ee85`. Card precision is 20%, reported only.
 for M3 so far: $40.38.
 
 Next:
-1. 13: **full run 2 was started and stopped after a few minutes** at the owner's request (2026-11-11, laptop going to sleep). No result was recorded and the worktree was removed. A few dollars were spent on its first sessions. The owner approved this run, so restart it as planned when the owner says to resume: It checks the fix:
+1. 13: **full run 2 restarted 2026-11-12** ("Continue, please.") from `.worktrees/m3-eval` frozen at `220f1c1` (same code as `043d498`), run folders in the session scratchpad (`m3-full2`). A first attempt on 2026-11-11 was stopped after a few minutes at the owner's request. If the session ends mid-run, the history file is lost: ask the owner before re-running. Original plan: It checks the fix:
    3 PRDs × 3 runs, about $30 and 80–90 minutes. Freeze the code in a worktree first
    (`git worktree add .worktrees/m3-eval HEAD`), run from it with `ATHEL_EVALS_KEEP` set to a
    scratchpad folder, then copy the history file into `tests/evals/history/`, record it in
