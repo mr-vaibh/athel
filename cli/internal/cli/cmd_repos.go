@@ -191,26 +191,32 @@ func cmdReposCache(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	return r.cacheClone(pos[0])
+}
+
+// cacheClone resolves an indexed repo name or a host/org/repo remote and makes sure Athel's own
+// cache clone of it exists and is current.
+func (r *runCtx) cacheClone(name string) (cacheReady, error) {
 	ws, err := r.workspaceDir()
 	if err != nil {
-		return nil, err
+		return cacheReady{}, err
 	}
 	idx, _, err := repos.Load(r.registry(), ws.RepoIndexFile())
 	if err != nil {
-		return nil, err
+		return cacheReady{}, err
 	}
-	remote, local, err := idx.Lookup(pos[0])
+	remote, local, err := idx.Lookup(name)
 	if err != nil {
-		return nil, err
+		return cacheReady{}, err
 	}
 	if remote == "" {
-		return nil, aerr.New(aerr.StateNotFound, pos[0]+" is neither an indexed repo nor a host/org/repo remote")
+		return cacheReady{}, aerr.New(aerr.StateNotFound, name+" is neither an indexed repo nor a host/org/repo remote")
 	}
 	env := gitro.NetworkEnv(r.env.Getenv)
 	c := repos.Cache{Dir: ws.CacheDir(), Git: func(dir string, a ...string) (int, string, error) { return gitro.RunEnv(env, dir, a...) }}
 	p, cloned, err := c.Ensure(remote, repos.CloneURL(remote, local), local)
 	if err != nil {
-		return nil, err
+		return cacheReady{}, err
 	}
 	return cacheReady{Remote: remote, Path: p, Cloned: cloned, Seeded: local}, nil
 }

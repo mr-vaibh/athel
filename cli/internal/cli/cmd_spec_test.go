@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 )
@@ -32,7 +33,28 @@ func specSetup(t *testing.T) *harness {
 	h := prdSetup(t)
 	h.stdin = cardYAML
 	h.mustOK("decide", "add", "CHG-001", "-")
+	h.stdin = convDoc
+	h.mustOK("conventions", "save", "github.com/example/users", "-", "--new")
 	return h
+}
+
+const convDoc = "conventions: |\n  # Conventions\n  Go 1.27, table-driven tests.\nmap: |\n  # Map\n  api/ holds the handlers.\n"
+
+func TestSpecNeedsFreshConventions(t *testing.T) {
+	h := prdSetup(t)
+	h.stdin = cardYAML
+	h.mustOK("decide", "add", "CHG-001", "-")
+	h.stdin = specBlock
+	if v := h.mustOK("spec", "validate", "CHG-001", "-"); v["valid"] != false || !strings.Contains(asJSON(t, v["problems"]), "no conventions for github.com/example/users yet") {
+		t.Fatalf("without conventions: %v", v)
+	}
+	h.stdin = convDoc
+	h.mustOK("conventions", "save", "github.com/example/users", "-", "--new")
+	h.clock.Advance(31 * 24 * time.Hour)
+	h.stdin = specBlock
+	if v := h.mustOK("spec", "validate", "CHG-001", "-"); !strings.Contains(asJSON(t, v["problems"]), "are stale (written more than 30 days ago)") {
+		t.Errorf("old conventions: %v", v)
+	}
 }
 
 func TestSpecSaveListShow(t *testing.T) {

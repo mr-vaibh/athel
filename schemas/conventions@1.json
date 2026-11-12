@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/conventions@1.json",
+  "title": "athel/conventions@1",
+  "description": ".athel/repos/<repo>/conventions.yaml: what conventions.md and map.md were written from (doc 05 §Brownfield onboarding; FR-SPEC-006). They are stale when any surveyed config file's git blob changes or disappears, or after 30 days. A new project has no inputs and only ages.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repo",
+    "new_project",
+    "commit",
+    "surveyed_at",
+    "inputs",
+    "conventions_sha256",
+    "map_sha256"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/conventions@1"
+    },
+    "repo": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "new_project": {
+      "type": "boolean"
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^([0-9a-f]{40}|[0-9a-f]{64}|)$"
+    },
+    "surveyed_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "blob"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "blob": {
+            "type": "string",
+            "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+          }
+        }
+      }
+    },
+    "conventions_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "map_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    }
+  }
+}

@@ -39,12 +39,34 @@ are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Exact next step
 
-1. **Waiting for the owner:** review of `docs/plans/M3-plan.md` (PR `docs/m3-plan`). The
-   owner: "I'll review it. If it looks good, we'll go ahead with the implementation."
-   Questions Q1 (eval budget, about $25–55 per M3 run) and Q2 (one M2 re-run, about $13)
-   are in §11.
-2. After approval: build task by task as in M2 (stacked PRs, gate before each commit),
-   starting with task 00 (gateway-trap check) and then the M2 eval re-run if Q2 is yes.
+M3 is approved (2026-11-10) and being built as stacked PRs on `docs/m3-plan` (#60):
+
+| Task | Branch | PR | Status |
+|---|---|---|---|
+| plan | `docs/m3-plan` | #60 | open (base main) |
+| 00 gateway-trap hint | `feat/m3-eval-carry` | #61 | done |
+| 01 new schemas | `feat/m3-schemas` | #62 | done |
+| 02 PRD intake | `feat/m3-prd` | #63 | done (also an M2 grader fix) |
+| 03 decision cards | `feat/m3-decisions` | #64 | done |
+| 04 /athel:decide (ADR 019) | `feat/m3-decide-human` | #65 | done |
+| 05 specs | `feat/m3-spec` | #66 | done |
+| 06 conventions | `feat/m3-conventions` | #67 | done |
+
+Next:
+1. Task 07, `feat/m3-plan-lints` on #67: `plan@2` with a task `kind` and migration from
+   `plan@1` (ADR 002 bump), plus the coverage, ordering, size, rollback and env-action lints,
+   `plan summary` and `plan diff`.
+2. Then 08 trace, 08b fixture, 09 planned blast, 10 actual blast, 11a architect policy and
+   templates, 11b skills, 13 evals, 14 report.
+
+The M2 eval re-run (run 5) is in progress from a frozen worktree (`.worktrees/m2-eval`,
+detached at `abfebf0`, locally excluded). When it finishes:
+- copy `tests/evals/history/m2-*.json` from the worktree into the M3 stack;
+- regrade it with the current grader;
+- update `EVALS.md`;
+- remove the worktree (`git worktree remove .worktrees/m2-eval`).
+
+M3 eval runs: at most 2 full runs, each asked first (owner, 2026-11-10).
 
 ## Open questions for the owner
 
