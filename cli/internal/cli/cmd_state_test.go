@@ -48,6 +48,7 @@ func TestTransitionCommand(t *testing.T) {
 			}
 		})
 	}
+	m3Spec(t, h)
 	h.env["ATHEL_SESSION_ID"] = ""
 	if code, env := h.runJSON("state", "transition", "CHG-001", "--to", "specified", "--by", "athel", "--reason", "r"); code != aerr.ExitState || errCode(env) != string(aerr.StateNoSession) {
 		t.Errorf("no session: exit %d env %v", code, env)
@@ -59,6 +60,8 @@ func TestTransitionCommand(t *testing.T) {
 
 func TestHumanOnlyThroughCLI(t *testing.T) {
 	h := setup(t)
+	m3Spec(t, h)
+	m3Plan(t, h)
 	for _, to := range []string{"investigating", "specified", "awaiting_decisions", "planned"} {
 		h.mustOK("state", "transition", "CHG-001", "--to", to, "--by", "athel", "--reason", "r")
 	}
@@ -66,8 +69,10 @@ func TestHumanOnlyThroughCLI(t *testing.T) {
 	if code != aerr.ExitPolicy || errCode(env) != string(aerr.PolicyHumanRequired) {
 		t.Errorf("exit %d env %v", code, env)
 	}
-	planPath := filepath.Join(t.TempDir(), "plan.yaml")
-	if err := os.WriteFile(planPath, []byte("schema: athel/plan@1\nchange: CHG-001\nhash: null\ntasks:\n  - {id: T-01, title: x, repo: r, paths: [src/**], verbs: [edit], covers: [AC-1], depends_on: [], size: S, gates: []}\n"), 0o600); err != nil {
+	planPath := writeTemp(t, "plan.yaml", m3PlanDoc)
+	// The guards keep a plan from going missing through the CLI; a plan removed by hand still
+	// cannot be approved.
+	if err := os.Remove(filepath.Join(h.root, ".athel", "changes", "CHG-001", "plan.yaml")); err != nil {
 		t.Fatal(err)
 	}
 	if code, env := h.runJSON("state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "no plan yet"); code != aerr.ExitState || errCode(env) != string(aerr.StateNotFound) {

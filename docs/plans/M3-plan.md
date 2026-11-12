@@ -347,7 +347,8 @@ None new. EARS and AC lints are regular expressions and word lists in Go. Diff p
 ADRs expected:
 - 019: human-origin decision answers and report sign-off;
 - 020: `plan@2` and its ordering model;
-- 021: diff change-surface heuristics.
+- 021: step guards on transitions (*as built*, task 08);
+- 022: diff change-surface heuristics.
 
 ## 10. Risks
 

@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mr-vaibh/athel/tests/internal/m3docs"
 )
 
 const session = "sess-m1"
@@ -39,7 +41,13 @@ func (a *athel) exec(stdin string, args ...string) ([]byte, int) {
 
 func (a *athel) ok(args ...string) {
 	a.t.Helper()
-	if out, code := a.exec("", append([]string{"--json"}, args...)...); code != 0 {
+	a.okIn("", args...)
+}
+
+// okIn runs athel with stdin and requires success.
+func (a *athel) okIn(stdin string, args ...string) {
+	a.t.Helper()
+	if out, code := a.exec(stdin, append([]string{"--json"}, args...)...); code != 0 {
 		a.t.Fatalf("athel %v: exit %d %s", args, code, out)
 	}
 }
@@ -80,8 +88,7 @@ func setup(t *testing.T) *athel {
 		filepath.Join(a.home, ".kube", "config"): "current-context: gke_acme-prod_eu\n",
 		filepath.Join(a.tree, "src", "phone.go"): "package svc\n",
 		filepath.Join(a.tree, ".env"):            "DB_PASSWORD=hunter2\n",
-		filepath.Join(dir, "plan.yaml"): "schema: athel/plan@1\nchange: CHG-001\nhash: null\ntasks:\n" +
-			"  - {id: T-01, title: phone, repo: svc, paths: [\"src/**\"], verbs: [edit, create, test, commit], covers: [AC-1], depends_on: [], size: S, gates: []}\n",
+		filepath.Join(dir, "plan.yaml"):          m3docs.Plan("svc", []string{"src/**"}, []string{"edit", "create", "test", "commit"}),
 	}
 	for p, body := range files {
 		if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
@@ -92,11 +99,15 @@ func setup(t *testing.T) *athel {
 		}
 	}
 	a.ok("init")
-	a.ok("change", "new", "--title", "Phone validation", "--prd-text", "# PRD")
+	a.ok("change", "new", "--title", "Phone validation", "--prd-text", m3docs.PRD)
+	// The M3 step guards need the spec step's work before specified and planned (ADR 021).
+	a.okIn(m3docs.Review, "prd", "review", "save", "CHG-001", "-")
+	a.okIn(m3docs.Conventions, "conventions", "save", m3docs.Repo, "-", "--new")
+	a.okIn(m3docs.Spec, "spec", "save", "CHG-001", "-")
+	a.ok("plan", "set", "CHG-001", filepath.Join(dir, "plan.yaml"))
 	for _, to := range []string{"investigating", "specified", "awaiting_decisions", "planned"} {
 		a.ok("state", "transition", "CHG-001", "--to", to, "--by", "athel", "--reason", "scenario")
 	}
-	a.ok("plan", "set", "CHG-001", filepath.Join(dir, "plan.yaml"))
 	a.hook("user-prompt-submit", map[string]any{"prompt_id": "p-approve", "prompt": "/athel:approve CHG-001"})
 	a.ok("state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "approved")
 	a.ok("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "build")

@@ -33,11 +33,15 @@ hook session-start '{"session_id":"session-1","cwd":"'"$ws"'","source":"startup"
 
 step "session 1: /athel:start creates the change from a PRD"
 export ATHEL_SESSION_ID=session-1
-a change new --title "Customers can update phone number" --prd-text "# Phone update
-Let customers update their phone number; all services must see the new number."
+a change new --title "Customers can update phone number" --prd-text "# PRD"
 a state enter CHG-001 start >/dev/null
 a checkpoint set CHG-001 start.prd-captured --note "PRD captured; no acceptance criteria yet" >/dev/null
 a state exit CHG-001 start --result ok >/dev/null
+
+step "session 1: the spec step's work (PRD review, conventions, spec, plan), as the M3 guards require"
+# shellcheck source=../../internal/m3docs/m3-prepare.sh
+source "$repo/tests/internal/m3docs/m3-prepare.sh"
+m3_prepare a "$(mktemp -d)"
 
 step "session 1: move through several states"
 for to in investigating specified awaiting_decisions planned; do
