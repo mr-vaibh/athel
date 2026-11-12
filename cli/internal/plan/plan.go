@@ -17,8 +17,12 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/schema"
 )
 
-// SchemaID is the schema of plan.yaml.
-const SchemaID = "athel/plan@1"
+// SchemaID is the schema plan.yaml is written in; SchemaV1 plans (M1) stay readable, with the
+// same hash, so an approval given to one stays valid (ADR 020).
+const (
+	SchemaID = "athel/plan@2"
+	SchemaV1 = "athel/plan@1"
+)
 
 // FileName is the plan's file inside the change folder.
 const FileName = "plan.yaml"
@@ -38,6 +42,9 @@ type Task struct {
 	RiskNotes  string   `yaml:"risk_notes,omitempty" json:"risk_notes,omitempty"`
 	Rollback   string   `yaml:"rollback,omitempty" json:"rollback,omitempty"`
 	EnvActions []string `yaml:"env_actions,omitempty" json:"env_actions,omitempty"`
+	Kind       string   `yaml:"kind,omitempty" json:"kind,omitempty"`
+	SizeReason string   `yaml:"size_reason,omitempty" json:"size_reason,omitempty"`
+	Deferred   bool     `yaml:"deferred,omitempty" json:"deferred,omitempty"`
 }
 
 // Plan is plan.yaml.
@@ -48,10 +55,18 @@ type Plan struct {
 	Tasks  []Task  `yaml:"tasks" json:"tasks"`
 }
 
-// Decode validates data against plan@1 and checks the task graph: unique task IDs,
-// dependencies that exist, and no cycles (FR-PLAN-001).
+// Decode validates data against the plan schema it names (plan@2, or plan@1 from M1) and
+// checks the task graph: unique task IDs, dependencies that exist, and no cycles (FR-PLAN-001).
 func Decode(reg *schema.Registry, data []byte) (*Plan, error) {
-	if err := reg.ValidateYAML(SchemaID, data); err != nil {
+	var head struct {
+		Schema string `yaml:"schema"`
+	}
+	_ = yaml.Unmarshal(data, &head) // a malformed document fails the schema check below
+	id := SchemaID
+	if head.Schema == SchemaV1 {
+		id = SchemaV1
+	}
+	if err := reg.ValidateYAML(id, data); err != nil {
 		return nil, err
 	}
 	dec := yaml.NewDecoder(bytes.NewReader(data))
