@@ -15,7 +15,7 @@ import (
 
 // changeFiles are the step outputs the CLI writes into a change folder for its steps; nothing
 // else may be written there this way (doc 04: .athel/changes/<id>/ is written only by the CLI).
-var changeFiles = regexp.MustCompile(`^(investigation\.md|blast-radius\.md|decisions\.yaml|prd/v[1-9][0-9]*\.index\.yaml|prd/review-v[1-9][0-9]*\.md)$`)
+var changeFiles = regexp.MustCompile(`^(investigation\.md|blast-radius\.md|decisions\.yaml|spec/[A-Za-z0-9._-]{1,100}\.md|prd/v[1-9][0-9]*\.index\.yaml|prd/review-v[1-9][0-9]*\.md)$`)
 
 // IsChangeFile reports whether name is a step output the CLI may write into a change folder.
 func IsChangeFile(name string) bool { return changeFiles.MatchString(name) }
@@ -37,7 +37,11 @@ func (s *Store) SaveChangeFile(id, session, name string, data []byte) (*Change, 
 		if err := s.claim(c, session, s.Clock.Now()); err != nil {
 			return err
 		}
-		return fsutil.WriteFileAtomic(filepath.Join(s.WS.ChangeDir(c.ID), name), data)
+		path := filepath.Join(s.WS.ChangeDir(c.ID), name)
+		if err := fsutil.EnsureDir(filepath.Dir(path)); err != nil {
+			return err
+		}
+		return fsutil.WriteFileAtomic(path, data)
 	})
 }
 
@@ -65,6 +69,9 @@ func (s *Store) UpdateChangeFile(id, session, name string, fn func(old []byte) (
 		}
 		data, err := fn(old)
 		if err != nil {
+			return err
+		}
+		if err := fsutil.EnsureDir(filepath.Dir(path)); err != nil {
 			return err
 		}
 		return fsutil.WriteFileAtomic(path, data)

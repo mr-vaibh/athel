@@ -38,7 +38,7 @@ func TestIsChangeFile(t *testing.T) {
 	for name, want := range map[string]bool{
 		"investigation.md": true, "blast-radius.md": true, "prd/v1.index.yaml": true, "prd/v12.index.yaml": true,
 		"prd/review-v2.md": true, "prd/v0.index.yaml": false, "prd/v1.md": false, "change.yaml": false,
-		"prd/../change.yaml": false, "spec/users.md": false,
+		"prd/../change.yaml": false, "spec/users.md": true, "spec/../x.md": false, "spec/a/b.md": false,
 	} {
 		if IsChangeFile(name) != want {
 			t.Errorf("%s: %v, want %v", name, !want, want)
@@ -130,5 +130,27 @@ func TestUpdateChangeFile(t *testing.T) {
 	}
 	if _, err := s.UpdateChangeFile(c.ID, "sess-1", "decisions.yaml", appendLine("x")); !aerr.HasCode(err, aerr.StateInvalid) {
 		t.Errorf("cancelled change: %v", err)
+	}
+}
+
+func TestSaveChangeFileCreatesFolder(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "x")
+	if _, err := s.SaveChangeFile(c.ID, "sess-1", "spec/users.md", []byte("# users\n")); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := os.ReadFile(filepath.Join(s.WS.ChangeDir(c.ID), "spec", "users.md")); err != nil || string(b) != "# users\n" {
+		t.Errorf("file = %q %v", b, err)
+	}
+	d := mustCreate(t, s, "y")
+	if err := os.WriteFile(filepath.Join(s.WS.ChangeDir(d.ID), "spec"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.SaveChangeFile(d.ID, "sess-1", "spec/users.md", nil); !aerr.HasCode(err, aerr.StateIO) {
+		t.Errorf("a file where the folder belongs: %v", err)
+	}
+	write := func([]byte) ([]byte, error) { return []byte("x"), nil }
+	if _, err := s.UpdateChangeFile(d.ID, "sess-1", "spec/users.md", write); !aerr.HasCode(err, aerr.StateIO) {
+		t.Errorf("update with a file where the folder belongs: %v", err)
 	}
 }
