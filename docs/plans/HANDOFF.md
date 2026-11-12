@@ -72,7 +72,7 @@ Next:
 1. 13: **done.** Full run 2 met the M3 eval bar: 9/9 valid, blast recall 100%, $29.74
    (`EVALS.md`). Card over-asking is in the backlog for M4.
 2. 14: **done**: `docs/plans/M3-report.md`, ROADMAP updated, branch `docs/m3-report` (PR #76, base `feat/m3-evals`).
-3. **Waiting for the owner:** accept M3 and merge the stack #60 → #76 in order. Then plan M4 (Build).
+3. **Done 2026-11-12:** the owner accepted M3; #60–#76 merged in order with merge commits; `main` CI green at `9339c36`. Next: plan M4 (Build) on `docs/m4-plan`.
 
 M2 eval run 5 is done and recorded in `EVALS.md`: 51/54 valid, traps 27/27, labels 90.5%. Its
 last 6 sessions hit the usage limit and are excluded. Lesson: check the account's remaining
