@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"flag"
 	"io"
 	"path/filepath"
 	"strings"
@@ -10,9 +11,11 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/audit"
 	"github.com/mr-vaibh/athel/cli/internal/blast"
 	"github.com/mr-vaibh/athel/cli/internal/clock"
+	"github.com/mr-vaibh/athel/cli/internal/conventions"
 	"github.com/mr-vaibh/athel/cli/internal/digest"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/facts"
+	"github.com/mr-vaibh/athel/cli/internal/gitro"
 	"github.com/mr-vaibh/athel/cli/internal/grants"
 	"github.com/mr-vaibh/athel/cli/internal/schema"
 	"github.com/mr-vaibh/athel/cli/internal/state"
@@ -202,4 +205,100 @@ func (r *runCtx) checkPlannedReport(rep *blast.Report) error {
 			WithNextAction("link each changed item to its requirement and list what was ruled out, then save again")
 	}
 	return nil
+}
+
+// diffSurface is the change surface between two refs of a repo's cache clone (never the
+// developer's clone).
+func (r *runCtx) diffSurface(repo, base, head string) (cacheReady, blast.Surface, error) {
+	c, err := r.cacheClone(repo)
+	if err != nil {
+		return c, blast.Surface{}, err
+	}
+	code, out, err := gitro.Run(c.Path, "diff", "--unified=0", base, head)
+	if err != nil || code != 0 {
+		return c, blast.Surface{}, aerr.New(aerr.ToolUnreachable, "git diff "+base+" "+head+" in "+c.Remote+": "+strings.TrimSpace(out))
+	}
+	return c, blast.ParseDiff(out), nil
+}
+
+func diffFlags(r *runCtx, name string) (*flag.FlagSet, *string, *string) {
+	fl := r.newFlags(name)
+	return fl, fl.String("base", "main", "the base ref"), fl.String("head", "", "the ref with the change (required)")
+}
+
+// cmdBlastDiff shows what a diff changes (doc 05 §Analysis steps, step 1, from the diff).
+func cmdBlastDiff(r *runCtx, args []string) (any, error) {
+	fl, base, head := diffFlags(r, "blast diff")
+	pos, err := parse(fl, args, 1)
+	if err != nil {
+		return nil, err
+	}
+	if *head == "" {
+		return nil, usagef("blast diff: --head is required")
+	}
+	_, s, err := r.diffSurface(pos[0], *base, *head)
+	return s, err
+}
+
+type driftReport struct {
+	Repo    string        `json:"repo"`
+	Surface blast.Surface `json:"surface"`
+	Drift   []string      `json:"drift"`
+	Path    string        `json:"path"`
+}
+
+// cmdBlastCheck compares a repo's real diff with the change's planned blast radius and writes the
+// actual report (FR-BLAST-001). Any impact the plan does not name is E-GATE-BLAST-DRIFT: the PR
+// is blocked until the plan is updated and approved again (FR-BLAST-005).
+func cmdBlastCheck(r *runCtx, args []string) (any, error) {
+	fl, base, head := diffFlags(r, "blast check")
+	pos, err := parse(fl, args, 2)
+	if err != nil {
+		return nil, err
+	}
+	if *head == "" {
+		return nil, usagef("blast check: --head is required")
+	}
+	s, session, err := r.mutating()
+	if err != nil {
+		return nil, err
+	}
+	planned, err := r.plannedReport(s, pos[0])
+	if err != nil {
+		return nil, err
+	}
+	c, surface, err := r.diffSurface(pos[1], *base, *head)
+	if err != nil {
+		return nil, err
+	}
+	drift := blast.Drift(surface, planned)
+	if drift == nil {
+		drift = []string{}
+	}
+	name := "blast-actual-" + conventions.Dir(c.Remote) + ".md"
+	if _, err := s.SaveChangeFile(pos[0], session, name, blast.RenderActual(c.Remote, *base, *head, surface, drift)); err != nil {
+		return nil, err
+	}
+	out := driftReport{Repo: c.Remote, Surface: surface, Drift: drift, Path: filepath.Join(s.WS.ChangeDir(pos[0]), name)}
+	if len(drift) > 0 {
+		return nil, aerr.New(aerr.GateBlastDrift, "the diff of "+c.Remote+" changes what the planned blast radius does not name: "+strings.Join(drift, "; ")).
+			WithNextAction("update the spec, the planned blast radius and the plan, and get the plan approved again (FR-BLAST-005)")
+	}
+	return out, nil
+}
+
+// plannedReport reads the change's planned blast radius report.
+func (r *runCtx) plannedReport(s *state.Store, id string) (*blast.Report, error) {
+	md, err := r.readChangeFile(s, id, "blast-radius.md")
+	if err != nil {
+		return nil, err
+	}
+	rep, err := blast.Extract(r.registry(), md)
+	if err != nil {
+		return nil, err
+	}
+	if rep.Mode != "planned" {
+		return nil, aerr.New(aerr.StateInvalid, id+"'s blast radius report is "+rep.Mode+", not planned")
+	}
+	return rep, nil
 }

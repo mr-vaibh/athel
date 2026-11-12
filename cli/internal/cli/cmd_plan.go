@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"errors"
 	"io/fs"
 	"os"
@@ -152,15 +151,7 @@ func (r *runCtx) blastRisk(s *state.Store, id string) (string, error) {
 	if err != nil {
 		return "", aerr.Wrap(aerr.StateIO, "read blast-radius.md", err)
 	}
-	i := bytes.LastIndex(md, []byte("```yaml\n"))
-	if i < 0 {
-		return "", aerr.New(aerr.StateSchema, "blast-radius.md has no report block")
-	}
-	body := md[i+len("```yaml\n"):]
-	if j := bytes.Index(body, []byte("\n```")); j >= 0 {
-		body = body[:j+1]
-	}
-	rep, err := blast.Decode(r.registry(), body)
+	rep, err := blast.Extract(r.registry(), md)
 	if err != nil || rep.Risk == nil {
 		return "", err
 	}
