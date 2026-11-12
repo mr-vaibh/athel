@@ -59,6 +59,7 @@ M3 is approved (2026-11-10) and being built as stacked PRs on `docs/m3-plan` (#6
 | 11a architect agent, read-only policy, templates | `feat/m3-architect-policy` | #73 |
 | 11b skills spec, decide, plan, signoff; status cards | `feat/m3-skills` | #74 |
 | 13 M3 eval harness, plus fixes the smoke runs found (review and blast templates, draft errors, sandbox SSH mapping, E.164 split, architect maxTurns 60) | `feat/m3-evals` | #75 |
+| 14 M3 report, ROADMAP | `docs/m3-report` | #76 |
 
 Paid runs so far (each approved by the owner; details in `EVALS.md`): smokes 1–3 not valid,
 and each found a cause that was fixed; smoke 4 valid ($3.70). Smokes total $12.11. Full run 1
@@ -70,8 +71,8 @@ for M3 so far: $40.38.
 Next:
 1. 13: **done.** Full run 2 met the M3 eval bar: 9/9 valid, blast recall 100%, $29.74
    (`EVALS.md`). Card over-asking is in the backlog for M4.
-2. 14: the M3 report (`docs/m3-report`), EVALS.md, HANDOFF, ROADMAP.
-3. Ask the owner to merge the M3 stack #60 → #75 in order.
+2. 14: **done**: `docs/plans/M3-report.md`, ROADMAP updated, branch `docs/m3-report` (PR #76, base `feat/m3-evals`).
+3. **Waiting for the owner:** accept M3 and merge the stack #60 → #76 in order. Then plan M4 (Build).
 
 M2 eval run 5 is done and recorded in `EVALS.md`: 51/54 valid, traps 27/27, labels 90.5%. Its
 last 6 sessions hit the usage limit and are excluded. Lesson: check the account's remaining

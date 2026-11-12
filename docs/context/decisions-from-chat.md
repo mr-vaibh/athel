@@ -54,3 +54,4 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-10 | M3 full run 1: 3 runs per PRD (~$33) or 2 (~$22)? | "3 runs each, ~$33 (Recommended)" | Full run 1, all 3 PRDs × 3 runs, from the frozen worktree used for smoke 4 |
 | 2026-11-11 | Run M3 full run 2 (the last allowed, about $30) to check the fix for full run 1's failure? | "Yes, run it (Recommended)" | Full run 2, all 3 PRDs × 3 runs, from a worktree frozen at `043d498` |
 | 2026-11-11 | (owner) Hold progress, laptop going to sleep | "can you hold the progress here only?" | Full run 2 stopped before any result; restart it on resume |
+| 2026-11-12 | Accept M3 and merge its 17 PRs (#60 → #76) in order? | "Accept and merge (Recommended)" | M3 stack merged in order with merge commits; M3-report §7 |
