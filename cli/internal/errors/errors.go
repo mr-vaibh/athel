@@ -61,6 +61,7 @@ const (
 	ToolUnreachable        Code = "E-TOOL-UNREACHABLE"      // M2: a remote or tool could not be reached
 	PolicyDevClone         Code = "E-POLICY-DEV-CLONE"      // M2: a git command that would change a developer's clone
 	PolicyAgentReadOnly    Code = "E-POLICY-AGENT-READONLY" // M2: a write by a read-only subagent (the scout)
+	ConflictVersion        Code = "E-CONFLICT-VERSION"      // M3: another PRD version landed first
 	IntegrityAudit         Code = "E-INTEGRITY-AUDIT"
 	IntegrityState         Code = "E-INTEGRITY-STATE"
 )

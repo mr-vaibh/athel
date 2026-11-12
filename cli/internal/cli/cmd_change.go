@@ -8,6 +8,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	prdpkg "github.com/mr-vaibh/athel/cli/internal/prd"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
 
@@ -72,7 +73,8 @@ func cmdChangeNew(r *runCtx, args []string) (any, error) {
 	}
 	c, err := s.Create(state.NewChange{
 		Title: *title, CreatedBy: createdBy, PRD: prd, PRDSource: source,
-		Budget: state.Budget{MaxCostUSD: set.BudgetMaxCostUSD, MaxHours: set.BudgetMaxHours, MaxToolCalls: set.BudgetMaxToolCalls},
+		IndexFor: func(id, sha string) []byte { return prdpkg.Encode(prdpkg.Build(id, "v1", sha, prd, nil)) },
+		Budget:   state.Budget{MaxCostUSD: set.BudgetMaxCostUSD, MaxHours: set.BudgetMaxHours, MaxToolCalls: set.BudgetMaxToolCalls},
 	})
 	if err != nil {
 		return nil, err

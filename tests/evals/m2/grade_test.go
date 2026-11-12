@@ -132,10 +132,15 @@ func names(m map[string]string) []string {
 	return out
 }
 
+// anyOf reports whether a name the answer used is one of the aliases, or contains one as a
+// whole space-separated phrase ("user-service GET /v1/users/{id}" names "GET /v1/users/{id}").
 func anyOf(want, have []string) bool {
 	for _, w := range want {
-		if slices.Contains(have, strings.ToLower(w)) {
-			return true
+		w = strings.ToLower(w)
+		for _, h := range have {
+			if h == w || strings.Contains(" "+h+" ", " "+w+" ") {
+				return true
+			}
 		}
 	}
 	return false
@@ -421,5 +426,18 @@ func TestGraderDriftAlternatives(t *testing.T) {
 		if g := GradeAnswer(c, answer(t, "drift: [{text: '"+text+"'}]"), nil, nil, ""); g.TrapHandled != want {
 			t.Errorf("%q: handled %v, want %v", text, g.TrapHandled, want)
 		}
+	}
+}
+
+func TestGraderPhraseInLongerName(t *testing.T) {
+	c := caseByID(t, "endpoint-callers-clean")
+	a := answer(t, `claims:
+  - {id: C1, subject: {kind: service, name: orders}, predicate: calls, object: {kind: endpoint, name: "user-service GET /v1/users/{id}"}, env: prod, confidence: confirmed}
+  - {id: C2, subject: {kind: service, name: notifications}, predicate: calls, object: {kind: endpoint, name: "user-service GET /v1/users/{id}"}, env: prod, confidence: likely}`)
+	if g := GradeAnswer(c, a, map[string]string{"C1": "confirmed", "C2": "likely"}, nil, ""); !g.Pass() {
+		t.Errorf("a combined name contains the alias: %+v", g)
+	}
+	if anyOf([]string{"users"}, []string{"users.updated.v1"}) {
+		t.Error("a dotted name is not the phrase users")
 	}
 }

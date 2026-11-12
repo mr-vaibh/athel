@@ -127,6 +127,9 @@ type NewChange struct {
 	PRD       []byte
 	PRDSource string // file | text | stdin
 	Budget    Budget // limits only; usage starts at zero
+	// IndexFor builds prd/v1.index.yaml once the change has its ID (doc 05 FR-SPEC-003: the CLI,
+	// not the model, assigns PRD IDs). Nil writes no index.
+	IndexFor func(id, sha string) []byte
 }
 
 // Create allocates the next change ID under the workspace lock and writes prd/v1.md and
@@ -150,6 +153,11 @@ func (s *Store) Create(n NewChange) (*Change, error) {
 	}
 	if err := fsutil.WriteFileAtomic(filepath.Join(dir, "prd", "v1.md"), n.PRD); err != nil {
 		return nil, err
+	}
+	if n.IndexFor != nil {
+		if err := fsutil.WriteFileAtomic(filepath.Join(dir, "prd", "v1.index.yaml"), n.IndexFor(id, digest.Bytes(n.PRD))); err != nil {
+			return nil, err
+		}
 	}
 	now := s.now()
 	c := &Change{
