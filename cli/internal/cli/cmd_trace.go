@@ -62,6 +62,25 @@ func (r *runCtx) stepGuard(s *state.Store, id string, to state.State) error {
 		return r.specifiedGuard(s, id)
 	case state.Planned:
 		return r.plannedGuard(s, id)
+	case state.PlanApproved:
+		return r.signoffGuard(s, id)
+	}
+	return nil
+}
+
+// signoffGuard: a CRITICAL blast radius needs the developer's sign-off of the current report
+// before the plan can be approved (doc 05 §Risk rules).
+func (r *runCtx) signoffGuard(s *state.Store, id string) error {
+	risk, err := r.blastRisk(s, id)
+	if err != nil || risk != "CRITICAL" {
+		return err
+	}
+	ok, err := r.signedOff(s, id)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return guardError(id, state.PlanApproved, []string{"the blast radius is CRITICAL and the current report has no sign-off (/athel:signoff " + id + ")"})
 	}
 	return nil
 }
