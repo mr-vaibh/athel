@@ -11,9 +11,11 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"go.yaml.in/yaml/v3"
 
+	"github.com/mr-vaibh/athel/cli/internal/clock"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/schema"
 )
@@ -296,3 +298,78 @@ func (f *File) Present(step, at string) ([]*Card, error) {
 }
 
 func jsonOf(v any) ([]byte, error) { return json.Marshal(v) }
+
+// Reply is one human answer to apply: an option, free text, or "should not have asked".
+type Reply struct {
+	Card   string
+	Option string
+	Text   string
+	Skip   bool
+}
+
+// Apply records the human's answers from one /athel:decide prompt (FR-DEC-004). Free text is
+// accepted but marked unchecked, so the architect re-checks it for conflicts before use (doc 05
+// edge case). "Should not have asked" may come with or without an answer. All or nothing: one
+// bad answer leaves every card as it was.
+func (f *File) Apply(replies []Reply, grant, at string) error {
+	var problems []string
+	for _, r := range replies {
+		c, ok := f.Card(r.Card)
+		switch {
+		case !ok:
+			problems = append(problems, r.Card+" is not a card of "+f.Change)
+		case r.Skip:
+		case c.Answer != nil:
+			problems = append(problems, r.Card+" is already answered")
+		case r.Option != "" && !slices.ContainsFunc(c.Options, func(o Option) bool { return o.Key == r.Option }):
+			problems = append(problems, r.Card+" offers no option "+r.Option)
+		}
+	}
+	if len(problems) > 0 {
+		return aerr.New(aerr.StateInvalid, "answers rejected: "+strings.Join(problems, "; "))
+	}
+	for _, r := range replies {
+		c, _ := f.Card(r.Card) // checked above
+		if r.Skip {
+			yes := true
+			c.ShouldNotHaveAsked = &yes
+			continue
+		}
+		a := &Answer{Option: r.Option, Text: r.Text, By: "human", At: at, Grant: grant}
+		if r.Text != "" {
+			no := false
+			a.Checked = &no
+		}
+		c.Answer = a
+	}
+	return nil
+}
+
+// Reminder and default windows after a card was presented (doc 05 edge case "User never
+// answers").
+const (
+	RemindAfter  = 2 * time.Hour
+	DefaultAfter = 4 * time.Hour
+)
+
+// Tick applies the safe defaults that are due and lists the cards due a reminder. A card that
+// is not default_safe stays blocked until the human answers. Applied defaults are shown again at
+// plan approval, so they can be reversed.
+func (f *File) Tick(now time.Time) (applied, remind []string) {
+	applied, remind = []string{}, []string{}
+	for _, c := range f.Open("") {
+		if c.PresentedAt == nil {
+			continue
+		}
+		since, _ := clock.Parse(*c.PresentedAt) // decision@1 guarantees the timestamp format
+		waited := now.Sub(since)
+		switch {
+		case c.DefaultSafe && waited >= DefaultAfter:
+			c.Answer = &Answer{Option: c.Default, By: "default", At: clock.Format(now)}
+			applied = append(applied, c.ID)
+		case waited >= RemindAfter:
+			remind = append(remind, c.ID)
+		}
+	}
+	return applied, remind
+}

@@ -260,6 +260,17 @@ func athelCall(cmd shellparse.Command) Action {
 		return a
 	case athelReadGroups[group] || athelReads[call.Command]:
 		return a
+	default:
+		humanOnly(call, pos, vals)
+	}
+	a.Tier = W0
+	return a
+}
+
+// humanOnly marks the athel calls that act for the developer (doc 02 §Transition rules; M2 Q7;
+// ADR 019) and binds each to what the developer's grant names.
+func humanOnly(call *AthelCall, pos []shellparse.Word, vals map[string]shellparse.Word) {
+	switch {
 	case call.Command == "state transition" && len(pos) > 2:
 		call.Change, call.To, call.ByHuman = known(pos[2]), flagVal(vals, "--to"), flagVal(vals, "--by") == "human"
 	case call.Command == "repos roots" && len(pos) > 3 && known(pos[2]) == "set":
@@ -274,9 +285,18 @@ func athelCall(cmd shellparse.Command) Action {
 			roots = append(roots, v)
 		}
 		call.Command, call.Change, call.To, call.ByHuman = "repos roots set", grants.RootsKey(roots), grants.TargetRoots, true
+	case call.Command == "decide answer" && len(pos) > 2:
+		// Only the developer answers cards (ADR 019); the grant binds these exact answers.
+		words := make([]string, 0, len(pos)-3)
+		for _, w := range pos[3:] {
+			words = append(words, known(w))
+		}
+		key := "decide:invalid"
+		if answers, ok := grants.ParseAnswers(words); ok && len(answers) > 0 {
+			key = grants.DecideKey(known(pos[2]), answers)
+		}
+		call.Change, call.To, call.ByHuman = key, grants.TargetDecide, true
 	}
-	a.Tier = W0
-	return a
 }
 
 // athelReadGroups are athel command groups that only read; athelReads are single read-only
@@ -288,5 +308,6 @@ var (
 		"lock status": true, "lock show": true, "checkpoint status": true, "checkpoint show": true,
 		"budget status": true, "budget show": true, "fact find": true, "fact show": true,
 		"investigation validate": true, "repos show": true, "ask show": true, "blast score": true,
+		"prd show": true, "prd scan": true, "prd diff": true, "decide list": true, "decide show": true,
 	}
 )

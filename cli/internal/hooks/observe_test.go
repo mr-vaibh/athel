@@ -202,3 +202,25 @@ func TestScoutMarkerWriteError(t *testing.T) {
 		t.Errorf("marker write failure = %+v", o)
 	}
 }
+
+// TestDecideGrantFromHumanPromptOnly: only the developer's own /athel:decide prompt creates a
+// grant, bound to exactly its answers, and the hook names the command to run (ADR 019).
+func TestDecideGrantFromHumanPromptOnly(t *testing.T) {
+	d, _ := newDeps(t)
+	for _, req := range []*hookio.Request{
+		{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p1", Prompt: "/athel:decide CHG-001 D-1=b", AgentID: "agent-1"},
+		{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p2", Prompt: "/athel:decide CHG-001 D-1=b and go"},
+	} {
+		if o := Handle(req, d); o.Rule == RuleGrant {
+			t.Errorf("grant from %+v", req)
+		}
+	}
+	o := Handle(&hookio.Request{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p3", Prompt: "/athel:decide CHG-001 D-2=a D-1=b"}, d)
+	if o.Rule != RuleGrant || !strings.Contains(o.Response.AdditionalContext, "athel decide answer CHG-001 'D-1=b' 'D-2=a'") {
+		t.Fatalf("outcome = %+v", o)
+	}
+	_, answers, _ := grants.ParseDecidePrompt("/athel:decide CHG-001 D-1=b D-2=a")
+	if g, err := d.Store.Grants().Valid(grants.DecideKey("CHG-001", answers), grants.TargetDecide, sess); err != nil || g == nil {
+		t.Errorf("grant = %+v %v", g, err)
+	}
+}

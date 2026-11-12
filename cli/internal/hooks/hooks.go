@@ -208,6 +208,9 @@ func userPromptSubmit(req *hookio.Request, d Deps) Outcome {
 	} else if roots, ok := grants.ParseRootsPrompt(req.Prompt); ok {
 		recordGrant(req, d, grants.RootsKey(roots), grants.TargetRoots,
 			" Run `"+grants.RootsCommand(roots)+"` now, exactly as written, to save these repo search roots.", &o)
+	} else if change, answers, ok := grants.ParseDecidePrompt(req.Prompt); ok {
+		recordGrant(req, d, grants.DecideKey(change, answers), grants.TargetDecide,
+			" Run `"+grants.DecideCommand(change, answers)+"` now, exactly as written, to record these answers.", &o)
 	}
 	return o
 }

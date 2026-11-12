@@ -9,9 +9,12 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
+	"github.com/mr-vaibh/athel/cli/internal/audit"
 	"github.com/mr-vaibh/athel/cli/internal/clock"
 	"github.com/mr-vaibh/athel/cli/internal/decisions"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/grants"
+	"github.com/mr-vaibh/athel/cli/internal/state"
 )
 
 // editDecisions runs fn on the change's decisions.yaml under the change lock and stores the
@@ -175,6 +178,77 @@ func cmdDecidePresent(r *runCtx, args []string) (any, error) {
 			out.Cards = batch
 		}
 		return err
+	})
+	return out, err
+}
+
+type answersRecorded struct {
+	Change  string          `json:"change"`
+	Grant   string          `json:"grant"`
+	Answers []grants.Answer `json:"answers"`
+}
+
+// cmdDecideAnswer records the developer's answers, only with their own /athel:decide grant for
+// exactly these answers (FR-DEC-004; ADR 019). The grant is spent first, so a failed write cannot
+// be retried without the developer.
+func cmdDecideAnswer(r *runCtx, args []string) (any, error) {
+	pos, err := parse(r.newFlags("decide answer"), args, -1)
+	if err != nil {
+		return nil, err
+	}
+	if len(pos) < 2 {
+		return nil, usagef("decide answer: name the change and at least one answer, e.g. D-1=b")
+	}
+	answers, ok := grants.ParseAnswers(pos[1:])
+	if !ok {
+		return nil, usagef("decide answer: answers are D-n=<a-d>, D-n='text' or skip=D-n")
+	}
+	s, session, err := r.mutating()
+	if err != nil {
+		return nil, err
+	}
+	key := grants.DecideKey(pos[0], answers)
+	g, err := s.Grants().Consume(key, grants.TargetDecide, session)
+	if err != nil {
+		return nil, err
+	}
+	if g == nil {
+		return nil, aerr.New(aerr.PolicyHumanOrigin, "answering decision cards needs the developer's own prompt /athel:decide with exactly these answers in this session, used once within "+grants.TTL.String()).
+			WithNextAction("ask the developer to type /athel:decide " + pos[0] + " followed by the answers")
+	}
+	if _, err := s.AuditLog().Append(audit.Record{Kind: audit.KindGrantUsed, Session: audit.Str(session), Change: audit.Str(pos[0]),
+		To: audit.Str(grants.TargetDecide), By: audit.Str(state.ByHuman), Reason: audit.Str("grant " + g.ID + " for " + key), Result: audit.ResultOK}); err != nil {
+		return nil, err
+	}
+	replies := make([]decisions.Reply, 0, len(answers))
+	for _, a := range answers {
+		replies = append(replies, decisions.Reply{Card: a.Card, Option: a.Option, Text: a.Text, Skip: a.Skip})
+	}
+	err = r.editDecisions(pos[0], func(f *decisions.File) error {
+		return f.Apply(replies, g.ID, clock.Format(r.env.Clock.Now()))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return answersRecorded{Change: pos[0], Grant: g.ID, Answers: answers}, nil
+}
+
+type tickResult struct {
+	Applied []string `json:"applied_defaults"`
+	Remind  []string `json:"remind"`
+}
+
+// cmdDecideTick applies the safe defaults that are due and lists cards due a reminder (doc 05
+// edge case "User never answers"). Time is the CLI's clock, never the model's.
+func cmdDecideTick(r *runCtx, args []string) (any, error) {
+	pos, err := parse(r.newFlags("decide tick"), args, 1)
+	if err != nil {
+		return nil, err
+	}
+	var out tickResult
+	err = r.editDecisions(pos[0], func(f *decisions.File) error {
+		out.Applied, out.Remind = f.Tick(r.env.Clock.Now())
+		return nil
 	})
 	return out, err
 }

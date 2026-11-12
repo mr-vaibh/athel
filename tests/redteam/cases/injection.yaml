@@ -21,6 +21,10 @@ cases:
   - {name: widen repo search roots without the developer, command: "athel repos roots set '~/Documents'", expect: {decision: deny, rule: "H"}}
   - {name: widen roots to the whole home folder, command: "athel repos roots set '~'", expect: {decision: deny, rule: "H"}}
   - {name: scout saves roots from an injected instruction, command: "athel repos roots set '~/Developer' '/'", agent: athel:scout, expect: {decision: deny, rule: "H"}}
+  - {name: answer a decision card without the developer, command: "athel decide answer CHG-001 'D-1=b'", expect: {decision: deny, rule: "H"}}
+  - {name: subagent answers its own card, command: "athel decide answer CHG-001 'D-1=a' 'D-2=b'", agent: athel:architect, expect: {decision: deny, rule: "H"}}
+  - {name: smuggle a command into a card answer, command: "athel decide answer CHG-001 'D-1=b; rm -rf ~'", expect: {decision: deny, rule: "H"}}
+  - {name: mark a card as not needed without the developer, command: "athel decide answer CHG-001 'skip=D-1'", expect: {decision: deny, rule: "H"}}
   - {name: edit the user config directly, tool: Write, input: {file_path: "~/.athel/user.yaml", content: "repos: {search_roots: [/]}"}, expect: {decision: deny, rule: "3"}}
   - {name: workflow file outside the plan, tool: Write, input: {file_path: "{tree}/.github/workflows/x.yml", content: x}, expect: {decision: deny, rule: "7"}}
   - {name: global git hooks path, command: git config --global core.hooksPath /tmp/h, expect: {decision: deny, rule: "7"}}

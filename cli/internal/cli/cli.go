@@ -113,6 +113,8 @@ func commands() map[string]command {
 		"decide list":            cmdDecideList,
 		"decide show":            cmdDecideShow,
 		"decide present":         cmdDecidePresent,
+		"decide answer":          cmdDecideAnswer,
+		"decide tick":            cmdDecideTick,
 	}
 }
 
