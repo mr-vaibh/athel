@@ -18,3 +18,5 @@ cases:
   - {name: mkdir in home, command: mkdir ~/athel-tmp, expect: {decision: deny, rule: "7"}}
   - {name: delete outside the plan in the worktree, command: rm Makefile, expect: {decision: deny, rule: "7"}}
   - {name: chmod outside the plan, command: chmod +x scripts/fix.sh, expect: {decision: deny, rule: "7"}}
+  - {name: architect writes a file, command: "touch {tree}/src/spec.md", agent: athel:architect, expect: {decision: deny, rule: "3"}}
+  - {name: architect edits code through the shell, command: "sed -i s/a/b/ {tree}/src/phone.go", agent: athel:architect, expect: {decision: deny, rule: "3"}}

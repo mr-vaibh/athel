@@ -1,0 +1,41 @@
+# athel/spec@1 block for one service. Every key is required; keep a list empty ([]) when it has
+# nothing. Block style only. REQ and AC numbers are unique across the whole change.
+schema: athel/spec@1
+change: CHG-001
+service: billing
+repo: github.com/example/billing
+requirements:
+  # EARS: "When <trigger>, the <service> service shall <response>." Also While …, Where …,
+  # "If <condition>, then the …", or plain "The <service> service shall …". Name this spec's
+  # service as the subject; never should, may, etc. or TBD. prd: the PRD IDs it comes from
+  # (athel prd show); decisions: D-n cards it relies on.
+  - id: REQ-1
+    prd:
+      - PRD-2.1
+    text: When a customer downloads an invoice, the billing service shall return it as PDF.
+    decisions: []
+interfaces_changed:
+  # kind: endpoint | event | schema | config | cli | library
+  # change: new | additive | behavioural | breaking
+  - kind: endpoint
+    name: GET /v1/invoices/{id}/pdf
+    change: new
+    description: returns the invoice as application/pdf; 404 when unknown
+data_changes:
+  # change: add_column | add_table | backfill | switch_reads | drop | rename | type_change | index
+  - table: invoices
+    change: add_column
+    description: pdf_rendered_at, nullable
+design_notes: []
+acceptance_criteria:
+  # Given, when, then; "then" names what a test observes: a status code, a returned or stored
+  # value, an event, an error code. Numbers carry units.
+  - id: AC-1
+    req:
+      - REQ-1
+    given: an issued invoice INV-7
+    when: the customer requests GET /v1/invoices/INV-7/pdf
+    then: the response is 200 with content type application/pdf
+out_of_scope:
+  - Emailing invoices
+assumptions: []

@@ -53,16 +53,19 @@ M3 is approved (2026-11-10) and being built as stacked PRs on `docs/m3-plan` (#6
 | 06 conventions | `feat/m3-conventions` | #67 |
 | 07 plan@2 and lints (ADR 020) | `feat/m3-plan-lints` | #68 |
 | 08 trace and step guards (ADR 021) | `feat/m3-trace` | #69 |
+| 08b fixture: eval PRDs, table sizes, prepared branches | `feat/m3-fixture` | #70 |
+| 09 planned blast, /athel:signoff | `feat/m3-blast-planned` | #71 |
+| 10 actual blast from the diff (ADR 022) | `feat/m3-blast-actual` | #72 |
+| 11a architect read-only policy (partial) | `feat/m3-architect-policy` | pushed, no PR yet |
 
-Next, each stacked on the previous:
-1. 08b `feat/m3-fixture`: the table-row metric (G7), the 3 eval PRDs with expected outcomes,
-   and prepared branches for the actual-blast tests.
-2. 09 `feat/m3-blast-planned`: planned mode with spec refs, the `no-runtime-evidence` rule,
-   and `/athel:signoff` for CRITICAL.
-3. 10 `feat/m3-blast-actual` (ADR 022): `blast diff` and `blast check`.
-4. 11a architect policy and templates; 11b skills.
-5. 13 M3 evals: at most 2 full runs, each asked first (owner).
-6. 14 report.
+Next, on `feat/m3-architect-policy`:
+1. Finish 11a: `plugin/agents/architect.md` (strongest model, maxTurns 30, read-only, CLI-only
+   outputs) and `athel spec|decide|plan template` (valid examples from an unrelated domain,
+   tested against the schemas and the injection check). Then open the PR on #72.
+2. 11b: skills `spec`, `decide` (runs `decide tick` first), `plan` and `signoff`, plus the
+   `/athel:status` card view and the prompt-sync and leak tests.
+3. 13: M3 evals, at most 2 full runs, each asked first (owner).
+4. 14: the M3 report.
 
 M2 eval run 5 is done and recorded in `EVALS.md`: 51/54 valid, traps 27/27, labels 90.5%. Its
 last 6 sessions hit the usage limit and are excluded. Lesson: check the account's remaining

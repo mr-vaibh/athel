@@ -1,6 +1,7 @@
 package prd
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -78,5 +79,16 @@ func TestReviewProblems(t *testing.T) {
 		if _, err := DecodeReview(reg, []byte(doc)); !aerr.HasCode(err, aerr.StateSchema) {
 			t.Errorf("%s: %v", name, err)
 		}
+	}
+}
+
+// TestArchitectListsTheChecklist keeps the architect's checklist equal to prd-review@1's.
+func TestArchitectListsTheChecklist(t *testing.T) {
+	b, err := os.ReadFile("../../../plugin/agents/architect.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), strings.Join(ChecklistOrder, ",\n     ")) && !strings.Contains(strings.Join(strings.Fields(string(b)), " "), strings.Join(ChecklistOrder, ", ")) {
+		t.Errorf("architect.md does not list the checklist %v in order", ChecklistOrder)
 	}
 }
