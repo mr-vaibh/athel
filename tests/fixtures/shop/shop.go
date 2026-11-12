@@ -5,6 +5,7 @@
 package shop
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -101,6 +102,9 @@ func (b builder) buildRepo(root, home, name string) (Repo, error) {
 			return Repo{}, err
 		}
 	}
+	if err := b.preparedBranches(work, name); err != nil {
+		return Repo{}, err
+	}
 	if err := b.git(dev, root, "clone", "-q", "--bare", work, r.Bare); err != nil {
 		return Repo{}, err
 	}
@@ -131,6 +135,39 @@ func (b builder) teammateWork(work string) error {
 	for _, s := range [][]string{{"commit", "-q", "-am", "Normalise phone formats"}, {"switch", "-q", "main"}} {
 		if err := b.git(mate, work, s...); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// branchesDir holds prepared branches per repo: testdata/branches/<repo>/<branch>/ is copied
+// over main and committed as <branch> ("__" stands for "/"). M3's actual blast radius tests
+// diff them against main (eval/phone-planned matches eval PRD 1's plan; eval/phone-extra also
+// renames the users.updated event, an impact the plan does not have).
+func branchesDir() string { return filepath.Join(filepath.Dir(Sources()), "branches") }
+
+// preparedBranches commits each prepared branch of repo name from main.
+func (b builder) preparedBranches(work, name string) error {
+	dirs, err := os.ReadDir(filepath.Join(branchesDir(), name))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	author := gitEnv("Athel eval", "eval@shop.example", "2026-11-05T10:00:00Z")
+	for _, d := range dirs {
+		branch := strings.ReplaceAll(d.Name(), "__", "/")
+		if err := b.git(author, work, "switch", "-q", "-c", branch, "main"); err != nil {
+			return err
+		}
+		if err := copyTree(filepath.Join(branchesDir(), name, d.Name()), work); err != nil {
+			return err
+		}
+		for _, s := range [][]string{{"add", "-A"}, {"commit", "-q", "-m", "Prepared branch " + branch}, {"switch", "-q", "main"}} {
+			if err := b.git(author, work, s...); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

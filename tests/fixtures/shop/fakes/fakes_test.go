@@ -197,9 +197,10 @@ func TestMCPQueriesLikeAServer(t *testing.T) {
 		callLine(4, "query_prometheus", `{}`),
 		callLine(5, "query_prometheus", `{"expr":"http_requests_total{route=~\"(\"}"}`),
 		callLine(6, "query_prometheus", `{"expr":"http_request_errors_ratio{service=\"payments\"}"}`),
+		callLine(7, "query_prometheus", `{"expr":"pg_stat_user_tables_n_live_tup{relname=\"users\"}"}`),
 	)
 	for i, want := range []string{`"client":"notifications"`, `"client":"notifications"`, `unknown argument "query"; query_prometheus accepts expr`,
-		`missing required argument "expr"`, "bad regular expression", `"value":0.18`} {
+		`missing required argument "expr"`, "bad regular expression", `"value":0.18`, `"value":2100000`} {
 		if !strings.Contains(text(r[i]), want) {
 			t.Errorf("call %d: %s lacks %s", i+1, text(r[i]), want)
 		}

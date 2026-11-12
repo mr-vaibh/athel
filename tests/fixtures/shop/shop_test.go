@@ -184,3 +184,50 @@ func TestCopyTreeErrors(t *testing.T) {
 		t.Error("teammate work without api/user.go succeeded")
 	}
 }
+
+// TestPreparedBranches: the actual blast radius tests diff these against main (M3 task 10).
+func TestPreparedBranches(t *testing.T) {
+	t.Parallel()
+	a, err := Build(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	bare := a.Repos["users"].Bare
+	for branch, want := range map[string]string{
+		"eval/phone-planned": "api/user.go migrations/002_phone_number.sql",
+		"eval/phone-extra":   "api/user.go events/publish.go migrations/002_phone_number.sql",
+	} {
+		if got := strings.Join(strings.Fields(gitOut(t, bare, "diff", "--name-only", "main", branch)), " "); got != want {
+			t.Errorf("%s changes %q, want %q", branch, got, want)
+		}
+	}
+	b, err := Build(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if head(t, bare, "eval/phone-extra") != head(t, b.Repos["users"].Bare, "eval/phone-extra") {
+		t.Error("prepared branches differ between builds")
+	}
+}
+
+func TestPreparedBranchFailures(t *testing.T) {
+	t.Parallel()
+	for name, failing := range map[string]func(args []string) bool{
+		"create": func(args []string) bool {
+			return len(args) > 3 && args[0] == "switch" && args[2] == "-c" && strings.HasPrefix(args[3], "eval/")
+		},
+		"commit": func(args []string) bool {
+			return args[0] == "commit" && strings.Contains(strings.Join(args, " "), "Prepared branch")
+		},
+	} {
+		b := builder{git: func(env []string, dir string, args ...string) error {
+			if failing(args) {
+				return os.ErrPermission
+			}
+			return runGit(env, dir, args...)
+		}}
+		if _, err := b.build(t.TempDir()); err == nil {
+			t.Errorf("%s: a failing prepared branch was not reported", name)
+		}
+	}
+}
