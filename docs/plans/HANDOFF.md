@@ -39,16 +39,16 @@ are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Exact next step
 
-1. Merge the scoreboard PR (`docs/eval-scoreboard`): `EVALS.md` plus links.
-2. Start M3 Phase 1, planning (doc 08 M3 row; `ROADMAP.md` §M3):
-   - read the M3 spec sections, write `docs/plans/M3-plan.md` with open questions and
-     recommendations, and stop for the owner's approval;
-   - include an `EVALS.md` improvement (items 1–3) as an early M3 task, followed by an eval run
-     with the owner's go-ahead.
+1. **Waiting for the owner:** review of `docs/plans/M3-plan.md` (PR `docs/m3-plan`). The
+   owner: "I'll review it. If it looks good, we'll go ahead with the implementation."
+   Questions Q1 (eval budget, about $25–55 per M3 run) and Q2 (one M2 re-run, about $13)
+   are in §11.
+2. After approval: build task by task as in M2 (stacked PRs, gate before each commit),
+   starting with task 00 (gateway-trap check) and then the M2 eval re-run if Q2 is yes.
 
 ## Open questions for the owner
 
-- None open. Each future eval run needs a go-ahead (cost).
+- M3 plan review, Q1 and Q2 (M3-plan §11). Each eval run needs a go-ahead (cost).
 
 ## Owner instructions given in chat (all also in docs/context/decisions-from-chat.md)
 
