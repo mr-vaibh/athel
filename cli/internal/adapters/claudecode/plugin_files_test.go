@@ -94,51 +94,112 @@ func readSkill(t *testing.T, name string) skill {
 
 // mutatingCommands are athel commands that change state; skills that run them must pass the
 // session so the CLI can take the change lock for it.
-var mutatingCommands = regexp.MustCompile(`athel [^\n` + "`" + `]*\b(change new|state (transition|enter|exit)|checkpoint set|lock (acquire|release|refresh)|budget add|resume)\b`)
+var mutatingCommands = regexp.MustCompile(`athel [^\n` + "`" + `]*\b(change new|state (transition|enter|exit)|checkpoint set|lock (acquire|release|refresh)|budget add|resume|decide (add|record|present|answer|tick)|blast (save|signoff)|spec save|plan set|trace|conventions save|prd (index|review save|add-version))\b`)
+
+// checkSkillCommands: every athel command a skill names prints JSON, and every one that changes
+// state carries the session so the CLI can take the change lock for it.
+func checkSkillCommands(t *testing.T, s skill) {
+	t.Helper()
+	if d, _ := s.frontmatter["description"].(string); len(d) < 20 {
+		t.Errorf("description too short: %q", d)
+	}
+	if !strings.Contains(s.body, ".athel/") || !strings.Contains(s.body, "Never") {
+		t.Error("skill does not forbid editing .athel/ directly")
+	}
+	for _, m := range mutatingCommands.FindAllString(s.body, -1) {
+		if !strings.Contains(m, "--session ${CLAUDE_SESSION_ID}") {
+			t.Errorf("mutating command without the session: %q", m)
+		}
+	}
+	for _, line := range strings.Split(s.body, "\n") {
+		if strings.Contains(line, "athel ") && strings.Contains(line, "`athel") && !strings.Contains(line, "--json") {
+			t.Errorf("athel command without --json: %q", line)
+		}
+	}
+}
 
 func TestSkillsCallOnlyCLI(t *testing.T) {
-	for _, name := range []string{"start", "status", "resume", "approve", "accept"} {
+	for _, name := range []string{"start", "status", "resume", "approve", "accept", "decide", "signoff"} {
 		t.Run(name, func(t *testing.T) {
 			s := readSkill(t, name)
-			if d, _ := s.frontmatter["description"].(string); len(d) < 20 {
-				t.Errorf("description too short: %q", d)
-			}
 			if s.frontmatter["allowed-tools"] != "Bash(athel:*)" {
 				t.Errorf("allowed-tools = %v: skills may only run the athel CLI", s.frontmatter["allowed-tools"])
 			}
-			if !strings.Contains(s.body, ".athel/") || !strings.Contains(s.body, "Never") {
-				t.Error("skill does not forbid editing .athel/ directly")
-			}
-			for _, m := range mutatingCommands.FindAllString(s.body, -1) {
-				if !strings.Contains(m, "--session ${CLAUDE_SESSION_ID}") {
-					t.Errorf("mutating command without the session: %q", m)
-				}
-			}
-			for _, line := range strings.Split(s.body, "\n") {
-				if strings.Contains(line, "athel ") && strings.Contains(line, "`athel") && !strings.Contains(line, "--json") {
-					t.Errorf("athel command without --json: %q", line)
-				}
-			}
+			checkSkillCommands(t, s)
 		})
 	}
-	if mutatingCommands.MatchString(readSkill(t, "status").body) {
+	status := readSkill(t, "status").body
+	if mutatingCommands.MatchString(status) {
 		t.Error("/athel:status must be read-only")
+	}
+	if !strings.Contains(status, "athel --json decide list $ARGUMENTS --open") {
+		t.Error("/athel:status must show the change's open decision cards")
+	}
+	if !strings.Contains(readSkill(t, "start").body, "prd index <ID>") {
+		t.Error("/athel:start must index the PRD, so specs can cite its statements (M3 plan §4.1)")
 	}
 	if readSkill(t, "start").frontmatter["disable-model-invocation"] != true {
 		t.Error("/athel:start creates changes and must only run when the user asks")
 	}
 }
 
+// TestStepSkillsFollowTheStateMachine: the spec and plan skills delegate to the architect and move
+// the change only along doc 02's transitions, ending each step before leaving its states.
+func TestStepSkillsFollowTheStateMachine(t *testing.T) {
+	steps := map[string][]string{
+		"spec": {"--to investigating --by athel", "state enter $ARGUMENTS investigate", "`athel:scout`",
+			"state exit $ARGUMENTS investigate --result ok", "state enter $ARGUMENTS spec", "--to specified --by athel", "decide present $ARGUMENTS --step spec",
+			"state exit $ARGUMENTS spec --result ok", "--to awaiting_decisions --by athel"},
+		"plan": {"decide tick $ARGUMENTS", "state enter $ARGUMENTS plan", "trace $ARGUMENTS", "--to planned --by athel",
+			"state exit $ARGUMENTS plan --result ok", "plan summary $ARGUMENTS", "/athel:approve", "/athel:signoff"},
+	}
+	for name, order := range steps {
+		t.Run(name, func(t *testing.T) {
+			s := readSkill(t, name)
+			checkSkillCommands(t, s)
+			if s.frontmatter["allowed-tools"] != "Bash(athel:*), Agent" && s.frontmatter["allowed-tools"] != "Bash(athel:*), Agent, Read" {
+				t.Errorf("allowed-tools = %v: the CLI, the architect and reading only", s.frontmatter["allowed-tools"])
+			}
+			if !strings.Contains(s.body, "`athel:architect`") || !strings.Contains(s.body, "--result blocked") {
+				t.Error("step skills delegate to the architect and end a refused step as blocked")
+			}
+			at := 0
+			for _, want := range order {
+				i := strings.Index(s.body[at:], want)
+				if i < 0 {
+					t.Fatalf("%q missing or out of order", want)
+				}
+				at += i
+			}
+		})
+	}
+}
+
 // TestHumanSkillsAreHumanOnly: the model must not invoke the approval skills itself (the grant
 // would not exist anyway, because only the human's own prompt creates one).
 func TestHumanSkillsAreHumanOnly(t *testing.T) {
-	for name, target := range map[string]string{"approve": "plan_approved", "accept": "done"} {
+	for name, call := range map[string]string{
+		"approve": "--to plan_approved --by human",
+		"accept":  "--to done --by human",
+		"decide":  "decide answer <CHG-NNN> <answers>",
+		"signoff": "blast signoff $ARGUMENTS",
+	} {
 		s := readSkill(t, name)
 		if s.frontmatter["disable-model-invocation"] != true {
 			t.Errorf("%s: disable-model-invocation must be true", name)
 		}
-		if !strings.Contains(s.body, "--to "+target+" --by human") || !strings.Contains(s.body, "E-POLICY-HUMAN-ORIGIN") {
-			t.Errorf("%s: body must run the human transition to %s and explain its denial", name, target)
+		if !strings.Contains(s.body, call) || !strings.Contains(s.body, "E-POLICY-HUMAN-ORIGIN") {
+			t.Errorf("%s: body must run %q and explain its denial", name, call)
 		}
+	}
+}
+
+// TestDecideTicksAfterAnswering (ADR 019 follow-up): a due default must never override the
+// answers the developer just typed, so the decide skill ticks only after recording them.
+func TestDecideTicksAfterAnswering(t *testing.T) {
+	body := readSkill(t, "decide").body
+	answer, tick := strings.Index(body, "decide answer"), strings.Index(body, "decide tick")
+	if answer < 0 || tick < answer {
+		t.Errorf("decide answer at %d, decide tick at %d: tick only after the answers", answer, tick)
 	}
 }
