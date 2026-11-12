@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated: 2026-11-10, session 4 (M2 merged), on the owner's personal machine. Tools
+Last updated: 2026-11-11, session 4 (M2 merged; M3 full run 1 recorded), on the owner's personal machine. Tools
 are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Where we are
@@ -58,14 +58,20 @@ M3 is approved (2026-11-10) and being built as stacked PRs on `docs/m3-plan` (#6
 | 10 actual blast from the diff (ADR 022) | `feat/m3-blast-actual` | #72 |
 | 11a architect agent, read-only policy, templates | `feat/m3-architect-policy` | #73 |
 | 11b skills spec, decide, plan, signoff; status cards | `feat/m3-skills` | #74 |
+| 13 M3 eval harness, plus fixes the smoke runs found (review and blast templates, draft errors, sandbox SSH mapping, E.164 split, architect maxTurns 60) | `feat/m3-evals` | #75 |
+
+Paid runs so far (each approved by the owner; details in `EVALS.md`): smokes 1–3 not valid,
+and each found a cause that was fixed; smoke 4 valid ($3.70). Smokes total $12.11. Full run 1
+($28.27): 8 of 9 valid, so EC-1 is not met; blast recall 100%, so EC-2 is met. The failed run's
+cause (a card option "re-investigate first", which no lifecycle step can follow) is fixed in
+the architect's instructions at `0e7ee85`. Card precision is 20%, reported only. Total paid
+for M3 so far: $40.38.
 
 Next:
-1. 13: M3 evals (`feat/m3-evals`, on #74). Grader: blast recall ≥95%, spec and plan validity,
-   card recall and precision. Multi-prompt runner (spec, decide, plan) and regrade. Smoke one
-   PRD first (about $5), then at most 2 full runs, each asked first (owner). Check the
-   account's remaining usage before any paid run.
+1. 13: **done.** Full run 2 met the M3 eval bar: 9/9 valid, blast recall 100%, $29.74
+   (`EVALS.md`). Card over-asking is in the backlog for M4.
 2. 14: the M3 report (`docs/m3-report`), EVALS.md, HANDOFF, ROADMAP.
-3. Ask the owner to merge the M3 stack #60 → #74 in order.
+3. Ask the owner to merge the M3 stack #60 → #75 in order.
 
 M2 eval run 5 is done and recorded in `EVALS.md`: 51/54 valid, traps 27/27, labels 90.5%. Its
 last 6 sessions hit the usage limit and are excluded. Lesson: check the account's remaining

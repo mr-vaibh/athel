@@ -11,13 +11,21 @@ import (
 // fixtureNames are names only the shop fixture uses. The plugin the scout reads (agents, skills,
 // playbooks) and the CLI's claim block template must never contain them: an example that matches
 // a trap would hand the scout the answer and inflate the eval (the first paid run found the
-// playbooks citing `user-svc` vs `users`, PR 812 and users.updated.v1).
+// playbooks citing `user-svc` vs `users`, PR 812 and users.updated.v1). The last line holds the
+// M3 eval PRDs' expected answers: the architect reads the same plugin and templates.
 var fixtureNames = []string{"acme", "user-svc", "user-service", "users.updated", "phone", "legacy-profile",
-	"812", "SHOP-", "shopmetrics", "commerce", "identity", "notifications", "teammate"}
+	"812", "SHOP-", "shopmetrics", "commerce", "identity", "notifications", "teammate",
+	"PaymentsHighErrorRate", "e164", "E.164", "phone_number", "payments", "orders"}
+
+// schemaVocabulary are field names a schema fixes, which a template must spell out; they hint at
+// nothing. Only exact keys are removed before the check, so a fixture name anywhere else still
+// fails.
+var schemaVocabulary = []string{"touches_auth_payments_pii"}
 
 func TestPluginNeverHintsAtTheFixture(t *testing.T) {
 	roots := []string{"../../../plugin/agents", "../../../plugin/skills", "../../../cli/internal/investigation/template.yaml",
-		"../../../cli/internal/spec/template.yaml", "../../../cli/internal/decisions/template.yaml", "../../../cli/internal/plan/template.yaml"}
+		"../../../cli/internal/spec/template.yaml", "../../../cli/internal/decisions/template.yaml", "../../../cli/internal/plan/template.yaml",
+		"../../../cli/internal/prd/review_template.yaml", "../../../cli/internal/blast/template.yaml"}
 	for _, root := range roots {
 		err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
@@ -27,8 +35,12 @@ func TestPluginNeverHintsAtTheFixture(t *testing.T) {
 			if err != nil {
 				return err
 			}
+			text := strings.ToLower(string(b))
+			for _, key := range schemaVocabulary {
+				text = strings.ReplaceAll(text, key+":", "")
+			}
 			for _, name := range fixtureNames {
-				if strings.Contains(strings.ToLower(string(b)), strings.ToLower(name)) {
+				if strings.Contains(text, strings.ToLower(name)) {
 					t.Errorf("%s mentions the fixture's %q", p, name)
 				}
 			}

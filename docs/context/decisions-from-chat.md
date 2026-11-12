@@ -47,3 +47,10 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-10 | M3 plan: review it, add what is missing, then implement? | "review your plan, see if it good and do we need something else in it? if all looks good, then start implementing". Self-review added G11–G13 (M4/M6 scope notes, architect read-only), §4.1b (templates, leak and prompt-sync guards), fixture before blast-actual (08b), and task 11 split. Plan approved; Q1/Q2 (cost) asked when each run is due | M3-plan.md status, PR #60 |
 | 2026-11-10 | Re-run the M2 evals now (about $13)? | "Yes, run it (Recommended)" | Run 5 from a frozen worktree of `feat/m3-eval-carry` |
 | 2026-11-10 | Plan for up to 4 M3 eval runs (about $100–200)? | "Fewer runs" (option text: "Keep it to 1–2 full runs; tell me the limit"), no number given. Applied: at most 2 full M3 runs, each still asked first | M3-plan Q1, EVALS.md |
+| 2026-11-10 | Run the M3 smoke trial (one PRD, one run, about $5–8)? | "Yes, run the trial (Recommended)" | Smoke run of `phone-e164` from a frozen worktree of `feat/m3-evals` |
+| 2026-11-10 | Repeat the M3 smoke trial with logs kept (about $3–8, not counted toward the 2 full runs)? | "Yes, repeat it (Recommended)" | Smoke run 2 of `phone-e164`, ATHEL_EVALS_KEEP set |
+| 2026-11-10 | Run M3 smoke trial 3 after the sandbox fix (about $3–8)? | "Yes, run it (Recommended)" | Smoke run 3 of `phone-e164`, run folder kept |
+| 2026-11-10 | Run M3 smoke trial 4 after the template fixes (about $3–8)? | "Yes, run it (Recommended)" | Smoke run 4 of `phone-e164`, run folder kept |
+| 2026-11-10 | M3 full run 1: 3 runs per PRD (~$33) or 2 (~$22)? | "3 runs each, ~$33 (Recommended)" | Full run 1, all 3 PRDs × 3 runs, from the frozen worktree used for smoke 4 |
+| 2026-11-11 | Run M3 full run 2 (the last allowed, about $30) to check the fix for full run 1's failure? | "Yes, run it (Recommended)" | Full run 2, all 3 PRDs × 3 runs, from a worktree frozen at `043d498` |
+| 2026-11-11 | (owner) Hold progress, laptop going to sleep | "can you hold the progress here only?" | Full run 2 stopped before any result; restart it on resume |

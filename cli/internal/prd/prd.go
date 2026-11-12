@@ -42,8 +42,10 @@ var (
 	headingRe = regexp.MustCompile(`^#{1,6}\s+(.+?)\s*#*\s*$`)
 	listRe    = regexp.MustCompile(`^\s*(?:[-*+]|[0-9]+[.)])\s+(.+)$`)
 	modalRe   = regexp.MustCompile(`(?i)\b(shall|must|should|will|can|cannot|may not|needs? to|has to|have to)\b`)
-	sentRe    = regexp.MustCompile(`[^.!?]+(?:[.!?]+|$)`)
-	spaceRe   = regexp.MustCompile(`\s+`)
+	// A sentence ends at . ! or ? followed by a space or the line's end, so a dot inside a token
+	// (E.164, v1.2, 2.5) stays in its sentence.
+	sentRe  = regexp.MustCompile(`(?:[^.!?]|[.!?]+[^.!?\s])+(?:[.!?]+|$)`)
+	spaceRe = regexp.MustCompile(`\s+`)
 )
 
 // candidate is a heading or statement before it has an ID.

@@ -118,7 +118,7 @@ func cmdConventionsSave(r *runCtx, args []string) (any, error) {
 	}
 	var doc conventionsDoc
 	if err := decodeStrict(data, &doc, "conventions"); err != nil {
-		return nil, err
+		return nil, draftError(err, "")
 	}
 	if strings.TrimSpace(doc.Conventions) == "" || strings.TrimSpace(doc.Map) == "" {
 		return nil, aerr.New(aerr.StateInvalid, "both conventions and map are required")

@@ -24,7 +24,8 @@ of your own. Never read or edit `.athel/` files except the ones named here.
    table sizes, new config or secrets (names only), owners and active work (service_owner,
    active_work), and current health (service_health) of every affected service.
    Each scout answer replaces `.athel/asks/ASK-NNN/investigation.md`; read it after each run.
-6. **Report (step 8).** Write an `athel/blast@1` document from the scouts' answers: every
+6. **Report (step 8).** Write an `athel/blast@1` document from the scouts' answers, starting
+   from `athel --json blast template` (use `ask: ASK-NNN` and `mode: adhoc`): every
    consumer with its evidence and observed traffic (or `traffic: null` when none was seen), every
    migration with its row count (null when unknown), the flags, and the required `not_affected`
    list (what was ruled out and how). Leave `risk: null` and `rules_fired: []`. Save it:

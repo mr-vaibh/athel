@@ -42,3 +42,19 @@ func TestArchitectListsTheAskRules(t *testing.T) {
 		t.Error("architect.md lists a rule decision@1 does not allow")
 	}
 }
+
+// TestArchitectCardsLeadToAPlan: the lifecycle has no step that investigates again after the
+// cards (doc 02), so an option that only defers, once answered, leaves the plan step nowhere
+// to go (M3 full run 1). The architect is told so, and the plan step applies every answer.
+func TestArchitectCardsLeadToAPlan(t *testing.T) {
+	b, err := os.ReadFile("../../../plugin/agents/architect.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Every option of a card must lead to a plan", "Apply every answer",
+		"`athel spec save CHG-NNN -` first", "only when an answer rules out the change itself"} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("architect.md does not say %q", want)
+		}
+	}
+}

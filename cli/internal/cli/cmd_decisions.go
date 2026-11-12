@@ -78,7 +78,7 @@ func cmdDecideAdd(r *runCtx, args []string) (any, error) {
 	}
 	var c decisions.Draft
 	if err := decodeStrict(data, &c, "card"); err != nil {
-		return nil, err
+		return nil, draftError(err, "decide template")
 	}
 	var added *decisions.Card
 	err = r.editDecisions(pos[0], func(f *decisions.File) error {
@@ -100,7 +100,7 @@ func cmdDecideRecord(r *runCtx, args []string) (any, error) {
 	}
 	var d decisions.DecidedDraft
 	if err := decodeStrict(data, &d, "decision"); err != nil {
-		return nil, err
+		return nil, draftError(err, "")
 	}
 	var rec *decisions.Decided
 	err = r.editDecisions(pos[0], func(f *decisions.File) error {

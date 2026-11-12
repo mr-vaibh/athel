@@ -129,3 +129,19 @@ func TestEncodeDecodeIndex(t *testing.T) {
 		}
 	}
 }
+
+// TestSentencesEndAtPunctuationAndSpace: a dot inside a token (E.164, v1.2, 2.5) does not end a
+// sentence; the first M3 smoke run indexed "stored in E." as a whole requirement.
+func TestSentencesEndAtPunctuationAndSpace(t *testing.T) {
+	for _, tc := range []struct{ line, want string }{
+		{"Numbers must be stored in E.164. Nice.", "Numbers must be stored in E.164."},
+		{"The API must answer within 2.5 s on v1.2!", "The API must answer within 2.5 s on v1.2!"},
+		{"It must work", "It must work"},
+		{"Fine. It must stop?? Done.", "It must stop??"},
+	} {
+		got := parse([]byte(tc.line))
+		if len(got) != 1 || got[0].text != tc.want {
+			t.Errorf("%q: %+v, want %q", tc.line, got, tc.want)
+		}
+	}
+}

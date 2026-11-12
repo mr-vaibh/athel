@@ -115,7 +115,7 @@ func (r *runCtx) lintPlan(s *state.Store, id string, data []byte) error {
 	}
 	p, err := plan.Decode(r.registry(), data)
 	if err != nil {
-		return err
+		return draftError(err, "plan template")
 	}
 	if p.Schema != plan.SchemaID {
 		return aerr.New(aerr.StateInvalid, id+" has specs, so its plan must be "+plan.SchemaID+" with a kind per task").

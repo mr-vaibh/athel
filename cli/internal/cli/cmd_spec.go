@@ -107,7 +107,7 @@ func cmdSpecValidate(r *runCtx, args []string) (any, error) {
 	}
 	sp, problems, err := r.checkSpec(s, pos[0], data)
 	if err != nil {
-		return nil, err
+		return nil, draftError(err, "spec template")
 	}
 	return specChecked{Valid: len(problems) == 0, Service: sp.Service, Problems: problems}, nil
 }
@@ -133,7 +133,7 @@ func cmdSpecSave(r *runCtx, args []string) (any, error) {
 	}
 	sp, problems, err := r.checkSpec(s, pos[0], data)
 	if err != nil {
-		return nil, err
+		return nil, draftError(err, "spec template")
 	}
 	if len(problems) > 0 {
 		return nil, aerr.New(aerr.StateInvalid, "spec rejected: "+strings.Join(problems, "; ")).
