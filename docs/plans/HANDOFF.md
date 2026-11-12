@@ -68,12 +68,8 @@ the architect's instructions at `0e7ee85`. Card precision is 20%, reported only.
 for M3 so far: $40.38.
 
 Next:
-1. 13: **full run 2 restarted 2026-11-12** ("Continue, please.") from `.worktrees/m3-eval` frozen at `220f1c1` (same code as `043d498`), run folders in the session scratchpad (`m3-full2`). A first attempt on 2026-11-11 was stopped after a few minutes at the owner's request. If the session ends mid-run, the history file is lost: ask the owner before re-running. Original plan: It checks the fix:
-   3 PRDs × 3 runs, about $30 and 80–90 minutes. Freeze the code in a worktree first
-   (`git worktree add .worktrees/m3-eval HEAD`), run from it with `ATHEL_EVALS_KEEP` set to a
-   scratchpad folder, then copy the history file into `tests/evals/history/`, record it in
-   `EVALS.md` and remove the worktree. If the owner declines, report EC-1 as measured (8/9)
-   in the M3 report.
+1. 13: **done.** Full run 2 met the M3 eval bar: 9/9 valid, blast recall 100%, $29.74
+   (`EVALS.md`). Card over-asking is in the backlog for M4.
 2. 14: the M3 report (`docs/m3-report`), EVALS.md, HANDOFF, ROADMAP.
 3. Ask the owner to merge the M3 stack #60 → #75 in order.
 
