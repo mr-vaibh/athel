@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/decision@1.json",
+  "title": "athel/decision@1",
+  "description": "decisions.yaml: every decision card and its answer, and every choice Athel made alone (doc 05 §Decision cards; FR-DEC-001…004). Cards are raised only by an ask rule A1–A7; answers count only from the human's own /athel:decide prompt or an applied safe default.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "change",
+    "decisions"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/decision@1"
+    },
+    "change": {
+      "type": "string",
+      "pattern": "^CHG-[0-9]{3,}(-F[1-9][0-9]*)?$"
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/card"
+          },
+          {
+            "$ref": "#/$defs/decision"
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "rule",
+        "step",
+        "question",
+        "context",
+        "options",
+        "recommendation",
+        "default_if_unanswered",
+        "default_safe",
+        "blocks",
+        "answer"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^D-[0-9]+$"
+        },
+        "kind": {
+          "const": "card"
+        },
+        "rule": {
+          "enum": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5",
+            "A6",
+            "A7"
+          ]
+        },
+        "step": {
+          "enum": [
+            "spec",
+            "blast",
+            "plan",
+            "build",
+            "review",
+            "verify",
+            "uat"
+          ]
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "context": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "label",
+              "consequence"
+            ],
+            "properties": {
+              "key": {
+                "enum": [
+                  "a",
+                  "b",
+                  "c",
+                  "d"
+                ]
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "consequence": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            }
+          }
+        },
+        "recommendation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "option",
+            "reason"
+          ],
+          "properties": {
+            "option": {
+              "enum": [
+                "a",
+                "b",
+                "c",
+                "d"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          }
+        },
+        "default_if_unanswered": {
+          "enum": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ]
+        },
+        "default_safe": {
+          "type": "boolean"
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(T-[0-9]{2,}|spec|blast|plan|build)$"
+          }
+        },
+        "new_blocker": {
+          "type": "boolean"
+        },
+        "presented_at": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "answer": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "by",
+                "at"
+              ],
+              "properties": {
+                "option": {
+                  "enum": [
+                    "a",
+                    "b",
+                    "c",
+                    "d"
+                  ]
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "by": {
+                  "enum": [
+                    "human",
+                    "default"
+                  ]
+                },
+                "at": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+                },
+                "grant": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "checked": {
+                  "type": "boolean"
+                }
+              }
+            }
+          ]
+        },
+        "should_not_have_asked": {
+          "type": "boolean"
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "step",
+        "question",
+        "choice",
+        "reason",
+        "decided_by",
+        "at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^D-[0-9]+$"
+        },
+        "kind": {
+          "const": "decision"
+        },
+        "step": {
+          "enum": [
+            "spec",
+            "blast",
+            "plan",
+            "build",
+            "review",
+            "verify",
+            "uat"
+          ]
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "choice": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "decided_by": {
+          "const": "athel"
+        },
+        "at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+        }
+      }
+    }
+  }
+}

@@ -33,6 +33,10 @@ const (
 	Services      = "athel/services@1"
 	Observation   = "athel/observation@1"
 	Ask           = "athel/ask@1"
+	PRDIndex      = "athel/prd-index@1"
+	PRDReview     = "athel/prd-review@1"
+	Spec          = "athel/spec@1"
+	Decision      = "athel/decision@1"
 )
 
 var idRe = regexp.MustCompile(`^athel/([a-z][a-z0-9-]*@[1-9][0-9]*)$`)
