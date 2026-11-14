@@ -152,6 +152,10 @@ func commands() map[string]command {
 		"review fix":             cmdReviewFix,
 		"review dispute":         cmdReviewDispute,
 		"review show":            cmdReviewShow,
+		"review context":         cmdReviewContext,
+		"build next":             cmdBuildNext,
+		"build context":          cmdBuildContext,
+		"build done":             cmdBuildDone,
 	}
 }
 

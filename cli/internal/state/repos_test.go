@@ -5,7 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mr-vaibh/athel/cli/internal/build"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/plan"
 )
 
 // approved is a change whose plan, with one task in repo users, is approved.
@@ -109,5 +111,33 @@ func TestWaivers(t *testing.T) {
 	}
 	if _, err := s.AddWaiver(c.ID, "other", w); !aerr.HasCode(err, aerr.StateLockHeld) {
 		t.Errorf("another session: %v", err)
+	}
+}
+
+func TestUpdateBuild(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := approved(t, s)
+	add := func(_ *plan.Plan, recs []build.Task) ([]build.Task, error) {
+		return append(recs, build.Task{ID: "T-01", Status: build.InProgress, Started: "x", Commits: []string{}}), nil
+	}
+	if _, err := s.UpdateBuild(c.ID, testSession, add); !aerr.HasCode(err, aerr.StateInvalid) {
+		t.Errorf("before building: %v", err)
+	}
+	if _, err := s.Transition(c.ID, TransitionRequest{To: Building, By: ByAthel, Reason: "go", Session: ptr(testSession)}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.UpdateBuild(c.ID, testSession, add)
+	if err != nil || len(got.Build) != 1 {
+		t.Fatalf("%+v %v", got, err)
+	}
+	if _, err := s.UpdateBuild(c.ID, "", add); !aerr.HasCode(err, aerr.StateNoSession) {
+		t.Errorf("no session: %v", err)
+	}
+	if _, err := s.UpdateBuild(c.ID, "other", add); !aerr.HasCode(err, aerr.StateLockHeld) {
+		t.Errorf("another session: %v", err)
+	}
+	boom := errors.New("refused")
+	if _, err := s.UpdateBuild(c.ID, testSession, func(*plan.Plan, []build.Task) ([]build.Task, error) { return nil, boom }); !errors.Is(err, boom) {
+		t.Errorf("fn's error: %v", err)
 	}
 }

@@ -15,7 +15,7 @@ var sealHash = regexp.MustCompile(`(?m)^  hash: sha256:[0-9a-f]{64}$`)
 // schema line names version 2 and the seal covers those bytes.
 func toV2(t *testing.T, current string) string {
 	t.Helper()
-	v2 := strings.Replace(current, "schema: "+SchemaID, "schema: "+SchemaV2, 1)
+	v2 := strings.Replace(withoutBuild(current), "schema: "+SchemaID, "schema: "+SchemaV2, 1)
 	h, err := ContentHash([]byte(v2))
 	if err != nil {
 		t.Fatal(err)
@@ -89,10 +89,10 @@ func TestChangeFlagsRoundTrip(t *testing.T) {
 }
 
 // toV3 turns a current change file into the sealed change@3 file M2 and M3 wrote: repos was
-// always empty then, so only the schema line differs.
+// always empty then and there were no build records, so only those differ.
 func toV3(t *testing.T, current string) string {
 	t.Helper()
-	v3 := strings.Replace(current, "schema: "+SchemaID, "schema: "+SchemaV3, 1)
+	v3 := strings.Replace(withoutBuild(current), "schema: "+SchemaID, "schema: "+SchemaV3, 1)
 	h, err := ContentHash([]byte(v3))
 	if err != nil {
 		t.Fatal(err)

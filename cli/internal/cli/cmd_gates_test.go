@@ -36,6 +36,9 @@ func goGates(t *testing.T, plan ...string) (*harness, string) {
 	fakeGH(t, h, "[]")
 	h.mustOK("git", "preflight", "CHG-001", "users")
 	h.mustOK("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "preflight clear")
+	h.stdin = convDoc // the developer's and reviewer's manifests name the repo's conventions
+	h.mustOK("conventions", "save", "github.com/acme/users", "-", "--new")
+	h.stdin = ""
 	bin := t.TempDir()
 	lint := "#!/bin/sh\necho 'main.go:1:1: old finding (gosec)'\nif [ -f src/bad.go ]; then echo 'src/bad.go:3:1: new finding (revive)'; fi\n" +
 		"if [ -f src/unsafe.go ]; then echo 'src/unsafe.go:5:2: G404: weak random number generator (gosec)'; fi\nexit 1\n"
