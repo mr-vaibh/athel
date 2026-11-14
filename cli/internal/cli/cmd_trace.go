@@ -67,6 +67,8 @@ func (r *runCtx) stepGuard(s *state.Store, id string, to state.State) error {
 		return r.signoffGuard(s, id)
 	case state.Building:
 		return r.buildingGuard(s, id)
+	case state.ReadyForPR:
+		return r.readyGuard(s, id)
 	}
 	return nil
 }

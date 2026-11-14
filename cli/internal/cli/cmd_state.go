@@ -52,6 +52,9 @@ func cmdStateTransition(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	if c, err := s.Get(pos[0]); err == nil && c.Frozen() != nil {
+		return nil, c.Frozen() // a hand-edited change is refused before any guard reads it
+	}
 	if err := r.stepGuard(s, pos[0], state.State(*to)); err != nil {
 		return nil, err
 	}

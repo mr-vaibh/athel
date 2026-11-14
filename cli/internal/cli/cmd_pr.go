@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mr-vaibh/athel/cli/internal/build"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/gitlint"
 	"github.com/mr-vaibh/athel/cli/internal/pr"
@@ -76,7 +77,7 @@ func cmdPROpen(r *runCtx, args []string) (any, error) {
 	if w.PR != nil {
 		return prOpened{prDraft: d, URL: *w.PR}, nil
 	}
-	out, err := r.tool("gh", "pr", "create", "--repo", ghRepo(w.Remote), "--head", w.Branch, "--base", w.Base,
+	out, err := r.gh("pr", "create", "--repo", ghRepo(w.Remote), "--head", w.Branch, "--base", w.Base,
 		"--title", d.Title, "--body", d.Body, "--draft")
 	if err != nil {
 		return nil, err
@@ -113,7 +114,7 @@ func cmdPRUpdate(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return d, err
 	}
-	if _, err := r.tool("gh", "pr", "edit", path.Base(*w.PR), "--repo", ghRepo(w.Remote), "--title", d.Title, "--body", d.Body); err != nil {
+	if _, err := r.gh("pr", "edit", path.Base(*w.PR), "--repo", ghRepo(w.Remote), "--title", d.Title, "--body", d.Body); err != nil {
 		return nil, err
 	}
 	return prOpened{prDraft: d, URL: *w.PR}, nil
@@ -269,4 +270,75 @@ func (r *runCtx) taskLines(s *state.Store, c *state.Change, w state.RepoWork, ex
 		}
 	}
 	return pr.Split(tasks, limit), nil
+}
+
+// readyGuard: a change is ready for PR when every plan task is done and every repo's branch is
+// pushed, lint-clean and has its draft PR (doc 06 build loop step 6; FR-GIT-007).
+func (r *runCtx) readyGuard(s *state.Store, id string) error {
+	c, err := s.Get(id)
+	if err != nil {
+		return err
+	}
+	p, ok := s.ApprovedPlan(c)
+	if !ok {
+		return guardError(id, state.ReadyForPR, []string{"the plan is not approved"})
+	}
+	var problems []string
+	if !build.AllDone(p, c.Build) {
+		problems = append(problems, "not every plan task is done (athel build next)")
+	}
+	for _, w := range c.Repos {
+		switch {
+		case !w.Pushed:
+			problems = append(problems, w.Name+" is not pushed (athel git push "+id+" "+w.Name+")")
+		case w.PR == nil:
+			problems = append(problems, w.Name+" has no draft PR (athel pr open "+id+" "+w.Name+")")
+		}
+		if _, err := r.lintBranch(s, c, w); err != nil {
+			problems = append(problems, w.Name+": "+err.Error())
+		}
+	}
+	return guardError(id, state.ReadyForPR, problems)
+}
+
+// cmdPRReady marks a draft PR ready for review once the change is ready_for_pr and the remote
+// branch is the worktree's head: every gate has passed (FR-GIT-007). Athel never merges.
+func cmdPRReady(r *runCtx, args []string) (any, error) {
+	pos, err := parse(r.newFlags("pr ready"), args, 2)
+	if err != nil {
+		return nil, err
+	}
+	s, _, err := r.mutating()
+	if err != nil {
+		return nil, err
+	}
+	c, err := s.Get(pos[0])
+	if err != nil {
+		return nil, err
+	}
+	w, ok := repoWork(c, pos[1])
+	switch {
+	case c.State != state.ReadyForPR && c.State != state.InReview:
+		return nil, aerr.New(aerr.StateInvalid, c.ID+" is "+string(c.State)+"; a PR is marked ready only when the change is ready_for_pr").
+			WithNextAction("finish every task, then athel state transition " + c.ID + " --to ready_for_pr")
+	case !ok || w.PR == nil:
+		return nil, aerr.New(aerr.StateNotFound, c.ID+" has no PR in "+pos[1])
+	}
+	dir := filepath.Join(s.WS.Root, filepath.FromSlash(w.Worktree))
+	local, err := r.gitOut(dir, "rev-parse", "HEAD")
+	if err != nil {
+		return nil, err
+	}
+	remote, err := r.gitOut(dir, "ls-remote", "--heads", "origin", "refs/heads/"+w.Branch)
+	if err != nil {
+		return nil, err
+	}
+	if f := strings.Fields(remote); len(f) == 0 || f[0] != strings.TrimSpace(local) {
+		return nil, aerr.New(aerr.StateInvalid, w.Branch+" on the remote is not the worktree's head").
+			WithNextAction("athel git push " + c.ID + " " + w.Name)
+	}
+	if _, err := r.gh("pr", "ready", path.Base(*w.PR), "--repo", ghRepo(w.Remote)); err != nil {
+		return nil, err
+	}
+	return prOpened{URL: *w.PR}, nil
 }

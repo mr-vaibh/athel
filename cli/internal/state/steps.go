@@ -161,3 +161,21 @@ func LastCheckpoint(c *Change) *Checkpoint {
 	}
 	return &c.Checkpoints[len(c.Checkpoints)-1]
 }
+
+// NoteStopBlock counts one more consecutive Stop-hook block of the running step and returns the
+// count (doc 02: after 3 the step moves to blocked). EnterStep starts the count again.
+func (s *Store) NoteStopBlock(id, session string) (int, error) {
+	if err := CheckSession(session); err != nil {
+		return 0, err
+	}
+	n := 0
+	_, err := s.Update(id, func(c *Change) error {
+		if err := s.claim(c, session, s.Clock.Now()); err != nil {
+			return err
+		}
+		c.StopBlocks.Count++
+		n = c.StopBlocks.Count
+		return nil
+	})
+	return n, err
+}
