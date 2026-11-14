@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.athel.invalid/change@4.json",
   "title": "athel/change@4",
-  "description": "State of one Athel change (.athel/changes/CHG-NNN/change.yaml). Version 2 (M1) binds plan approval to the plan hash and adds the integrity record. Version 3 (M2) fills flags: a fact this change relied on was disputed or superseded (doc 03 FR-DISC-005). Version 4 (M4) fills repos: Athel's worktree, branch and pull request per repo. Reserved fields must stay empty until the milestone that fills them bumps the version.",
+  "description": "State of one Athel change (.athel/changes/CHG-NNN/change.yaml). Version 2 (M1) binds plan approval to the plan hash and adds the integrity record. Version 3 (M2) fills flags: a fact this change relied on was disputed or superseded (doc 03 FR-DISC-005). Version 4 (M4) fills repos (Athel's worktree, branch and pull request per repo) and waivers. Reserved fields must stay empty until the milestone that fills them bumps the version.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -423,8 +423,49 @@
     },
     "waivers": {
       "type": "array",
-      "maxItems": 0,
-      "description": "reserved: gate waivers (M4)"
+      "description": "Gate and finding waivers, each from the developer's own /athel:waive (doc 06 FR-BUILD-014)",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task",
+          "subject",
+          "by",
+          "reason",
+          "until",
+          "grant",
+          "at"
+        ],
+        "properties": {
+          "task": {
+            "type": "string",
+            "pattern": "^T-[0-9]{2,}$"
+          },
+          "subject": {
+            "type": "string",
+            "pattern": "^([a-z][a-z0-9-]{1,40}|R[1-9][0-9]*-[0-9]{2,})$"
+          },
+          "by": {
+            "const": "human"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "until": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          },
+          "grant": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
     },
     "repos": {
       "type": "array",

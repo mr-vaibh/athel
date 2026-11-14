@@ -146,6 +146,7 @@ func commands() map[string]command {
 		"gate baseline":          cmdGateBaseline,
 		"gate run":               cmdGateRun,
 		"gate show":              cmdGateShow,
+		"gate waive":             cmdGateWaive,
 		"review template":        cmdReviewTemplate,
 		"review save":            cmdReviewSave,
 		"review fix":             cmdReviewFix,

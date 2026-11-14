@@ -215,6 +215,9 @@ func userPromptSubmit(req *hookio.Request, d Deps) Outcome {
 	} else if change, answers, ok := grants.ParseDecidePrompt(req.Prompt); ok {
 		recordGrant(req, d, grants.DecideKey(change, answers), grants.TargetDecide,
 			" Run `"+grants.DecideCommand(change, answers)+"` now, exactly as written, to record these answers.", &o)
+	} else if w, ok := grants.ParseWaivePrompt(req.Prompt); ok {
+		recordGrant(req, d, grants.WaiveKey(w), grants.TargetWaive,
+			" Run `"+grants.WaiveCommand(w)+"` now, exactly as written, to record this waiver.", &o)
 	}
 	return o
 }

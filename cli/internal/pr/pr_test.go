@@ -60,6 +60,7 @@ func TestBody(t *testing.T) {
 		Decisions: []Decision{{ID: "D-1", Question: "Which region?", Answer: "b", By: "human"}},
 		Linked:    []Linked{{Repo: "orders", PR: "https://github.com/acme/orders/pull/902"}},
 		Rollback:  []string{"T-01: revert the commit"},
+		Waivers:   []string{"T-01 lint until 2026-11-30 by human: legacy finding"},
 	})
 	for _, want := range []string{
 		"## Summary", "CHG-001", "spec/users.md", "## Why", "prd/v1.md",
@@ -67,14 +68,14 @@ func TestBody(t *testing.T) {
 		"## Blast radius", "HIGH", "## Decisions", "D-1 Which region? → b (human)",
 		"## Tests and gates", "## Security notes", "## Side findings (not fixed here)",
 		"## Linked PRs and merge order", "orders: https://github.com/acme/orders/pull/902",
-		"## Rollback", "T-01: revert the commit",
+		"## Rollback", "T-01: revert the commit", "## Waivers", "- T-01 lint until 2026-11-30 by human: legacy finding",
 	} {
 		if !strings.Contains(b, want) {
 			t.Errorf("body lacks %q:\n%s", want, b)
 		}
 	}
 	empty := Body(BodyInput{Change: "CHG-001", Title: "x", Repo: "users"})
-	for _, want := range []string{"No decisions were asked or made.", "No other repo in this change.", "No rollback steps in the plan.", "unknown"} {
+	for _, want := range []string{"No decisions were asked or made.", "No other repo in this change.", "No rollback steps in the plan.", "unknown", "## Waivers\n\nNone."} {
 		if !strings.Contains(empty, want) {
 			t.Errorf("empty body lacks %q:\n%s", want, empty)
 		}

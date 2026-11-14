@@ -55,7 +55,7 @@ type Change struct {
 	Budget       Budget         `yaml:"budget" json:"budget"`
 	Lock         *Lock          `yaml:"lock" json:"lock"`
 	Approvals    Approvals      `yaml:"approvals" json:"approvals"`
-	Waivers      []any          `yaml:"waivers" json:"waivers"`
+	Waivers      []Waiver       `yaml:"waivers" json:"waivers"`
 	Repos        []RepoWork     `yaml:"repos" json:"repos"`
 	ChangeSet    any            `yaml:"change_set" json:"change_set"`
 	Parent       any            `yaml:"parent" json:"parent"`
@@ -77,6 +77,28 @@ type RepoWork struct {
 	Worktree string  `yaml:"worktree" json:"worktree"` // relative to the workspace root
 	Pushed   bool    `yaml:"pushed" json:"pushed"`
 	PR       *string `yaml:"pr" json:"pr"`
+}
+
+// Waiver lets one gate or one major review finding of a task through until a date, on the
+// developer's own /athel:waive (doc 06 FR-BUILD-014).
+type Waiver struct {
+	Task    string `yaml:"task" json:"task"`
+	Subject string `yaml:"subject" json:"subject"` // a gate ID or a finding ID
+	By      string `yaml:"by" json:"by"`
+	Reason  string `yaml:"reason" json:"reason"`
+	Until   string `yaml:"until" json:"until"` // YYYY-MM-DD, the last day it holds
+	Grant   string `yaml:"grant" json:"grant"`
+	At      string `yaml:"at" json:"at"`
+}
+
+// Waived reports whether a waiver for subject in task holds on day (YYYY-MM-DD).
+func (c *Change) Waived(task, subject, day string) bool {
+	for _, w := range c.Waivers {
+		if w.Task == task && w.Subject == subject && w.Until >= day {
+			return true
+		}
+	}
+	return false
 }
 
 // OwnBranches are the branches Athel created for this change: the only ones it may push (doc 04

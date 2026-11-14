@@ -274,19 +274,28 @@ func cmdGateRun(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	run := gateRun{N: len(f.Runs) + 1, Stage: *stage, Head: strings.TrimSpace(head), At: clock.Format(r.env.Clock.Now()), Green: true, Results: []gateOutcome{}}
-	for _, gate := range list {
-		if gate.Stage != *stage && *stage == gates.Cheap {
-			continue
-		}
-		o := r.evaluateGate(g, f.Baseline, gate, run.N)
-		run.Green = run.Green && (o.Status == gates.Pass || o.Status == gates.Skipped)
-		run.Results = append(run.Results, o)
-	}
+	run := r.runGates(g, f, list, *stage, strings.TrimSpace(head))
 	if err := r.recordRun(g, f, run); err != nil {
 		return nil, err
 	}
 	return run, redError(g, run)
+}
+
+// runGates runs a stage's gates (the full stage runs every gate) and judges each, a waiver
+// letting a red gate through while it holds.
+func (r *runCtx) runGates(g gateTask, f *gateFile, list []gates.Gate, stage, head string) gateRun {
+	run := gateRun{N: len(f.Runs) + 1, Stage: stage, Head: head, At: clock.Format(r.env.Clock.Now()), Green: true, Results: []gateOutcome{}}
+	day := r.env.Clock.Now().UTC().Format(time.DateOnly)
+	for _, gate := range list {
+		if gate.Stage != stage && stage == gates.Cheap {
+			continue
+		}
+		o := r.evaluateGate(g, f.Baseline, gate, run.N)
+		applyWaiver(g.c, g.task.ID, gate, day, &o)
+		run.Green = run.Green && (o.Status == gates.Pass || o.Status == gates.Skipped || o.Status == gates.Waived)
+		run.Results = append(run.Results, o)
+	}
+	return run
 }
 
 // recordRun stores a run, and raises a card when it is the third identical failure in a row.
@@ -306,7 +315,7 @@ func (r *runCtx) recordRun(g gateTask, f *gateFile, run gateRun) error {
 func redError(g gateTask, run gateRun) error {
 	var red []string
 	for _, o := range run.Results {
-		if o.Status != gates.Pass && o.Status != gates.Skipped {
+		if o.Status != gates.Pass && o.Status != gates.Skipped && o.Status != gates.Waived {
 			red = append(red, o.Gate+" "+o.Status+": "+o.Summary)
 		}
 	}

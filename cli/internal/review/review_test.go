@@ -155,3 +155,15 @@ func TestTemplateIsAValidSubmission(t *testing.T) {
 		t.Errorf("the template is a valid second round: %v", err)
 	}
 }
+
+func TestWaive(t *testing.T) {
+	r, _ := Next(nil, Submission{Verdict: Approved, New: []Draft{newFinding(Major, "a"), newFinding(Blocker, "b"), newFinding(Minor, "c")}}, "h")
+	if err := r.Waive("R1-01", "accepted risk"); err != nil || r.Findings[0].Status != Waived {
+		t.Errorf("a major is waived: %v", err)
+	}
+	for _, id := range []string{"R1-02", "R1-03", "R9-09"} {
+		if err := r.Waive(id, "x"); err == nil {
+			t.Errorf("%s must not be waived", id)
+		}
+	}
+}

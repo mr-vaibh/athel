@@ -242,7 +242,7 @@ func athelCall(cmd shellparse.Command) Action {
 	pos, vals := positionals(cmd.Args[1:], map[string]bool{"--to": true, "--by": true, "--reason": true, "--session": true,
 		"--workspace": true, "--title": true, "--prd-file": true, "--prd-text": true, "--task": true, "--result": true,
 		"--note": true, "--evidence": true, "--prompt-id": true, "-n": true, "--cost-usd": true, "--minutes": true,
-		"--tool-calls": true, "--schema": true, "--layer": true})
+		"--tool-calls": true, "--schema": true, "--layer": true, "--until": true, "--commit": true, "--stage": true, "--step": true})
 	a := Action{Tool: "athel", Tier: R0, Text: text(cmd)}
 	if len(pos) == 0 {
 		return a
@@ -287,18 +287,28 @@ func humanOnly(call *AthelCall, pos []shellparse.Word, vals map[string]shellpars
 		call.Command, call.Change, call.To, call.ByHuman = "repos roots set", grants.RootsKey(roots), grants.TargetRoots, true
 	case call.Command == "blast signoff" && len(pos) > 2:
 		call.Change, call.To, call.ByHuman = known(pos[2]), grants.TargetSignoff, true
+	case call.Command == "gate waive" && len(pos) > 4:
+		// Only the developer waives a gate or a finding (FR-BUILD-014); the grant binds this
+		// exact waiver, its expiry and its reason.
+		w := grants.Waiver{Change: known(pos[2]), Task: known(pos[3]), Subject: known(pos[4]),
+			Until: flagVal(vals, "--until"), Reason: flagVal(vals, "--reason")}
+		call.Change, call.To, call.ByHuman = grants.WaiveKey(w), grants.TargetWaive, true
 	case call.Command == "decide answer" && len(pos) > 2:
 		// Only the developer answers cards (ADR 019); the grant binds these exact answers.
-		words := make([]string, 0, len(pos)-3)
-		for _, w := range pos[3:] {
-			words = append(words, known(w))
-		}
-		key := "decide:invalid"
-		if answers, ok := grants.ParseAnswers(words); ok && len(answers) > 0 {
-			key = grants.DecideKey(known(pos[2]), answers)
-		}
-		call.Change, call.To, call.ByHuman = key, grants.TargetDecide, true
+		call.Change, call.To, call.ByHuman = decideKey(pos), grants.TargetDecide, true
 	}
+}
+
+// decideKey is the grant key of `athel decide answer CHG answers…`.
+func decideKey(pos []shellparse.Word) string {
+	words := make([]string, 0, len(pos)-3)
+	for _, w := range pos[3:] {
+		words = append(words, known(w))
+	}
+	if answers, ok := grants.ParseAnswers(words); ok && len(answers) > 0 {
+		return grants.DecideKey(known(pos[2]), answers)
+	}
+	return "decide:invalid"
 }
 
 // athelReadGroups are athel command groups that only read; athelReads are single read-only
