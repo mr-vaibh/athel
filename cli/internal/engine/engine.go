@@ -20,6 +20,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/classify"
 	"github.com/mr-vaibh/athel/cli/internal/envdetect"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/gates"
 	"github.com/mr-vaibh/athel/cli/internal/grants"
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
 	"github.com/mr-vaibh/athel/cli/internal/plan"
@@ -180,18 +181,78 @@ func (ctx Context) forbidden(a classify.Action) (string, aerr.Code, string) {
 		return "12", aerr.PolicySecretPath, a.Forbidden
 	case a.Tier == classify.X:
 		return "3", aerr.PolicyForbidden, a.Forbidden
-	case ctx.Agent == hookio.ScoutAgent && classify.IsWrite(a.Tier) && a.Athel == nil:
-		return "3", aerr.PolicyAgentReadOnly, "the scout is read-only: it reports, it never changes anything (doc 04 injection-defence layer 4)"
-	case ctx.Agent == hookio.ArchitectAgent && classify.IsWrite(a.Tier) && a.Athel == nil:
-		return "3", aerr.PolicyAgentReadOnly, "the architect writes specs, cards and plans only through the athel CLI, never a file (M3 plan G13)"
 	case a.Athel != nil && a.Athel.Command == "integrity accept":
 		return "H", aerr.PolicyHumanOrigin, "only the developer accepts a hand edit of Athel state, in a terminal"
 	case a.Athel != nil && a.Athel.ByHuman:
 		if why := ctx.humanOrigin(a.Athel); why != "" {
 			return "H", aerr.PolicyHumanOrigin, why
 		}
+	case ctx.Agent != "" && classify.IsWrite(a.Tier):
+		if code, why := ctx.agentScope(a); why != "" {
+			return "3", code, why
+		}
 	}
 	return "", "", ""
+}
+
+// agentScope is rule 3 for Athel's subagents: what each may write (doc 04 injection-defence
+// layer 4, M3 plan G13, ADR 024), or "" when the write is within its role.
+func (ctx Context) agentScope(a classify.Action) (aerr.Code, string) {
+	switch {
+	case ctx.Agent == hookio.ScoutAgent && a.Athel == nil:
+		return aerr.PolicyAgentReadOnly, "the scout is read-only: it reports, it never changes anything (doc 04 injection-defence layer 4)"
+	case ctx.Agent == hookio.ArchitectAgent && a.Athel == nil:
+		return aerr.PolicyAgentReadOnly, "the architect writes specs, cards and plans only through the athel CLI, never a file (M3 plan G13)"
+	case RoleCommands[ctx.Agent] != nil:
+		return ctx.roleScope(a)
+	}
+	return "", ""
+}
+
+// RoleCommands are the writing athel commands each build role may run; every other writing
+// command is the build skill's, in the main session (ADR 024). Reads are open to all.
+var RoleCommands = map[string][]string{
+	hookio.DeveloperAgent: {"build save", "review fix", "review dispute", "finding add"},
+	hookio.QAAgent:        {"qa save", "finding add"},
+	hookio.SecurityAgent:  {"security save", "finding add"},
+	hookio.ReviewerAgent:  {"review save", "finding add"},
+}
+
+// roleScope says why a build agent's write is outside its role (doc 06 §Role agents), or "".
+func (ctx Context) roleScope(a classify.Action) (aerr.Code, string) {
+	role := strings.TrimPrefix(ctx.Agent, "athel:")
+	switch {
+	case a.Athel != nil && !slices.Contains(RoleCommands[ctx.Agent], a.Athel.Command):
+		return aerr.PolicyAgentScope, "the " + role + " agent may not run athel " + a.Athel.Command + "; it saves its work with athel " +
+			strings.Join(RoleCommands[ctx.Agent], ", athel ") + " (ADR 024)"
+	case a.Athel != nil, ctx.Agent == hookio.DeveloperAgent:
+		return "", ""
+	case ctx.Agent == hookio.SecurityAgent || ctx.Agent == hookio.ReviewerAgent:
+		return aerr.PolicyAgentReadOnly, "the " + role + " agent judges the code and never changes it; it reports findings (doc 06 independence rules)"
+	}
+	return ctx.qaScope(a)
+}
+
+// qaScope: QA writes test files in the change's worktrees and runs tests, nothing else; a bug
+// its test shows is a finding for the developer (doc 06).
+func (ctx Context) qaScope(a classify.Action) (aerr.Code, string) {
+	const why = "QA writes only test files and runs tests; a bug in product code is a finding for the developer (athel qa save)"
+	if a.Tier != classify.W0 {
+		return aerr.PolicyAgentScope, why
+	}
+	if len(a.Paths) == 0 {
+		if a.Verb == "test" {
+			return "", ""
+		}
+		return aerr.PolicyAgentScope, why
+	}
+	for _, p := range a.Paths {
+		_, rel, ok := ctx.worktreeOf(path.Clean(p))
+		if !ok || !gates.IsTestFile(rel) {
+			return aerr.PolicyAgentScope, why + ": " + p + " is not a test file"
+		}
+	}
+	return "", ""
 }
 
 // humanOrigin explains why a human-only CLI call (`--by human`, `repos roots set`) is not the
