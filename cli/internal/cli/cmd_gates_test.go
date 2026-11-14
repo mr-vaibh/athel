@@ -10,12 +10,32 @@ import (
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 )
 
-// goGates is a building change whose users worktree is a small Go module with a passing test,
-// committed, with a scripted golangci-lint on PATH: one old finding always, and a new one when
-// src/bad.go exists.
+// goGates is a building change on users, whose base is a small Go module with a passing test,
+// with one commit on Athel's branch: a test naming AC-1, the AC its task covers. A scripted
+// golangci-lint is on PATH: one old finding always, and a new one when src/bad.go exists.
 func goGates(t *testing.T) (*harness, string) {
 	t.Helper()
-	h, tree, _, _ := building(t)
+	h, src, git := approvedOnUsersRemote(t)
+	h.exe = athelBinary(t)
+	mate := teammate(t, src, git)
+	for file, body := range map[string]string{
+		"go.mod":        "module example.com/users\n\ngo 1.27\n",
+		"main.go":       "package main\n\nfunc main() {}\n",
+		"src/a_test.go": "package src\n\nimport \"testing\"\n\nfunc TestA(t *testing.T) {}\n",
+	} {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(mate, file)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(mate, file), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	git(mate, "add", "-A")
+	git(mate, "-c", "user.name=Mate", "-c", "user.email=mate@example.invalid", "commit", "-q", "-m", "a Go module")
+	git(mate, "push", "-q", "origin", "main")
+	fakeGH(t, h, "[]")
+	h.mustOK("git", "preflight", "CHG-001", "users")
+	h.mustOK("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "preflight clear")
 	bin := t.TempDir()
 	lint := "#!/bin/sh\necho 'main.go:1:1: old finding (gosec)'\nif [ -f src/bad.go ]; then echo 'src/bad.go:3:1: new finding (revive)'; fi\nexit 1\n"
 	if err := os.WriteFile(filepath.Join(bin, "golangci-lint"), []byte(lint), 0o700); err != nil {
@@ -27,14 +47,9 @@ func goGates(t *testing.T) (*harness, string) {
 	}
 	h.env["PATH"] = bin + string(os.PathListSeparator) + os.Getenv("PATH")
 	h.env["GOCACHE"], h.env["GOFLAGS"], h.env["GOTOOLCHAIN"] = strings.TrimSpace(string(cache)), "-mod=mod", "local"
-	for file, body := range map[string]string{
-		"go.mod":        "module example.com/users\n\ngo 1.27\n",
-		"main.go":       "package main\n\nfunc main() {}\n",
-		"src/a_test.go": "package src\n\nimport \"testing\"\n\nfunc TestA(t *testing.T) {}\n",
-	} {
-		if out, err := commit(t, h, tree, file, body, goodMsg); err != nil {
-			t.Fatalf("%s: %v %s", file, err, out)
-		}
+	tree := filepath.Join(h.root, "repos", "users@CHG-001")
+	if out, err := commit(t, h, tree, "src/ac_test.go", "package src\n\nimport \"testing\"\n\n// TestAC1 checks AC-1.\nfunc TestAC1(t *testing.T) {}\n", goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
 	}
 	return h, tree
 }
@@ -49,7 +64,7 @@ func TestGateBaselineAndRun(t *testing.T) {
 		t.Error("the baseline is taken once")
 	}
 	run := h.mustOK("gate", "run", "CHG-001", "T-01")
-	if run["green"] != true || len(run["results"].([]any)) != 5 {
+	if run["green"] != true || len(run["results"].([]any)) != 6 {
 		t.Fatalf("a clean task is green, with the old lint finding not counted: %v", run)
 	}
 }
@@ -266,7 +281,7 @@ func TestGateFullStage(t *testing.T) {
 			t.Fatalf("%v %s", err, out)
 		}
 	}
-	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 7 {
+	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 9 {
 		t.Fatalf("a tested, simple change is green on the full stage: %v", run)
 	}
 	untested := "package src\n\n// Sub subtracts.\nfunc Sub(a, b int) int {\n\tc := a - b\n\tc++\n\tc--\n\treturn c\n}\n"
@@ -310,5 +325,66 @@ func TestGateFullStageBroken(t *testing.T) {
 	}
 	if goModule(t.TempDir()) != "" {
 		t.Error("no go.mod, no module")
+	}
+}
+
+func TestGateACTestsAndContract(t *testing.T) {
+	h, tree := goGates(t)
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	if out, err := commit(t, h, tree, "src/ac_test.go", "package src\n\nimport \"testing\"\n\nfunc TestAC1(t *testing.T) {}\n", goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	route := "package src\n\nimport \"net/http\"\n\n// Register adds a route.\nfunc Register(mux *http.ServeMux) {\n\tmux.HandleFunc(\"PUT /v1/users/{id}/phone\", nil)\n}\n"
+	if out, err := commit(t, h, tree, "src/routes.go", route, goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	_, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
+	msg := asJSON(t, env)
+	for _, want := range []string{"ac-tests fail: no changed test names AC-1", "contract fail: the diff changes contracts the plan does not name"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("lacks %q: %s", want, msg)
+		}
+	}
+	if show := asJSON(t, h.mustOK("gate", "show", "CHG-001", "T-01")); !strings.Contains(show, "PUT /v1/users/{id}/phone") {
+		t.Errorf("the unplanned route is named: %s", show)
+	}
+}
+
+func TestGateOverrides(t *testing.T) {
+	h, _ := goGates(t)
+	cfg := filepath.Join(h.root, ".athel", "config", "gates.yaml")
+	extra := "schema: athel/gates@1\nrepos:\n  users:\n    - {id: version, stage: cheap, pass: exit-zero, waivable: human, command: [go, version]}\n"
+	if err := os.WriteFile(cfg, []byte(extra), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	run := h.mustOK("gate", "run", "CHG-001", "T-01")
+	if results := run["results"].([]any); len(results) != 7 || results[6].(map[string]any)["gate"] != "version" {
+		t.Errorf("an added gate runs after the defaults: %v", results)
+	}
+	for _, bad := range []string{
+		"schema: athel/gates@1\nrepos:\n  users:\n    - {id: contract, command: [go, version]}\n",
+		"schema: athel/gates@1\nrepos: {users: [{id: x, pass: tests, command: [go]}]}\n",
+		"repos: [",
+	} {
+		if err := os.WriteFile(cfg, []byte(bad), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, env := h.runJSON("gate", "run", "CHG-001", "T-01"); errCode(env) != string(aerr.PolicyConfigInvalid) {
+			t.Errorf("%q: %v", bad, env)
+		}
+	}
+}
+
+// TestGateContractNeedsAReadablePlan: a planned report that cannot be read makes the contract
+// gate unavailable, never green.
+func TestGateContractNeedsAReadablePlan(t *testing.T) {
+	h, _ := goGates(t)
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	if err := os.WriteFile(filepath.Join(h.root, ".athel", "changes", "CHG-001", "blast-radius.md"), []byte("no report block"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01"); !strings.Contains(asJSON(t, env), "contract unavailable") {
+		t.Errorf("%v", env)
 	}
 }

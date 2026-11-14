@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mr-vaibh/athel/cli/internal/blast"
+	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/gates"
 )
 
@@ -130,5 +132,65 @@ func (r *runCtx) judgeComplexity(g gateTask, base *gateBaseline, o *gateOutcome)
 	}
 	if len(o.Details) > 0 {
 		o.Status, o.Summary = gates.Fail, "functions newly over doc 06's complexity or length limits"
+	}
+}
+
+// judgeBuiltin runs a gate Athel computes itself.
+func (r *runCtx) judgeBuiltin(g gateTask, base *gateBaseline, gate gates.Gate, o *gateOutcome) {
+	switch gate.Pass {
+	case gates.Complexity:
+		r.judgeComplexity(g, base, o)
+	case gates.ACTests:
+		r.judgeACTests(g, o)
+	case gates.Contract:
+		r.judgeContract(g, o)
+	}
+}
+
+// judgeACTests: every AC the task covers is named by a test file changed since the change's
+// branch was cut (FR-BUILD-003), so a test written by an earlier task of the change counts.
+func (r *runCtx) judgeACTests(g gateTask, o *gateOutcome) {
+	names, err := r.gitOut(g.dir, "diff", "--name-only", "--diff-filter=AM", g.base)
+	if err != nil {
+		o.Status, o.Summary = "unavailable", err.Error()
+		return
+	}
+	tests := map[string]string{}
+	for _, name := range strings.Fields(names) {
+		if !gates.IsTestFile(name) {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(g.dir, name)) //nolint:gosec // a changed file of the worktree
+		if err != nil {
+			o.Status, o.Summary = "unavailable", err.Error()
+			return
+		}
+		tests[name] = string(b)
+	}
+	if missing := gates.MissingACs(g.task.Covers, tests); len(missing) > 0 {
+		o.Status, o.Summary = gates.Fail, "no changed test names "+strings.Join(missing, ", ")
+		o.Details = append(o.Details, "put the AC ID in the test's name or a comment, in the repo's test style (FR-BUILD-003)")
+	}
+}
+
+// judgeContract: the API and event changes of the change's diff in this repo are all in the
+// planned blast radius (doc 06 contract gate; FR-BLAST-005). With no planned report nothing was
+// planned, so any contract change fails.
+func (r *runCtx) judgeContract(g gateTask, o *gateOutcome) {
+	diff, err := r.gitOut(g.dir, "diff", "--unified=0", "--no-color", "--no-ext-diff", g.base)
+	if err != nil {
+		o.Status, o.Summary = "unavailable", err.Error()
+		return
+	}
+	planned, err := r.plannedReport(g.s, g.c.ID)
+	if aerr.HasCode(err, aerr.StateNotFound) {
+		planned, err = &blast.Report{}, nil
+	}
+	if err != nil {
+		o.Status, o.Summary = "unavailable", err.Error()
+		return
+	}
+	if drift := blast.Drift(blast.ParseDiff(diff), planned); len(drift) > 0 {
+		o.Status, o.Summary, o.Details = gates.Fail, "the diff changes contracts the plan does not name", drift
 	}
 }
