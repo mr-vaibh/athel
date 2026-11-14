@@ -52,23 +52,20 @@ M4-plan §9:
 | 00a buildable Go fixture repos | `feat/m4-fixture-build` | #78 | open, gate green |
 | 00b fake GitHub PR store and call log | `feat/m4-fixture-prs` | #79 | open, gate green |
 | 01 worktrees, `change@4`, `OwnBranches` | `feat/m4-worktrees` | #80 | open, gate green |
-| 02 git preflight, overlap card, `building` guard | `feat/m4-preflight` | — | **next** |
-| 03–17 | see M4-plan §9 | — | not started |
+| 02 git preflight, overlap card, `building` guard | `feat/m4-preflight` | #81 | open, gate green |
+| 03 commit, branch and title lint; pre-commit checks | `feat/m4-git-lint` | — | **next** |
+| 04–17 | see M4-plan §9 | — | not started |
 
 Next:
-1. **Task 02** on `feat/m4-preflight`, branched from `feat/m4-worktrees`. It covers doc 04's
-   preflight algorithm:
-   - fetch, and record the base head;
-   - collect active work on the planned paths: open PRs with their files (`gh pr list`),
-     branches pushed in the last 14 days, commits to base in the last 7 days, and tickets;
-   - compute the file-level overlap;
-   - on overlap with someone else's work, raise an A4 card (wait, coordinate, narrow) and make
-     no commit;
-   - write `preflight/<repo>.md`;
-   - guard `plan_approved → building` on a clean preflight for every repo.
-
-   `athel git worktree` (task 01) already gives the worktree and branch. The shop fixture's
-   teammate PR #812 and branch `teammate/profile-phone` are the trap.
+1. **Task 03** on `feat/m4-git-lint`, branched from `feat/m4-preflight`. It covers FR-GIT-005
+   and FR-BUILD-012:
+   - a new package `internal/gitlint` checks commit messages against git.yaml `commit`:
+     conventional format, the `Athel-Change` and `Athel-Task` trailers, and at most 15 files
+     per commit;
+   - it also lints branch names and PR titles;
+   - pre-commit checks block a file over 1 MB and secret patterns (M1 scrubber);
+   - the PreToolUse hook checks `git commit` in change mode;
+   - `athel git lint` is the command.
 2. Continue the tasks in order, each its own PR stacked on the previous one.
 3. Paid evals only with the owner's go-ahead each time, smoke runs first.
 
