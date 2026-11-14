@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/finding@1.json",
+  "title": "athel/finding@1",
+  "description": "Side findings of a change (.athel/changes/CHG-NNN/findings.yaml, doc 07 \u00a7Side findings, FR-FIND-001..004): problems outside the change's scope, never fixed inside it, with the developer's disposition.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "findings"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/finding@1"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "found_by",
+          "found_in",
+          "location",
+          "category",
+          "severity",
+          "effort",
+          "fix_risk",
+          "evidence",
+          "suggested_fix",
+          "disposition"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^SF-[1-9][0-9]*$"
+          },
+          "found_by": {
+            "type": "string",
+            "minLength": 1
+          },
+          "found_in": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "step"
+            ],
+            "properties": {
+              "step": {
+                "type": "string"
+              },
+              "task": {
+                "type": "string"
+              }
+            }
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "enum": [
+              "bug",
+              "security",
+              "performance",
+              "reliability",
+              "dead-code",
+              "dependency",
+              "test-gap",
+              "docs"
+            ]
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "effort": {
+            "enum": [
+              "S",
+              "M",
+              "L"
+            ]
+          },
+          "fix_risk": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "suggested_fix": {
+            "type": "string",
+            "minLength": 1
+          },
+          "disposition": {
+            "enum": [
+              "fix_pr",
+              "ticket",
+              "ignore",
+              null
+            ]
+          },
+          "decided_by": {
+            "type": "string"
+          },
+          "decided_at": {
+            "type": "string"
+          },
+          "child": {
+            "type": "string",
+            "pattern": "^CHG-[0-9]{3,}-F[1-9][0-9]*$"
+          }
+        }
+      }
+    }
+  }
+}

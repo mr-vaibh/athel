@@ -175,6 +175,9 @@ func (r *runCtx) prDraft(s *state.Store, c *state.Change, w state.RepoWork) (prD
 		}
 	}
 	in.Rollback, in.Waivers = planNotes(s, c, w.Name)
+	if in.Findings, err = r.prFindings(s, c.ID); err != nil {
+		return prDraft{}, err
+	}
 	excluded := size.Excluded
 	if excluded == nil {
 		excluded = []string{}

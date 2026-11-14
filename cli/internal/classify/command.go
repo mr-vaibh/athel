@@ -275,16 +275,7 @@ func humanOnly(call *AthelCall, pos []shellparse.Word, vals map[string]shellpars
 		call.Change, call.To, call.ByHuman = known(pos[2]), flagVal(vals, "--to"), flagVal(vals, "--by") == "human"
 	case call.Command == "repos roots" && len(pos) > 3 && known(pos[2]) == "set":
 		// Confirmed roots widen rule 12, so saving them is the developer's act, like --by human.
-		// shellparse writes a leading ~ as $HOME; the grant holds the ~ form the developer typed.
-		roots := make([]string, 0, len(pos)-3)
-		for _, w := range pos[3:] {
-			v := known(w)
-			if rest, ok := strings.CutPrefix(v, "$HOME/"); ok {
-				v = "~/" + rest
-			}
-			roots = append(roots, v)
-		}
-		call.Command, call.Change, call.To, call.ByHuman = "repos roots set", grants.RootsKey(roots), grants.TargetRoots, true
+		call.Command, call.Change, call.To, call.ByHuman = "repos roots set", rootsKey(pos), grants.TargetRoots, true
 	case call.Command == "blast signoff" && len(pos) > 2:
 		call.Change, call.To, call.ByHuman = known(pos[2]), grants.TargetSignoff, true
 	case call.Command == "gate waive" && len(pos) > 4:
@@ -293,10 +284,39 @@ func humanOnly(call *AthelCall, pos []shellparse.Word, vals map[string]shellpars
 		w := grants.Waiver{Change: known(pos[2]), Task: known(pos[3]), Subject: known(pos[4]),
 			Until: flagVal(vals, "--until"), Reason: flagVal(vals, "--reason")}
 		call.Change, call.To, call.ByHuman = grants.WaiveKey(w), grants.TargetWaive, true
+	case call.Command == "finding triage" && len(pos) > 3:
+		// Only the developer chooses what happens to side findings (FR-FIND-003).
+		call.Change, call.To, call.ByHuman = triageKey(pos), grants.TargetTriage, true
 	case call.Command == "decide answer" && len(pos) > 2:
 		// Only the developer answers cards (ADR 019); the grant binds these exact answers.
 		call.Change, call.To, call.ByHuman = decideKey(pos), grants.TargetDecide, true
 	}
+}
+
+// rootsKey is the grant key of `athel repos roots set roots…`. shellparse writes a leading ~ as
+// $HOME; the grant holds the ~ form the developer typed.
+func rootsKey(pos []shellparse.Word) string {
+	roots := make([]string, 0, len(pos)-3)
+	for _, w := range pos[3:] {
+		v := known(w)
+		if rest, ok := strings.CutPrefix(v, "$HOME/"); ok {
+			v = "~/" + rest
+		}
+		roots = append(roots, v)
+	}
+	return grants.RootsKey(roots)
+}
+
+// triageKey is the grant key of `athel finding triage CHG choices…`.
+func triageKey(pos []shellparse.Word) string {
+	words := make([]string, 0, len(pos)-3)
+	for _, w := range pos[3:] {
+		words = append(words, known(w))
+	}
+	if choices, ok := grants.ParseChoices(words); ok {
+		return grants.TriageKey(known(pos[2]), choices)
+	}
+	return "triage:invalid"
 }
 
 // decideKey is the grant key of `athel decide answer CHG answers…`.
@@ -321,6 +341,6 @@ var (
 		"budget status": true, "budget show": true, "fact find": true, "fact show": true,
 		"investigation validate": true, "repos show": true, "ask show": true, "blast score": true,
 		"prd show": true, "prd scan": true, "prd diff": true, "decide list": true, "decide show": true, "spec validate": true, "spec list": true, "spec show": true, "conventions show": true, "plan summary": true, "plan diff": true, "blast diff": true, "spec template": true, "decide template": true, "plan template": true, "prd review template": true, "blast template": true,
-		"gate show": true, "review show": true, "review template": true, "git lint": true, "pr body": true, "build next": true,
+		"gate show": true, "review show": true, "review template": true, "git lint": true, "pr body": true, "build next": true, "finding list": true,
 	}
 )
