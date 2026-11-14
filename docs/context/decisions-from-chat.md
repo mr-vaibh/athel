@@ -55,3 +55,7 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-11 | Run M3 full run 2 (the last allowed, about $30) to check the fix for full run 1's failure? | "Yes, run it (Recommended)" | Full run 2, all 3 PRDs × 3 runs, from a worktree frozen at `043d498` |
 | 2026-11-11 | (owner) Hold progress, laptop going to sleep | "can you hold the progress here only?" | Full run 2 stopped before any result; restart it on resume |
 | 2026-11-12 | Accept M3 and merge its 17 PRs (#60 → #76) in order? | "Accept and merge (Recommended)" | M3 stack merged in order with merge commits; M3-report §7 |
+| 2026-11-14 | Approve the M4 plan and its eval budget (Q1: up to 3 build runs at ~$60–150 and 2 defect runs at ~$25–45, each asked first, smoke runs first)? | "Approve, budget OK (Recommended)" | M4-plan status; every G decision in M4-plan §3 applies |
+| 2026-11-14 | Q2: install PostgreSQL (Homebrew `postgresql@17`) for the migration gate, tests only? | "Yes, install it (Recommended)" | `docs/context/environment.md`; M4 task 07; CI gets a PostgreSQL service |
+| 2026-11-14 | Q3: install `govulncheck` and allow it to read `vuln.go.dev`? | "Yes, only vuln.go.dev (Recommended)" | `docs/context/environment.md`; the network exception is limited to `vuln.go.dev`; M4 task 07 |
+| 2026-11-14 | Q4: after the evals pass, one live check on a throwaway private GitHub repo, then one dogfooding change to Athel with a PR the owner reviews? | "Yes, ask again before each (Recommended)" | Agreement in principle only; ask again right before each |
