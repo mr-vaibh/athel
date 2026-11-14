@@ -20,3 +20,16 @@ cases:
   - {name: chmod outside the plan, command: chmod +x scripts/fix.sh, expect: {decision: deny, rule: "7"}}
   - {name: architect writes a file, command: "touch {tree}/src/spec.md", agent: athel:architect, expect: {decision: deny, rule: "3"}}
   - {name: architect edits code through the shell, command: "sed -i s/a/b/ {tree}/src/phone.go", agent: athel:architect, expect: {decision: deny, rule: "3"}}
+  - {name: QA fixes product code, tool: Edit, input: {file_path: "{tree}/src/phone.go", old_string: a, new_string: b}, agent: athel:qa, expect: {decision: deny, rule: "3"}}
+  - {name: QA rewrites product code through the shell, command: "sed -i s/a/b/ {tree}/src/phone.go", agent: athel:qa, wrap: true, expect: {decision: deny, rule: "3"}}
+  - {name: QA commits, command: "git commit -m tests", agent: athel:qa, expect: {decision: deny, rule: "3"}}
+  - {name: QA saves the review round, command: "athel review save CHG-001 T-01 -", agent: athel:qa, expect: {decision: deny, rule: "3"}}
+  - {name: reviewer edits what it reviews, tool: Edit, input: {file_path: "{tree}/src/phone.go", old_string: a, new_string: b}, agent: athel:reviewer, expect: {decision: deny, rule: "3"}}
+  - {name: reviewer writes a test, tool: Write, input: {file_path: "{tree}/src/phone_test.go", content: x}, agent: athel:reviewer, expect: {decision: deny, rule: "3"}}
+  - {name: reviewer marks a fix itself, command: "athel review fix CHG-001 T-01 R1-01 --commit HEAD", agent: athel:reviewer, expect: {decision: deny, rule: "3"}}
+  - {name: security patches the hole it found, tool: Edit, input: {file_path: "{tree}/src/phone.go", old_string: a, new_string: b}, agent: athel:security, expect: {decision: deny, rule: "3"}}
+  - {name: security deletes through the shell, command: "rm {tree}/src/phone.go", agent: athel:security, wrap: true, expect: {decision: deny, rule: "3"}}
+  - {name: developer saves its own review, command: "athel review save CHG-001 T-01 -", agent: athel:developer, expect: {decision: deny, rule: "3"}}
+  - {name: developer marks its task done, command: "athel build done CHG-001 T-01", agent: athel:developer, expect: {decision: deny, rule: "3"}}
+  - {name: developer runs the gates, command: "athel gate run --stage full CHG-001 T-01", agent: athel:developer, expect: {decision: deny, rule: "3"}}
+  - {name: developer moves the change on, command: "athel state transition CHG-001 --to ready_for_pr --by athel --reason done", agent: athel:developer, expect: {decision: deny, rule: "3"}}

@@ -31,6 +31,14 @@ const ScoutAgent = "athel:scout"
 // only through the athel CLI, so like the scout it never writes a file (M3 plan G13).
 const ArchitectAgent = "athel:architect"
 
+// The build roles (doc 06 §Role agents). Each writes only what its role allows (ADR 024).
+const (
+	DeveloperAgent = "athel:developer"
+	QAAgent        = "athel:qa"
+	SecurityAgent  = "athel:security"
+	ReviewerAgent  = "athel:reviewer"
+)
+
 // Request is one hook invocation. Raw tool input is kept as bytes so it can be hashed without
 // being interpreted; only its scrubbed, classified form is ever logged.
 type Request struct {
