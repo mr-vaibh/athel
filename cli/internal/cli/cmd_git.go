@@ -49,6 +49,9 @@ func (r *runCtx) ensureWorktree(s *state.Store, session, id, repo string) (workt
 			return state.RepoWork{}, err
 		}
 		rel := filepath.Join("repos", repo+"@"+c.ID)
+		if err := r.installHooks(s, cache.Path); err != nil {
+			return state.RepoWork{}, err
+		}
 		added, err := tree.Add(gitw.Request{Cache: cache.Path, Dir: filepath.Join(s.WS.Root, rel), Base: pol.Git.BaseBranch,
 			Branch: gitw.BranchName(pol.Git.BranchName, c.ID, c.Title), Change: c.ID, Prefix: gitw.Prefix(pol.Git.BranchName)})
 		if err != nil {

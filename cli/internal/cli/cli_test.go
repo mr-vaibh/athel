@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"os"
@@ -23,11 +24,15 @@ type harness struct {
 	stdin string
 	// userHome stands in for the user's home folder; empty makes UserHome fail.
 	userHome string
+	// cwd is the folder a command runs in; empty is root.
+	cwd string
+	// exe is the athel binary the git hooks call.
+	exe string
 }
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
-	return &harness{t: t, root: t.TempDir(), home: t.TempDir(), env: map[string]string{},
+	return &harness{t: t, root: t.TempDir(), home: t.TempDir(), env: map[string]string{}, exe: "/opt/athel/bin/athel",
 		clock: clock.NewFixed(time.Date(2026, 11, 1, 10, 0, 0, 0, time.UTC))}
 }
 
@@ -40,7 +45,13 @@ func (h *harness) run(args ...string) (int, string, string) {
 	}
 	code := Run(Env{
 		Args: args, Stdin: strings.NewReader(h.stdin), Stdout: &out, Stderr: &errOut,
-		Getenv: func(k string) string { return env[k] }, Cwd: h.root,
+		Getenv: func(k string) string { return env[k] }, Cwd: cmp.Or(h.cwd, h.root),
+		Executable: func() (string, error) {
+			if h.exe == "" {
+				return "", errors.New("no athel binary in this test")
+			}
+			return h.exe, nil
+		},
 		UserHome: func() (string, error) {
 			if h.userHome != "" {
 				return h.userHome, nil

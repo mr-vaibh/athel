@@ -33,7 +33,7 @@ func environment(getwd func() (string, error)) cli.Env {
 	return cli.Env{
 		Args: os.Args[1:], Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
 		Getenv: os.Getenv, Cwd: cwd, UserHome: os.UserHomeDir, Clock: clock.System{}, Version: version,
-		ClaudeVersion: versionOf("claude"),
+		ClaudeVersion: versionOf("claude"), Executable: os.Executable,
 	}
 }
 

@@ -43,6 +43,8 @@ func (cl *cmdClassifier) git(cmd shellparse.Command) Action {
 	switch {
 	case gitAliasOnCommandLine(cmd.Args[1:]):
 		a.Tier, a.Forbidden = X, "defines a git alias on the command line, which hides the real git command"
+	case gitSkipsHooks(sub, pos, cmd.Args[1:]):
+		a.Tier, a.Forbidden = X, "skips or replaces Athel's git hooks, which lint every commit and block large files and secrets"
 	case sub == "push":
 		return cl.gitPush(a, cmd.Args[1:], dir)
 	case gitHistoryRewrite[sub]:
@@ -327,4 +329,61 @@ func ghAPI(pos []shellparse.Word, vals map[string]shellparse.Word) (Tier, string
 		return W3, ""
 	}
 	return W2, ""
+}
+
+// commitValueFlags take the next word as their value, so a following "-n" is not a flag.
+var commitValueFlags = map[string]bool{"-m": true, "-F": true, "-c": true, "-C": true, "-t": true, "--message": true,
+	"--file": true, "--template": true, "--reuse-message": true, "--reedit-message": true, "--author": true, "--date": true,
+	"--cleanup": true, "--trailer": true, "--fixup": true, "--squash": true, "--pathspec-from-file": true}
+
+// gitSkipsHooks reports a git call that would bypass Athel's commit-msg and pre-commit hooks
+// (M4): --no-verify (-n for commit), a core.hooksPath given with -c, or a change of the
+// core.hooksPath setting.
+func gitSkipsHooks(sub string, pos, args []shellparse.Word) bool {
+	for i, w := range args {
+		if w.Known && w.Value == "-c" && i+1 < len(args) && strings.HasPrefix(strings.ToLower(args[i+1].Value), "core.hookspath") {
+			return true
+		}
+	}
+	switch sub {
+	case "commit":
+		return commitSkipsHooks(args)
+	case "merge", "am":
+		return hasWord(args, "--no-verify")
+	case "config":
+		return configWritesHooksPath(pos, args)
+	}
+	return false
+}
+
+func commitSkipsHooks(args []shellparse.Word) bool {
+	for i := 0; i < len(args); i++ {
+		w := args[i]
+		switch {
+		case w.Known && w.Value == "--":
+			return false
+		case !w.Known:
+			return true // a word only known at run time could be --no-verify
+		case w.Value == "--no-verify":
+			return true
+		case commitValueFlags[w.Value]:
+			i++
+		case strings.HasPrefix(w.Value, "-") && !strings.HasPrefix(w.Value, "--"):
+			for _, r := range w.Value[1:] {
+				if r == 'n' {
+					return true
+				}
+				if strings.ContainsRune("mFcCt", r) {
+					break // the rest of the word is that flag's value
+				}
+			}
+		}
+	}
+	return false
+}
+
+func configWritesHooksPath(pos, args []shellparse.Word) bool {
+	named := slices.ContainsFunc(pos, func(w shellparse.Word) bool { return strings.EqualFold(w.Value, "core.hooksPath") })
+	writes := len(pos) > 2 || hasWord(args, "--unset") || hasWord(args, "--unset-all") || hasWord(args, "--add") || hasWord(args, "--replace-all")
+	return named && writes
 }

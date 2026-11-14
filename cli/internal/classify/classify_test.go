@@ -183,6 +183,13 @@ func TestGitClassifier(t *testing.T) {
 		{"git -c alias.p='push --force' p", X, "alias"}, {"git -calias.p=push p", X, "alias"},
 		{"git --config-env=alias.p=E p", X, "alias"}, {"git -c $CFG p", X, "alias"},
 		{"git -c user.name=x commit -m y", W0, ""},
+		// The commit-msg and pre-commit hooks Athel installs are FR-GIT-005's lint and doc 04's
+		// pre-commit check: skipping or replacing them is forbidden.
+		{"git commit --no-verify -m x", X, "hooks"}, {"git commit -n -m x", X, "hooks"}, {"git commit -anm x", X, "hooks"},
+		{"git merge --no-verify main", X, "hooks"}, {"git -c core.hooksPath=/tmp/h commit -m x", X, "hooks"},
+		{"git -c CORE.HOOKSPATH=/tmp/h commit -m x", X, "hooks"}, {"git config core.hooksPath /tmp/h", X, "hooks"},
+		{"git config --unset core.hooksPath", X, "hooks"}, {"git clean -n", W0, ""}, {"git config core.hooksPath", R0, ""},
+		{"git commit -m -n", W0, ""}, {"git commit -m x -- -n", W0, ""}, {"git commit $FLAGS -m x", X, "hooks"}, {`git commit -m "$(cat msg.txt)"`, W0, ""}, {"git commit -am x", W0, ""},
 	}, Options{ReadFile: read})
 	if a := bash(t, pol, "git p origin x", Options{}).Actions[0]; a.Uncertain != UnknownCommand || a.Tier != W0 {
 		t.Errorf("unknown git subcommand must be uncertain: %+v", a)
