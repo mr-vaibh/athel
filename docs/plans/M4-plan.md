@@ -1,6 +1,6 @@
 # M4 Build: plan
 
-Status: **draft for the owner's review** (2026-11-14).
+Status: **Approved by the owner on 2026-11-14** ("Approve, budget OK"), with Q2 PostgreSQL yes, Q3 `govulncheck` limited to `vuln.go.dev` yes, and Q4 yes in principle, asked again before each live action.
 
 Sources:
 - **Doc 06** (Build Loop, Review and Quality) governs M4 and was read in full.
