@@ -2,9 +2,11 @@ package cli
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/mr-vaibh/athel/cli/internal/gitro"
 	"github.com/mr-vaibh/athel/cli/internal/gitw"
+	"github.com/mr-vaibh/athel/cli/internal/policy"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
 
@@ -52,8 +54,9 @@ func (r *runCtx) ensureWorktree(s *state.Store, session, id, repo string) (workt
 		if err := r.installHooks(s, cache.Path); err != nil {
 			return state.RepoWork{}, err
 		}
+		template, change, finding := branchTemplate(pol.Git, c)
 		added, err := tree.Add(gitw.Request{Cache: cache.Path, Dir: filepath.Join(s.WS.Root, rel), Base: pol.Git.BaseBranch,
-			Branch: gitw.BranchName(pol.Git.BranchName, c.ID, c.Title), Change: c.ID, Prefix: gitw.Prefix(pol.Git.BranchName)})
+			Branch: gitw.BranchName(template, change, c.Title, finding), Change: c.ID, Prefix: gitw.Prefix(template)})
 		if err != nil {
 			return state.RepoWork{}, err
 		}
@@ -70,4 +73,14 @@ func (r *runCtx) ensureWorktree(s *state.Store, session, id, repo string) (workt
 // networkGit runs git with the developer's credentials (fetches and remote reads).
 func (r *runCtx) networkGit(dir string, args ...string) (int, string, error) {
 	return gitro.RunEnv(gitro.NetworkEnv(r.env.Getenv), dir, args...)
+}
+
+// branchTemplate is the template, change ID and finding ID a change's branch is named from: a
+// side-finding fix uses side_finding_branch with its parent's ID (doc 07 §Side findings).
+func branchTemplate(g policy.Git, c *state.Change) (string, string, string) {
+	if c.Parent == nil {
+		return g.BranchName, c.ID, ""
+	}
+	n := strings.TrimPrefix(c.ID, *c.Parent+"-F")
+	return g.SideFindingBranch, *c.Parent, "SF-" + n
 }

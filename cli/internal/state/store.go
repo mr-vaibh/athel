@@ -130,6 +130,10 @@ type NewChange struct {
 	// IndexFor builds prd/v1.index.yaml once the change has its ID (doc 05 FR-SPEC-003: the CLI,
 	// not the model, assigns PRD IDs). Nil writes no index.
 	IndexFor func(id, sha string) []byte
+	// Parent and Finding make a side-finding fix: change <Parent>-F<Finding>, linked to its parent
+	// (doc 07 FR-FIND-004). Empty Parent makes a top-level change.
+	Parent  string
+	Finding int
 }
 
 // Create allocates the next change ID under the workspace lock and writes prd/v1.md and
@@ -144,7 +148,10 @@ func (s *Store) Create(n NewChange) (*Change, error) {
 	if err != nil {
 		return nil, err
 	}
-	id := ids.NextChange(names)
+	id, err := childID(n, names)
+	if err != nil {
+		return nil, err
+	}
 	dir := s.WS.ChangeDir(id)
 	for _, d := range []string{filepath.Join(dir, "prd"), filepath.Join(dir, "artifacts")} {
 		if err := fsutil.EnsureDir(d); err != nil {
@@ -173,6 +180,9 @@ func (s *Store) Create(n NewChange) (*Change, error) {
 		},
 		Approvals: Approvals{},
 	}
+	if n.Parent != "" {
+		c.Parent = &n.Parent
+	}
 	if err := Save(s.Reg, s.WS.ChangeFile(id), c); err != nil {
 		_ = os.RemoveAll(dir) // never leave a half-created change behind; the save error is reported
 		return nil, err
@@ -193,4 +203,24 @@ func (s *Store) changeNames() ([]string, error) {
 		names = append(names, e.Name())
 	}
 	return names, nil
+}
+
+// childID is the new change's ID: the next top-level one, or <parent>-F<finding> for a fix,
+// whose parent must exist and which must not exist yet.
+func childID(n NewChange, names []string) (string, error) {
+	if n.Parent == "" {
+		return ids.NextChange(names), nil
+	}
+	p, err := ids.ParseChange(n.Parent)
+	if err != nil || p.Child != 0 || n.Finding < 1 {
+		return "", aerr.New(aerr.StateInvalid, "a fix change needs a top-level parent and a finding number")
+	}
+	id := ids.ChangeID{Number: p.Number, Child: n.Finding}.String()
+	switch {
+	case !slices.Contains(names, n.Parent):
+		return "", aerr.New(aerr.StateNotFound, "no change "+n.Parent)
+	case slices.Contains(names, id):
+		return "", aerr.New(aerr.ConflictVersion, id+" exists already").WithNextAction("athel state show " + id)
+	}
+	return id, nil
 }

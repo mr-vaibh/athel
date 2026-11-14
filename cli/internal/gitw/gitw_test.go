@@ -71,9 +71,12 @@ func TestBranchName(t *testing.T) {
 		{"feature/{change_id}", "CHG-007", "anything", "feature/CHG-007"},
 	}
 	for _, tt := range tests {
-		if got := BranchName(tt.template, tt.change, tt.title); got != tt.want {
+		if got := BranchName(tt.template, tt.change, tt.title, ""); got != tt.want {
 			t.Errorf("BranchName(%q, %q) = %q, want %q", tt.template, tt.title, got, tt.want)
 		}
+	}
+	if got := BranchName("athel/{change_id}-fix-{finding_id}", "CHG-042", "x", "SF-3"); got != "athel/CHG-042-fix-SF-3" {
+		t.Errorf("side-finding branch: %q", got)
 	}
 	if p := Prefix("athel/{change_id}-{slug}"); p != "athel/" {
 		t.Errorf("prefix %q", p)

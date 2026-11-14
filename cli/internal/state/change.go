@@ -61,7 +61,7 @@ type Change struct {
 	Repos        []RepoWork     `yaml:"repos" json:"repos"`
 	Build        []build.Task   `yaml:"build" json:"build"`
 	ChangeSet    any            `yaml:"change_set" json:"change_set"`
-	Parent       any            `yaml:"parent" json:"parent"`
+	Parent       *string        `yaml:"parent" json:"parent"`
 	Flags        []Flag         `yaml:"flags" json:"flags"`
 	History      []Transition   `yaml:"history" json:"history"`
 	Integrity    *Integrity     `yaml:"integrity" json:"integrity"`

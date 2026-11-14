@@ -174,6 +174,15 @@ func (r *runCtx) prDraft(s *state.Store, c *state.Change, w state.RepoWork) (prD
 			in.Linked = append(in.Linked, pr.Linked{Repo: o.Name, PR: *o.PR})
 		}
 	}
+	if c.Parent != nil { // a side-finding fix links its parent's PRs (FR-FIND-004)
+		if parent, err := s.Get(*c.Parent); err == nil {
+			for _, o := range parent.Repos {
+				if o.PR != nil {
+					in.Linked = append(in.Linked, pr.Linked{Repo: "parent " + parent.ID + " " + o.Name, PR: *o.PR})
+				}
+			}
+		}
+	}
 	in.Rollback, in.Waivers = planNotes(s, c, w.Name)
 	if in.Findings, err = r.prFindings(s, c.ID); err != nil {
 		return prDraft{}, err
