@@ -17,7 +17,15 @@ import (
 // is in the indexed repo users.
 func approvedOnUsers(t *testing.T) *harness {
 	t.Helper()
-	h, _, _, _ := cacheFixture(t)
+	h, _, _ := approvedOnUsersRemote(t)
+	return h
+}
+
+// approvedOnUsersRemote is approvedOnUsers plus the folder of bare remotes and a git runner, so
+// a test can push someone else's work.
+func approvedOnUsersRemote(t *testing.T) (*harness, string, func(string, ...string)) {
+	t.Helper()
+	h, _, src, git := cacheFixture(t)
 	h.mustOK("state", "transition", "CHG-001", "--to", "investigating", "--by", "athel", "--reason", "r")
 	m3Spec(t, h)
 	h.mustOK("plan", "set", "CHG-001", writeTemp(t, "users-plan.yaml", strings.NewReplacer("repo: r,", "repo: users,", "verbs: [edit, test]", "verbs: [edit, test, commit, push]").Replace(m3PlanDoc)))
@@ -26,7 +34,7 @@ func approvedOnUsers(t *testing.T) *harness {
 	}
 	h.humanPrompt("/athel:approve CHG-001")
 	h.mustOK("state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "ok")
-	return h
+	return h, src, git
 }
 
 func TestGitWorktree(t *testing.T) {
@@ -123,5 +131,120 @@ func TestDeveloperCloneUnchanged(t *testing.T) {
 	h.mustOK("git", "worktree", "CHG-001", "users")
 	if after := treeSum(t, clone); after != before {
 		t.Error("the developer's clone changed")
+	}
+}
+
+// fakeGH puts a gh on the harness's PATH that answers every call with prs (JSON).
+func fakeGH(t *testing.T, h *harness, prs string) {
+	t.Helper()
+	bin := t.TempDir()
+	script := "#!/bin/sh\ncat <<'EOF'\n" + prs + "\nEOF\n"
+	if err := os.WriteFile(filepath.Join(bin, "gh"), []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	h.env["PATH"] = bin + string(os.PathListSeparator) + os.Getenv("PATH")
+}
+
+const teammatePR = `[{"number":812,"author":{"login":"teammate"},"headRefName":"teammate/phone","files":[{"path":"src/a.go"}]}]`
+
+func TestGitPreflightOverlapRaisesCard(t *testing.T) {
+	h := approvedOnUsers(t)
+	if code, env := h.runJSON("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "r"); code == 0 || !strings.Contains(asJSON(t, env), "no git preflight for users") {
+		t.Fatalf("building before any preflight: %d %v", code, env)
+	}
+	fakeGH(t, h, teammatePR)
+	v := h.mustOK("git", "preflight", "CHG-001", "users")
+	card, _ := v["card"].(string)
+	if v["clean"] != false || card == "" || v["branch"] != "athel/CHG-001-phone-update" || !strings.HasSuffix(v["report"].(string), "preflight/users.md") {
+		t.Fatalf("preflight = %v", v)
+	}
+	md, err := os.ReadFile(v["report"].(string))
+	if err != nil || !strings.Contains(string(md), "pr #812 by teammate: src/a.go") {
+		t.Errorf("report: %v\n%s", err, md)
+	}
+	if again := h.mustOK("git", "preflight", "CHG-001", "users"); again["card"] != card {
+		t.Errorf("a re-run finds its card instead of raising another: %v", again)
+	}
+	if code, env := h.runJSON("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "r"); code == 0 || !strings.Contains(asJSON(t, env), card+" is unanswered and blocks the build step") {
+		t.Fatalf("building with the card open: %d %v", code, env)
+	}
+	h.humanPrompt("/athel:decide CHG-001 " + card + "=b")
+	h.mustOK("decide", "answer", "CHG-001", card+"=b")
+	h.mustOK("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "preflight done")
+}
+
+func TestGitPreflightClean(t *testing.T) {
+	h := approvedOnUsers(t)
+	fakeGH(t, h, `[{"number":9,"author":"someone","headRefName":"docs","files":["docs/x.md"]}]`)
+	v := h.mustOK("git", "preflight", "CHG-001", "users")
+	if v["clean"] != true || v["card"] != nil {
+		t.Fatalf("preflight = %v", v)
+	}
+	h.mustOK("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "clear")
+	if again := h.mustOK("git", "preflight", "CHG-001", "users"); again["clean"] != true {
+		t.Errorf("preflight runs again while building: %v", again)
+	}
+}
+
+func TestGitPreflightErrors(t *testing.T) {
+	h := approvedOnUsers(t)
+	fakeGH(t, h, "not json")
+	if code, env := h.runJSON("git", "preflight", "CHG-001", "users"); code != aerr.ExitTool || errCode(env) != string(aerr.ToolUnreachable) {
+		t.Errorf("gh output unreadable: %d %v", code, env)
+	}
+	h.env["PATH"] = t.TempDir()
+	if code, _ := h.runJSON("git", "preflight", "CHG-001", "users"); code == 0 {
+		t.Error("without gh or git the preflight fails")
+	}
+	for _, args := range [][]string{{"git", "preflight", "CHG-001"}, {"git", "preflight", "CHG-009", "users"}} {
+		if code, _ := h.runJSON(args...); code == 0 {
+			t.Errorf("%v must fail", args)
+		}
+	}
+}
+
+func TestGitPreflightPushedBranch(t *testing.T) {
+	h, src, git := approvedOnUsersRemote(t)
+	mate := filepath.Join(t.TempDir(), "mate")
+	git(filepath.Dir(mate), "clone", "-q", filepath.Join(src, "users.git"), mate)
+	git(mate, "switch", "-q", "-c", "spike/phone")
+	if err := os.MkdirAll(filepath.Join(mate, "src"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(mate, "src", "phone.go"), []byte("package src\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	git(mate, "add", "-A")
+	git(mate, "-c", "user.name=Mate", "-c", "user.email=mate@example.invalid", "commit", "-q", "-m", "spike")
+	git(mate, "push", "-q", "origin", "spike/phone")
+	fakeGH(t, h, "[]")
+	v := h.mustOK("git", "preflight", "CHG-001", "users")
+	if v["clean"] != false || !strings.Contains(asJSON(t, v), `"ref":"spike/phone"`) || !strings.Contains(asJSON(t, v), "src/phone.go") {
+		t.Errorf("a recently pushed branch on planned paths blocks: %v", v)
+	}
+}
+
+func TestGitPreflightToolFailures(t *testing.T) {
+	h := approvedOnUsers(t)
+	bin := t.TempDir()
+	h.env["PATH"] = bin + string(os.PathListSeparator) + os.Getenv("PATH")
+	if err := os.WriteFile(filepath.Join(bin, "gh"), []byte("#!/bin/sh\necho 'HTTP 401: Bad credentials' >&2\nexit 1\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, env := h.runJSON("git", "preflight", "CHG-001", "users"); errCode(env) != string(aerr.ToolUnreachable) || !strings.Contains(asJSON(t, env), "Bad credentials") {
+		t.Errorf("gh failing: %v", env)
+	}
+	if err := os.WriteFile(filepath.Join(bin, "gh"), []byte("not a program"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, env := h.runJSON("git", "preflight", "CHG-001", "users"); errCode(env) != string(aerr.ToolUnreachable) {
+		t.Errorf("gh not runnable: %v", env)
+	}
+	fakeGH(t, h, "[]")
+	if err := os.RemoveAll(filepath.Join(h.root, "cache")); err != nil {
+		t.Fatal(err)
+	}
+	if _, env := h.runJSON("git", "preflight", "CHG-001", "users"); errCode(env) != string(aerr.ToolGit) {
+		t.Errorf("the cache clone gone: %v", env)
 	}
 }
