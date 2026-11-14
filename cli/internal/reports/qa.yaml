@@ -18,6 +18,6 @@ gaps:
 findings:
   - severity: major               # blocker | major | minor | nit
     location: internal/library/fines.go:31-40
-    rule: correctness.boundary
+    rule: correctness.edge-case
     finding: The cap compares cents with whole currency units, so a fine can exceed the price.
     required: Compare in cents and add the case to TestFineCappedAtBookPrice.

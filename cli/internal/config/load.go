@@ -40,6 +40,10 @@ var AthelRules = Rules{
 	"discovery.question_budget.max_tool_calls": {Kind: Min},
 	"discovery.question_budget.max_minutes":    {Kind: Min},
 	"models.scout":                             {Kind: Free},
+	"models.developer":                         {Kind: Free},
+	"models.qa":                                {Kind: Free},
+	"models.security":                          {Kind: Free},
+	"models.reviewer":                          {Kind: Free},
 }
 
 // reservedFiles are policy files later milestones define; they are not read yet.

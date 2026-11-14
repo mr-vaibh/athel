@@ -28,5 +28,9 @@ discovery:
     max_minutes: 10
 models:
   scout: sonnet # M2 plan Q5
+  developer: opus # M4: doc 06, the strongest tier writes the code
+  qa: sonnet # M4: tests in the repo's style
+  security: opus # M4: same tier as the developer, its own prompt
+  reviewer: opus # M4: same tier, its own prompt; an org may pick another model (doc 06)
 features:
   discovery: true # the scout, /athel:ask and /athel:investigate; an org can switch them off

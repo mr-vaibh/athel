@@ -16,7 +16,7 @@ func (h *harness) reviewRound(t *testing.T, sub string) map[string]any {
 
 const majorFinding = `verdict: changes_requested
 new:
-  - {severity: major, source: reviewer, location: "src/ac_test.go:5", rule: tests.ac-named, finding: The test names no behaviour., required: Assert the AC-1 behaviour.}
+  - {severity: major, source: reviewer, location: "src/ac_test.go:5", rule: tests.ac-covered, finding: The test names no behaviour., required: Assert the AC-1 behaviour.}
 `
 
 // TestReviewRounds (FR-BUILD-007/008): a finding stays open until the reviewer verifies a fix
