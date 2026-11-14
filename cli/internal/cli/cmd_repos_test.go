@@ -299,7 +299,7 @@ func cacheFixture(t *testing.T) (*harness, string, string, func(string, ...strin
 	}
 	git(src, "clone", "-q", "--bare", filepath.Join(home, "Developer", "users"), filepath.Join(src, "users.git"))
 	gitHome := t.TempDir()
-	if err := os.WriteFile(filepath.Join(gitHome, ".gitconfig"), []byte("[url \"file://"+src+"/\"]\n\tinsteadOf = https://github.com/acme/\n\tinsteadOf = git@github.com:acme/\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(gitHome, ".gitconfig"), []byte("[user]\n\tname = Dev\n\temail = dev@example.invalid\n[url \"file://"+src+"/\"]\n\tinsteadOf = https://github.com/acme/\n\tinsteadOf = git@github.com:acme/\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	h.env["HOME"], h.env["PATH"] = gitHome, os.Getenv("PATH")

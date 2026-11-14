@@ -63,6 +63,8 @@ const (
 	PolicyAgentReadOnly    Code = "E-POLICY-AGENT-READONLY" // M2: a write by a read-only subagent (the scout)
 	ConflictVersion        Code = "E-CONFLICT-VERSION"      // M3: another PRD version landed first
 	ConflictWorktree       Code = "E-CONFLICT-WORKTREE"     // M4: the worktree path or every branch name is taken
+	ConflictMerge          Code = "E-CONFLICT-MERGE"        // M4: merging base into Athel's branch conflicts
+	ConflictForeignPush    Code = "E-CONFLICT-FOREIGN-PUSH" // M4: someone else pushed to Athel's branch
 	ToolGit                Code = "E-TOOL-GIT"              // M4: a git command in Athel's own workspace failed
 	GateBlastDrift         Code = "E-GATE-BLAST-DRIFT"      // M3: the diff changes what the planned blast radius does not name
 	GateCommitLint         Code = "E-GATE-COMMIT-LINT"      // M4: a commit, branch or PR title git.yaml does not allow
