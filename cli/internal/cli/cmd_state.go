@@ -4,6 +4,7 @@ import (
 	"flag"
 	"strings"
 
+	"github.com/mr-vaibh/athel/cli/internal/clock"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
@@ -73,6 +74,11 @@ func cmdStateEnter(r *runCtx, args []string) (any, error) {
 	s, session, err := r.mutating()
 	if err != nil {
 		return nil, err
+	}
+	if pos[1] == "build" && *task != "" {
+		if err := startTask(s, pos[0], session, *task, clock.Format(r.env.Clock.Now())); err != nil {
+			return nil, err
+		}
 	}
 	c, err := s.EnterStep(pos[0], session, pos[1], optional(*task))
 	if err != nil {

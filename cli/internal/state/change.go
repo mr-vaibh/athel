@@ -3,6 +3,8 @@
 // OS file lock and always schema-validated before the atomic write.
 package state
 
+import "github.com/mr-vaibh/athel/cli/internal/build"
+
 // State is a lifecycle state (doc 02 §State model).
 type State string
 
@@ -57,6 +59,7 @@ type Change struct {
 	Approvals    Approvals      `yaml:"approvals" json:"approvals"`
 	Waivers      []Waiver       `yaml:"waivers" json:"waivers"`
 	Repos        []RepoWork     `yaml:"repos" json:"repos"`
+	Build        []build.Task   `yaml:"build" json:"build"`
 	ChangeSet    any            `yaml:"change_set" json:"change_set"`
 	Parent       any            `yaml:"parent" json:"parent"`
 	Flags        []Flag         `yaml:"flags" json:"flags"`

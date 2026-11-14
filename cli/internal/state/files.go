@@ -8,14 +8,16 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/mr-vaibh/athel/cli/internal/build"
 	"github.com/mr-vaibh/athel/cli/internal/digest"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/fsutil"
+	"github.com/mr-vaibh/athel/cli/internal/plan"
 )
 
 // changeFiles are the step outputs the CLI writes into a change folder for its steps; nothing
 // else may be written there this way (doc 04: .athel/changes/<id>/ is written only by the CLI).
-var changeFiles = regexp.MustCompile(`^(investigation\.md|blast-radius\.md|decisions\.yaml|traceability\.md|blast-signoff\.yaml|blast-actual-[A-Za-z0-9._-]{1,200}\.md|spec/[A-Za-z0-9._-]{1,100}\.md|prd/v[1-9][0-9]*\.index\.yaml|prd/review-v[1-9][0-9]*\.md|preflight/[A-Za-z0-9._-]{1,100}\.md|gates/T-[0-9]{2,}\.yaml|artifacts/gates/T-[0-9]{2,}/[0-9]+-[a-z-]+\.log|reviews/T-[0-9]{2,}/round-[1-9][0-9]*\.yaml)$`)
+var changeFiles = regexp.MustCompile(`^(investigation\.md|blast-radius\.md|decisions\.yaml|traceability\.md|blast-signoff\.yaml|blast-actual-[A-Za-z0-9._-]{1,200}\.md|spec/[A-Za-z0-9._-]{1,100}\.md|prd/v[1-9][0-9]*\.index\.yaml|prd/review-v[1-9][0-9]*\.md|preflight/[A-Za-z0-9._-]{1,100}\.md|gates/T-[0-9]{2,}\.yaml|artifacts/gates/T-[0-9]{2,}/[0-9]+-[a-z-]+\.log|reviews/T-[0-9]{2,}/(round-[1-9][0-9]*\.yaml|context\.yaml|diff\.patch)|build/T-[0-9]{2,}/manifest\.yaml)$`)
 
 // IsChangeFile reports whether name is a step output the CLI may write into a change folder.
 func IsChangeFile(name string) bool { return changeFiles.MatchString(name) }
@@ -183,6 +185,32 @@ func (s *Store) AddWaiver(id, session string, w Waiver) (*Change, error) {
 			return err
 		}
 		c.Waivers = append(c.Waivers, w)
+		return nil
+	})
+}
+
+// UpdateBuild changes the change's task records for the session that holds the lock; fn gets
+// the approved plan and the records, and returns the new records.
+func (s *Store) UpdateBuild(id, session string, fn func(p *plan.Plan, recs []build.Task) ([]build.Task, error)) (*Change, error) {
+	if err := CheckSession(session); err != nil {
+		return nil, err
+	}
+	return s.Update(id, func(c *Change) error {
+		if c.State != Building {
+			return aerr.New(aerr.StateInvalid, c.ID+" is "+string(c.State)+"; tasks are built while building")
+		}
+		p, ok := s.ApprovedPlan(c)
+		if !ok {
+			return aerr.New(aerr.StateInvalid, c.ID+" has no approved plan")
+		}
+		if err := s.claim(c, session, s.Clock.Now()); err != nil {
+			return err
+		}
+		recs, err := fn(p, c.Build)
+		if err != nil {
+			return err
+		}
+		c.Build = recs
 		return nil
 	})
 }
