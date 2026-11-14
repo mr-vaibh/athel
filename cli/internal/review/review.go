@@ -275,3 +275,18 @@ func LocationFile(loc string) string {
 	file, _, _ := strings.Cut(loc, ":")
 	return file
 }
+
+// Waive closes a major finding on a human's waiver (doc 06 severity table: a major is "fixed or
+// waived by a human"; a blocker is only ever fixed, and minor and nit findings never block).
+func (r *Round) Waive(id, reason string) error {
+	f, err := r.find(id)
+	if err != nil {
+		return err
+	}
+	if f.Severity != Major {
+		return aerr.New(aerr.StateInvalid, id+" is "+f.Severity+"; only a major finding is waived (a blocker must be fixed; minor and nit findings never block)")
+	}
+	f.Status = Waived
+	f.History = append(f.History, Step{Round: r.Round, Status: Waived, Note: reason})
+	return nil
+}
