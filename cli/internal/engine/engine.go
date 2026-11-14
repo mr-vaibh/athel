@@ -54,7 +54,7 @@ type Context struct {
 	ChangeID      string
 	Plan          *plan.Plan // the approved plan of the active change, nil if none
 	WorkspaceRoot string     // directory that holds .athel/ (and repos/ for worktrees)
-	OwnBranches   []string   // branches Athel created for this change (from M4)
+	OwnBranches   []string   // branches Athel created for this change (change.yaml repos, M4)
 	Policy        *policy.Set
 	PolicyErr     error
 	Headless      bool

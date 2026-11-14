@@ -113,3 +113,43 @@ func (s *Store) AddPRDVersion(id, session, want string, text []byte, source stri
 
 // NextPRDVersion is the version a new PRD would get.
 func NextPRDVersion(c *Change) string { return "v" + strconv.Itoa(len(c.PRD.Versions)+1) }
+
+// AddRepo records Athel's worktree for one repo of the change (FR-GIT-001), for the session that
+// holds the lock. The change must be plan_approved or building, and the repo must be one the
+// approved plan writes in. make creates the worktree; it runs under the change lock, so two
+// sessions never make the same worktree. A repo already recorded is returned as it is.
+func (s *Store) AddRepo(id, session, name string, make func(c *Change) (RepoWork, error)) (RepoWork, bool, error) {
+	if err := CheckSession(session); err != nil {
+		return RepoWork{}, false, err
+	}
+	var got RepoWork
+	created := false
+	_, err := s.Update(id, func(c *Change) error {
+		if c.State != PlanApproved && c.State != Building {
+			return aerr.New(aerr.StateInvalid, c.ID+" is "+string(c.State)+"; worktrees are made when it is plan_approved or building").
+				WithNextAction("approve the plan first (/athel:approve)")
+		}
+		p, ok := s.ApprovedPlan(c)
+		if !ok || !p.WritesIn(name) {
+			return aerr.New(aerr.StateInvalid, "no task of the approved plan of "+c.ID+" writes in "+name).
+				WithNextAction("name a repo the plan's tasks write in: athel plan show " + c.ID)
+		}
+		if err := s.claim(c, session, s.Clock.Now()); err != nil {
+			return err
+		}
+		for _, r := range c.Repos {
+			if r.Name == name {
+				got = r
+				return nil
+			}
+		}
+		r, err := make(c)
+		if err != nil {
+			return err
+		}
+		got, created = r, true
+		c.Repos = append(c.Repos, r)
+		return nil
+	})
+	return got, created, err
+}

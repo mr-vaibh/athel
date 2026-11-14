@@ -25,13 +25,15 @@ const (
 )
 
 // SchemaID is the schema of change.yaml written by this version.
-const SchemaID = "athel/change@3"
+const SchemaID = "athel/change@4"
 
 // Older change schemas are read and upgraded in memory; `athel migrate` rewrites them. Version
-// 1 (M0) has no integrity seal; version 2 (M1) has one and only lacks the M2 flags.
+// 1 (M0) has no integrity seal; version 2 (M1) has one and only lacks the M2 flags; version 3
+// (M2, M3) always has empty repos, which version 4 (M4) fills.
 const (
 	SchemaV1 = "athel/change@1"
 	SchemaV2 = "athel/change@2"
+	SchemaV3 = "athel/change@3"
 )
 
 // Change is the content of change.yaml. Field order is the YAML output order. Timestamps are
@@ -54,7 +56,7 @@ type Change struct {
 	Lock         *Lock          `yaml:"lock" json:"lock"`
 	Approvals    Approvals      `yaml:"approvals" json:"approvals"`
 	Waivers      []any          `yaml:"waivers" json:"waivers"`
-	Repos        []any          `yaml:"repos" json:"repos"`
+	Repos        []RepoWork     `yaml:"repos" json:"repos"`
 	ChangeSet    any            `yaml:"change_set" json:"change_set"`
 	Parent       any            `yaml:"parent" json:"parent"`
 	Flags        []Flag         `yaml:"flags" json:"flags"`
@@ -62,6 +64,29 @@ type Change struct {
 	Integrity    *Integrity     `yaml:"integrity" json:"integrity"`
 
 	tampered bool // set on load when the stored hash does not match (integrity.go)
+}
+
+// RepoWork is Athel's own work in one repo of the change (FR-GIT-001): the worktree it writes in,
+// cut from its cache clone, and the branch it created there.
+type RepoWork struct {
+	Name     string  `yaml:"name" json:"name"`           // the plan's repo name
+	Remote   string  `yaml:"remote" json:"remote"`       // host/org/repo
+	Base     string  `yaml:"base" json:"base"`           // the base branch
+	BaseHead string  `yaml:"base_head" json:"base_head"` // the base commit the branch was cut from
+	Branch   string  `yaml:"branch" json:"branch"`
+	Worktree string  `yaml:"worktree" json:"worktree"` // relative to the workspace root
+	Pushed   bool    `yaml:"pushed" json:"pushed"`
+	PR       *string `yaml:"pr" json:"pr"`
+}
+
+// OwnBranches are the branches Athel created for this change: the only ones it may push (doc 04
+// rule 9).
+func (c *Change) OwnBranches() []string {
+	out := make([]string, 0, len(c.Repos))
+	for _, r := range c.Repos {
+		out = append(out, r.Branch)
+	}
+	return out
 }
 
 // Flag marks a fact this change used that verification later disputed or superseded (doc 03

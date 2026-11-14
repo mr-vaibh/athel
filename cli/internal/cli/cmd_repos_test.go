@@ -23,7 +23,7 @@ func devHome(t *testing.T) string {
 		if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package "+name+"\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		for _, args := range [][]string{{"init", "-q"}, {"add", "-A"}, {"commit", "-q", "-m", "x"}, {"remote", "add", "origin", remote}} {
+		for _, args := range [][]string{{"init", "-q", "-b", "main"}, {"add", "-A"}, {"commit", "-q", "-m", "x"}, {"remote", "add", "origin", remote}} {
 			cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
 			cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=" + os.DevNull,
 				"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@e", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@e"}
