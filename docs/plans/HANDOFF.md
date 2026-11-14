@@ -67,21 +67,25 @@ M4-plan §9:
 | 09 waivers: `/athel:waive`, reason, expiry (security-scan refused, G18) | `feat/m4-waivers` | #93 | open, gate green |
 | 10a `cli` coverage push: 90.2% → 92.0%; every command refuses cleanly | `feat/m4-cli-coverage` | #94 | open, gate green |
 | 10b build engine: task order, manifests, `build done` | `feat/m4-build-engine` | #95 | open, gate green |
-| 10c `ready_for_pr` guard, `pr ready`, Stop hook on gates | `feat/m4-ship-guard` | — | **next** |
+| 10c `ready_for_pr` guard, `pr ready`, Stop hook on unfinished tasks | `feat/m4-ship-guard` | #96 | open, gate green |
+| 11 side findings: `finding@1`, ranking, `/athel:triage`, fix as a child change | `feat/m4-findings` | — | **next** |
 | 11–17 | see M4-plan §9 | — | not started |
 
 CI passed on #77–#91 (checked 2026-11-14).
 
 Next:
-1. **Task 10c** on `feat/m4-ship-guard`, branched from `feat/m4-build-engine`:
-   - **guard `building → ready_for_pr`:** every plan task is done (`build.AllDone`), and every
-     repo is pushed with `git lint` clean;
-   - **`athel pr ready CHG REPO`:** the change is `ready_for_pr`, the PR is open and the branch
-     is pushed at HEAD; then `gh pr ready` (FR-GIT-007);
-   - **the Stop hook:** while the `build` step runs and its task is neither done nor blocked,
-     block the stop, with M0's `ShouldBlockStop` counter. The third block moves the step to
-     blocked and raises an A6 card (G13).
-2. Then 11 (side findings), 12 (agents and policy), 13 (skills), 14 (network-deny test),
+1. **Task 11** on `feat/m4-findings`, branched from `feat/m4-ship-guard`. It covers FR-FIND-001
+   to 004 and FR-BUILD-013:
+   - **`finding@1`** in `findings.yaml`, with IDs `SF-n` from the CLI; `athel finding add` and
+     `athel finding list`;
+   - **ranking:** security first, then severity, then effort S with low fix risk ("quick
+     win");
+   - **`athel finding present`**, used at ship; **`/athel:triage CHG SF-1=fix_pr SF-2=ticket …`**
+     is human-only (ADR 019 pattern) and sets the dispositions;
+   - **`athel finding fix`** makes a child change `CHG-NNN-F<n>` (M3 `--parent`), with a
+     one-task plan and a branch from `side_finding_branch`;
+   - **the PR body's side-findings section** lists the findings and their dispositions.
+2. Then 12 (agents and policy), 13 (skills), 14 (network-deny test),
    15–16 (evals: paid, so ask first), 17 (report).
 
 The `cli` package's tests take about 7 minutes.
