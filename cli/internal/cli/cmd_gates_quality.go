@@ -155,6 +155,8 @@ func (r *runCtx) judgeBuiltin(g gateTask, base *gateBaseline, gate gates.Gate, o
 		r.judgePerformance(g, base, o)
 	case gates.Migration:
 		r.judgeMigration(g, base, o)
+	case gates.Review:
+		r.judgeReview(g, o)
 	}
 }
 

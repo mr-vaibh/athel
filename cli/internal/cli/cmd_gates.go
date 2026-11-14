@@ -283,11 +283,23 @@ func cmdGateRun(r *runCtx, args []string) (any, error) {
 		run.Green = run.Green && (o.Status == gates.Pass || o.Status == gates.Skipped)
 		run.Results = append(run.Results, o)
 	}
-	f.Runs = append(f.Runs, run)
-	if err := r.saveGates(g, f); err != nil {
+	if err := r.recordRun(g, f, run); err != nil {
 		return nil, err
 	}
 	return run, redError(g, run)
+}
+
+// recordRun stores a run, and raises a card when it is the third identical failure in a row.
+func (r *runCtx) recordRun(g gateTask, f *gateFile, run gateRun) error {
+	f.Runs = append(f.Runs, run)
+	if err := r.saveGates(g, f); err != nil {
+		return err
+	}
+	if identicalFailures(f.Runs) {
+		_, err := r.raiseOnce(g.c.ID, identicalCard(g.task.ID))
+		return err
+	}
+	return nil
 }
 
 // redError names every gate that is not green, or is nil.
