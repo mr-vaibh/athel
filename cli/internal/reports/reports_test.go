@@ -58,6 +58,7 @@ func TestCheckQA(t *testing.T) {
 		{"failing suite without finding", with(func(d *QADraft) { d.Suite.Result = Fail }), "file it under findings"},
 		{"failing with finding", with(func(d *QADraft) { d.Suite.Result, d.Findings = Fail, []Finding{finding()} }), ""},
 		{"bad finding", with(func(d *QADraft) { d.Findings = []Finding{{Severity: "major"}} }), "location, a rule"},
+		{"unknown rule", with(func(d *QADraft) { f := finding(); f.Rule = "style.tabs"; d.Findings = []Finding{f} }), "style.tabs is not a rule"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) { expect(t, CheckQA(c.d, isTest, changed), c.want) })

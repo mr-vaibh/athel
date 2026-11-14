@@ -70,19 +70,26 @@ M4-plan §9:
 | 10c `ready_for_pr` guard, `pr ready`, Stop hook on unfinished tasks | `feat/m4-ship-guard` | #96 | open, gate green |
 | 11a side findings: `finding@1`, ranking, `/athel:triage`, PR-body section | `feat/m4-findings` | #97 | open, gate green |
 | 11b `finding fix`: a child change `CHG-NNN-F<n>` on `side_finding_branch` | `feat/m4-findings-fix` | #98 | open, gate green |
-| 12 agents and policy: developer, QA, security, reviewer; write scopes (ADR 024) | `feat/m4-agents` | — | **next** |
-| 13–17 | see M4-plan §9 | — | not started |
+| 12a build, QA and security reports; their findings join the review round | `feat/m4-agents-policy` | #99 | open, gate green |
+| 12b per-agent write scopes in the engine (ADR 024) | `feat/m4-agents-scopes` | #100 | open, gate green |
+| 12c developer, QA, security and reviewer agents; rule IDs; prompt sync | `feat/m4-agents-prompts` | #101 | open, gate green |
+| 13 skills `/athel:build` and `/athel:ship`; status; resume inside a task | `feat/m4-skills` | — | **next** |
+| 14–17 | see M4-plan §9 | — | not started |
 
 CI passed on #77–#91 (checked 2026-11-14).
 
 Next:
-1. **Task 12** on `feat/m4-agents`, branched from `feat/m4-findings-fix` (M4-plan §9 task 12):
-   the developer, QA, security and reviewer agents; per-agent write scopes (ADR 024);
-   templates; prompt-sync; leak guard; red-team cases; and which agent may run which
-   `athel` commands.
-2. Then 13 (skills `/athel:build` and `/athel:ship`), 14 (network-deny test),
-   15–16 (evals: paid, so ask first), 17 (report).
-   `athel finding present` was not built: `finding list` gives the summary and the ranked list.
+1. **Task 13** on `feat/m4-skills`, branched from `feat/m4-agents-prompts` (M4-plan §4.1 and §9 task 13):
+   - `/athel:build` runs the loop of §4.1. It delegates to `athel:developer`, `athel:qa`,
+     `athel:security` and `athel:reviewer` with the models from `athel config show`
+     (`values.models.*`), and commits QA's tests itself (ADR 024: QA cannot commit).
+   - `/athel:ship` covers the actual blast radius, `finding list`, `/athel:triage` and
+     `pr ready`.
+   - `status` shows tasks, gates and findings; resume works inside a task.
+   - Tests: `TestBuildSkillFollowsTheLoop`, `TestShipNeedsBothReports` (QA and security reports
+     exist for every task).
+2. Then 14 (network-deny test), 15–16 (evals: paid, so ask the owner first, smoke runs first),
+   17 (report).
 
 The `cli` package's tests take about 7 minutes.
 

@@ -113,6 +113,7 @@ func TestSubmissionChecks(t *testing.T) {
 		{Verdict: Approved, New: []Draft{{Severity: Major, Source: "intern", Location: "a", Rule: "r", Finding: "f", Required: "q"}}},
 		{Verdict: Approved, New: []Draft{{Severity: Major, Source: "reviewer", Rule: "r", Finding: "f", Required: "q"}}},
 		{Verdict: Approved, Previous: []Resolution{{ID: "R1-01", Status: Verified}}},
+		{Verdict: Approved, New: []Draft{{Severity: Major, Source: "reviewer", Location: "a", Rule: "style.tabs", Finding: "f", Required: "q"}}},
 	}
 	for i, s := range bad {
 		if _, err := Next(nil, s, "h"); err == nil {
@@ -184,7 +185,7 @@ func TestFoldReportFindings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	qa := Folded{From: "Q1-01", Source: "qa", Severity: Major, Location: "src/a.go:5", Rule: "tests.boundary", Finding: "x", Required: "y"}
+	qa := Folded{From: "Q1-01", Source: "qa", Severity: Major, Location: "src/a.go:5", Rule: "tests.failure-paths", Finding: "x", Required: "y"}
 	if n := r2.Fold([]Folded{sec, qa}); n != 1 || r2.Findings[2].ID != "R2-01" || r2.Findings[2].Source != "qa" {
 		t.Errorf("carried report findings stay; a new one is numbered in this round: %d %+v", n, r2.Findings)
 	}
