@@ -83,6 +83,7 @@ var defaultGates = []Gate{
 	{ID: "complexity", Stage: Full, Pass: Complexity, Waivable: Human},
 	{ID: "mutation", Stage: Full, Pass: Mutation, Waivable: Human},
 	{ID: "performance", Stage: Full, Pass: Performance, Waivable: Human},
+	{ID: "migration", Stage: Full, Pass: Migration, Waivable: Never, Builtin: true},
 }
 
 var goCommands = map[string][]string{
