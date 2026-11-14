@@ -143,6 +143,9 @@ func commands() map[string]command {
 		"pr body":                cmdPRBody,
 		"pr open":                cmdPROpen,
 		"pr update":              cmdPRUpdate,
+		"gate baseline":          cmdGateBaseline,
+		"gate run":               cmdGateRun,
+		"gate show":              cmdGateShow,
 	}
 }
 
