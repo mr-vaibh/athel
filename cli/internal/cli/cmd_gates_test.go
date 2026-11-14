@@ -601,3 +601,31 @@ func TestPostgresHelpers(t *testing.T) {
 		t.Errorf("%q", got)
 	}
 }
+
+// TestGatesUnavailableWithoutABaselineCommit: when the baseline's commit cannot be read (the
+// evidence points at a commit the worktree does not have), every gate judged against it is
+// unavailable, never green.
+func TestGatesUnavailableWithoutABaselineCommit(t *testing.T) {
+	h, _ := goGates(t, "covers: [AC-1]", "covers: [AC-1], risk_notes: \"latency budget 50ms\"")
+	h.stdin = plannedBlast() // CRITICAL: mutation runs too
+	h.mustOK("blast", "save", "--change", "CHG-001", "-")
+	h.stdin = ""
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	evidence := filepath.Join(h.root, ".athel", "changes", "CHG-001", "gates", "T-01.yaml")
+	b, err := os.ReadFile(evidence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	head := h.mustOK("gate", "show", "CHG-001", "T-01")["baseline"].(map[string]any)["head"].(string)
+	if err := os.WriteFile(evidence, []byte(strings.ReplaceAll(string(b), head, strings.Repeat("deadbeef", 5))), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01"); errCode(env) != string(aerr.GateRed) {
+		t.Fatalf("the run is red, not stopped: %v", env)
+	}
+	for _, gate := range []string{"lint", "security-scan", "coverage", "complexity", "mutation", "performance", "migration"} {
+		if m := lastResult(t, h, gate); m["status"] != "unavailable" {
+			t.Errorf("%s: %v", gate, m)
+		}
+	}
+}

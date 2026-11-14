@@ -188,3 +188,34 @@ func TestGitLintAndHookFailures(t *testing.T) {
 		t.Errorf("a file where the hooks go: %v", env)
 	}
 }
+
+// TestGitHooksInProcess runs the hooks' logic in this process (the end-to-end tests run it in
+// the built binary): a message file and a staged secret, judged the same way.
+func TestGitHooksInProcess(t *testing.T) {
+	h, tree := worktreeWithHooks(t)
+	h.cwd = tree
+	msgFile := filepath.Join(tree, ".git-msg-test")
+	for msg, want := range map[string]string{goodMsg: "", "wip": string(aerr.GateCommitLint)} {
+		if err := os.WriteFile(msgFile, []byte(msg), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, env := h.runJSON("git", "hook", "commit-msg", msgFile); errCode(env) != want {
+			t.Errorf("message %q: %v", msg, env)
+		}
+	}
+	if err := os.Remove(msgFile); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(tree, "src"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tree, "src", "key.go"), []byte("package src\n\nconst k = \"ghp_0123456789abcdefghijABCDEFGHIJ012345\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := exec.Command("git", "-C", tree, "add", "src/key.go").CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	if _, env := h.runJSON("git", "hook", "pre-commit"); errCode(env) != string(aerr.GateCommitLint) || !strings.Contains(asJSON(t, env), "src/key.go adds what looks like a secret") {
+		t.Errorf("a staged secret: %v", env)
+	}
+}

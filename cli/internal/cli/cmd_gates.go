@@ -92,11 +92,20 @@ type gateTask struct {
 }
 
 func (r *runCtx) gateTask(args []string, name string) (gateTask, error) {
+	return r.taskFor(args, name, true)
+}
+
+// taskFor finds a task of a building change and its worktree; a reading command needs no
+// session.
+func (r *runCtx) taskFor(args []string, name string, write bool) (gateTask, error) {
 	pos, err := parse(r.newFlags(name), args, 2)
 	if err != nil {
 		return gateTask{}, err
 	}
 	s, session, err := r.mutating()
+	if !write {
+		s, err = r.storeFor()
+	}
 	if err != nil {
 		return gateTask{}, err
 	}

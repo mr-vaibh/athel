@@ -179,7 +179,7 @@ func (r *runCtx) changeRound(pos []string, fn func(gateTask, *review.Round) erro
 }
 
 func cmdReviewShow(r *runCtx, args []string) (any, error) {
-	g, err := r.gateTask(args, "review show")
+	g, err := r.taskFor(args, "review show", false)
 	if err != nil {
 		return nil, err
 	}
