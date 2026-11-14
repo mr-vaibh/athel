@@ -151,6 +151,52 @@ func (r *runCtx) judgeBuiltin(g gateTask, base *gateBaseline, gate gates.Gate, o
 		r.judgeContract(g, o)
 	case gates.Mutation:
 		r.judgeMutation(g, base, o)
+	case gates.Performance:
+		r.judgePerformance(g, base, o)
+	}
+}
+
+// judgePerformance benchmarks the packages the task changed against the latency budget its
+// risk_notes names; a budgeted task must add a benchmark.
+func (r *runCtx) judgePerformance(g gateTask, base *gateBaseline, o *gateOutcome) {
+	limit, ok := gates.Budget(g.task.RiskNotes)
+	if !ok {
+		o.Status, o.Summary = gates.Skipped, "not required: the task's risk_notes name no latency budget"
+		return
+	}
+	diff, err := r.gitOut(g.dir, "diff", "-U0", "--no-color", "--no-ext-diff", base.Head)
+	if err != nil {
+		o.Status, o.Summary = "unavailable", err.Error()
+		return
+	}
+	pkgs := []string{}
+	for file := range gates.ChangedLines(diff) {
+		if p := "./" + filepath.Dir(file); !slices.Contains(pkgs, p) {
+			pkgs = append(pkgs, p)
+		}
+	}
+	sort.Strings(pkgs)
+	argv := append([]string{"go", "test", "-run", "^$", "-bench", ".", "-benchmem"}, pkgs...)
+	o.Command = argv
+	if len(pkgs) == 0 {
+		o.Status, o.Summary = gates.Fail, "no changed Go package to benchmark against the budget "+limit.String()
+		return
+	}
+	if why := r.gateRefusal(g.dir, argv); why != "" {
+		o.Status, o.Summary = "unavailable", "Athel's policy does not let the CLI run it: "+why
+		return
+	}
+	exit, out, _, err := r.runGateCommand(g.dir, argv)
+	benches := gates.ParseBench(out)
+	switch {
+	case err != nil || exit != 0:
+		o.Status, o.Summary, o.Details = gates.Fail, "the benchmarks did not run", tail(out)
+	case len(benches) == 0:
+		o.Status, o.Summary = gates.Fail, "no benchmark in "+strings.Join(pkgs, ", ")+"; a task with a latency budget adds one"
+	default:
+		if over := gates.OverBudget(benches, limit); len(over) > 0 {
+			o.Status, o.Summary, o.Details = gates.Fail, "over the latency budget "+limit.String(), over
+		}
 	}
 }
 

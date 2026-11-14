@@ -36,6 +36,7 @@ const (
 	Contract    = "contract"     // API and event changes match the planned blast radius
 	Mutation    = "mutation"     // HIGH-risk changes: ≥ 70% of changed-line mutants killed
 	Security    = "security"     // no new SAST finding, no secret, no new vulnerable dependency
+	Performance = "performance"  // benchmarks within the latency budget risk_notes names
 )
 
 // Skipped is a gate that does not apply to this task (for example mutation below HIGH risk);
@@ -81,6 +82,7 @@ var defaultGates = []Gate{
 	{ID: "coverage", Stage: Full, Pass: Coverage, Waivable: Human},
 	{ID: "complexity", Stage: Full, Pass: Complexity, Waivable: Human},
 	{ID: "mutation", Stage: Full, Pass: Mutation, Waivable: Human},
+	{ID: "performance", Stage: Full, Pass: Performance, Waivable: Human},
 }
 
 var goCommands = map[string][]string{
@@ -104,7 +106,7 @@ func Defaults(lang string, scripts map[string]bool) []Gate {
 		switch lang {
 		case Go:
 			g.Command = goCommands[g.ID]
-			g.Builtin = g.Builtin || g.Pass == Complexity || g.Pass == Mutation
+			g.Builtin = g.Builtin || g.Pass == Complexity || g.Pass == Mutation || g.Pass == Performance
 		case Node:
 			if s := nodeScripts[g.ID]; scripts[s] {
 				g.Command = []string{"npm", "run", "--silent", s}

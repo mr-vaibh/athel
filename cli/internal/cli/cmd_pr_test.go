@@ -122,10 +122,17 @@ func TestPRBodyListsDecisions(t *testing.T) {
 	h, _, _, _ := building(t)
 	h.stdin = "step: build\nquestion: Which log level for the new path?\nchoice: info\nreason: matches the existing handlers\n"
 	h.mustOK("decide", "record", "CHG-001", "-")
+	h.stdin = cardYAML
+	card := h.mustOK("decide", "add", "CHG-001", "-")["id"].(string)
 	h.stdin = ""
+	h.mustOK("decide", "present", "CHG-001", "--step", "spec")
+	h.humanPrompt("/athel:decide CHG-001 " + card + "=a")
+	h.mustOK("decide", "answer", "CHG-001", card+"=a")
 	body := h.mustOK("pr", "body", "CHG-001", "users")["body"].(string)
-	if !strings.Contains(body, "Which log level for the new path? → info (athel)") {
-		t.Errorf("Athel's own decision is in the body:\n%s", body)
+	for _, want := range []string{"Which log level for the new path? → info (athel)", card + " Which phone formats should the API accept? → a (human)"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the body lacks %q:\n%s", want, body)
+		}
 	}
 }
 
