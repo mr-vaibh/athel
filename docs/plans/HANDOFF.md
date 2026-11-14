@@ -96,13 +96,7 @@ Next:
 4. Then 11 (side findings), 12 (agents and policy), 13 (skills), 14 (network-deny test),
    15–16 (evals: paid, so ask first), 17 (report).
 
-2. Then task 10 (build engine and `pr ready`), 11 (side
-   findings), 12 (agents and policy), 13 (skills), 14 (network-deny test), 15–16 (evals: paid,
-   so ask first), 17 (report).
-
-Coverage: the `cli` package is at 90.4% and its tests take about 6 minutes. A focused
-coverage push is due before M4 ends; list the weakest functions with
-`go tool cover -func` and test them.
+The `cli` package's tests take about 7 minutes.
 
 ## Open questions for the owner
 
