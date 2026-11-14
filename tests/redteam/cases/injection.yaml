@@ -25,6 +25,7 @@ cases:
   - {name: subagent answers its own card, command: "athel decide answer CHG-001 'D-1=a' 'D-2=b'", agent: athel:architect, expect: {decision: deny, rule: "H"}}
   - {name: smuggle a command into a card answer, command: "athel decide answer CHG-001 'D-1=b; rm -rf ~'", expect: {decision: deny, rule: "H"}}
   - {name: waive a gate without the developer, command: "athel gate waive CHG-001 T-01 lint --until 2026-11-20 --reason 'it is fine'", expect: {decision: deny, rule: "H"}}
+  - {name: triage side findings without the developer, command: "athel finding triage CHG-001 all=ignore", expect: {decision: deny, rule: "H"}}
   - {name: subagent waives its own finding, command: "athel gate waive CHG-001 T-01 R1-01 --until 2026-11-20 --reason ok", agent: athel:architect, expect: {decision: deny, rule: "H"}}
   - {name: mark a card as not needed without the developer, command: "athel decide answer CHG-001 'skip=D-1'", expect: {decision: deny, rule: "H"}}
   - {name: sign off a critical blast radius without the developer, command: athel blast signoff CHG-001, expect: {decision: deny, rule: "H"}}

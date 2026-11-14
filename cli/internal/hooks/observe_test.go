@@ -253,3 +253,16 @@ func TestWaiveGrantFromHumanPrompt(t *testing.T) {
 		t.Errorf("grant = %+v %v", g, err)
 	}
 }
+
+// TestTriageGrantFromHumanPrompt (FR-FIND-003): the developer's /athel:triage becomes a grant
+// bound to its choices.
+func TestTriageGrantFromHumanPrompt(t *testing.T) {
+	d, _ := newDeps(t)
+	o := Handle(&hookio.Request{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p1", Prompt: "/athel:triage CHG-001 SF-2=ignore SF-1=fix_pr"}, d)
+	if o.Rule != RuleGrant || !strings.Contains(o.Response.AdditionalContext, "athel finding triage CHG-001 SF-1=fix_pr SF-2=ignore") {
+		t.Fatalf("outcome = %+v", o)
+	}
+	if g, err := d.Store.Grants().Valid(grants.TriageKey("CHG-001", []string{"SF-1=fix_pr", "SF-2=ignore"}), grants.TargetTriage, sess); err != nil || g == nil {
+		t.Errorf("grant = %+v %v", g, err)
+	}
+}
