@@ -52,3 +52,13 @@ gate's dependency audit, and the owner approved it, limited to Go's vulnerabilit
 
 If it cannot run then, the gate is unavailable, not green: only the security owner can waive
 it.
+
+## Follow-up (2026-11-14, M4 task 07d)
+The migration gate's throwaway PostgreSQL (`initdb`, `pg_ctl`, `psql`) is not a repo command,
+so it is not classified. The CLI runs it, like its own git:
+- in a temp folder;
+- reachable only through a Unix socket there (`listen_addresses=''`), with no TCP;
+- stopped and removed after the gate.
+
+The repo's SQL files are the only repo content it runs, against that empty database.
+PostgreSQL itself was approved by the owner (M4-plan Q2).
