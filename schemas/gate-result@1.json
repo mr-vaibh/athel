@@ -154,7 +154,8 @@
                   "enum": [
                     "pass",
                     "fail",
-                    "unavailable"
+                    "unavailable",
+                    "skipped"
                   ]
                 },
                 "summary": {
