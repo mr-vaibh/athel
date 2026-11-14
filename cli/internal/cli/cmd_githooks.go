@@ -218,27 +218,32 @@ func cmdGitLint(r *runCtx, args []string) (any, error) {
 	if !ok {
 		return nil, aerr.New(aerr.StateNotFound, c.ID+" has no worktree in "+pos[1]).WithNextAction("athel git preflight " + c.ID + " " + pos[1])
 	}
+	return r.lintBranch(s, c, w)
+}
+
+// lintBranch lints the branch name and every non-merge commit that only Athel's branch has.
+func (r *runCtx) lintBranch(s *state.Store, c *state.Change, w state.RepoWork) (lintResult, error) {
 	rules, tasks, err := r.lintRules(s, c, w.Name)
 	if err != nil {
-		return nil, err
+		return lintResult{}, err
 	}
 	pol, _ := r.policySet() // lintRules loaded it
 	dir := filepath.Join(s.WS.Root, filepath.FromSlash(w.Worktree))
 	out := lintResult{Repo: w.Name, Branch: w.Branch, OK: true, Commits: []lintedCommit{}}
-	var all []string
-	all = append(all, gitlint.Branch(w.Branch, pol.Git.BranchName, c.ID)...)
-	shas, err := r.gitOut(dir, "rev-list", "--reverse", "--no-merges", w.BaseHead+"..HEAD")
+	all := gitlint.Branch(w.Branch, pol.Git.BranchName, c.ID)
+	// Only commits on Athel's branch: neither the base it was cut from nor the base merged in since.
+	shas, err := r.gitOut(dir, "rev-list", "--reverse", "--no-merges", "HEAD", "^"+w.BaseHead, "^refs/heads/"+w.Base)
 	if err != nil {
-		return nil, err
+		return out, err
 	}
 	for _, sha := range strings.Fields(shas) {
 		msg, err := r.gitOut(dir, "log", "-1", "--format=%B", sha)
 		if err != nil {
-			return nil, err
+			return out, err
 		}
 		files, err := r.stagedFiles(dir, sha)
 		if err != nil {
-			return nil, err
+			return out, err
 		}
 		problems := append(gitlint.Message(msg, rules, c.ID, tasks), gitlint.StagedFiles(files, rules)...)
 		subject, _, _ := strings.Cut(strings.TrimSpace(msg), "\n")
@@ -248,10 +253,7 @@ func cmdGitLint(r *runCtx, args []string) (any, error) {
 		}
 	}
 	out.OK = len(all) == 0
-	if !out.OK {
-		return out, lintFailure(w.Branch+" has commits git.yaml does not allow", all)
-	}
-	return out, nil
+	return out, lintFailure(w.Branch+" has commits git.yaml does not allow", all)
 }
 
 func repoWork(c *state.Change, repo string) (state.RepoWork, bool) {
