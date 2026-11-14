@@ -54,23 +54,27 @@ M4-plan §9:
 | 01 worktrees, `change@4`, `OwnBranches` | `feat/m4-worktrees` | #80 | open, gate green |
 | 02 git preflight, overlap card, `building` guard | `feat/m4-preflight` | #81 | open, gate green |
 | 03 commit, branch and title lint; pre-commit checks | `feat/m4-git-lint` | #82 | open, gate green |
-| 04 push and PRs through the CLI (ADR 026) | `feat/m4-push-pr` | — | **next** |
-| 05–17 | see M4-plan §9 | — | not started |
+| 04a `athel git push` | `feat/m4-push-pr` | #83 | open, gate green |
+| 04b `athel pr body|open|update`, ADR 026 | `feat/m4-pr` | #84 | open, gate green (`pr ready` moves to task 10) |
+| 05 gates: `gates@1`, policy-checked runner (ADR 023), baseline, evidence | `feat/m4-gates` | — | **next** |
+| 06–17 | see M4-plan §9 | — | not started |
 
 Next:
-1. **Task 04** on `feat/m4-push-pr`, branched from `feat/m4-git-lint`. It covers FR-GIT-004,
-   006, 007, 009 and 010:
-   - **`athel git push CHG REPO`:**
-     - re-fetch, and stop with a card if anyone else pushed to Athel's branch;
-     - rebase on base if the branch was never pushed, otherwise merge base in;
-     - a conflict outside the plan's paths aborts and raises a card;
-     - `git lint` must pass;
-     - then push and mark the branch pushed.
-   - **`athel pr open|update|ready|body`:** a draft until the gates pass; a size limit of 400
-     changed lines without git.yaml's exclusions (oversized raises a split proposal); doc 04's
-     PR body sections; never merge.
-   - **ADR 026:** in change mode, agents' raw `git push` and `gh pr create|ready|edit` are
-     denied, with a next action naming the athel command. Add red-team cases.
+1. **Task 05** on `feat/m4-gates`, branched from `feat/m4-pr`. It covers FR-BUILD-009 and the
+   doc 06 gate edge cases:
+   - **`gates@1`:** embedded defaults (doc 06's table: pass criterion, waivable by, stage cheap
+     or full), overridable per repo in `.athel/config/gates.yaml`; commands from the
+     conventions recipes or the language defaults.
+   - **ADR 023:** every gate command is classified and decided by the same engine as an
+     agent's Bash call, run in the task's worktree with a scrubbed environment and a timeout.
+   - **`athel gate baseline` and `athel gate run --stage cheap|full`:**
+     - evidence goes to `gates/<task>.yaml` (`gate-result@1`), with output in `artifacts/`;
+     - tests already failing on base never fail the task;
+     - skipped or deleted tests compared with the baseline fail `unit`;
+     - a flaky test is re-run up to 3 times;
+     - a gate whose tool is missing is unavailable, which blocks unless waived.
+   - Prepared fixture branches for a failing-on-base test and a flaky test.
+   - The `cli` package is at 90.7%: keep it above 90%.
 2. Continue the tasks in order, each its own PR stacked on the previous one.
 3. Paid evals only with the owner's go-ahead each time, smoke runs first.
 
