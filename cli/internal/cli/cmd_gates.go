@@ -65,6 +65,8 @@ type gateBaseline struct {
 	Lint  string         `yaml:"lint" json:"lint"`
 	Tests gates.TestRun  `yaml:"tests" json:"tests"`
 	Exits map[string]int `yaml:"exits" json:"exits"`
+	// Coverage is the total statement coverage on base, when the coverage gate ran there.
+	Coverage *float64 `yaml:"coverage" json:"coverage"`
 }
 
 type gateFile struct {
@@ -193,22 +195,18 @@ func cmdGateBaseline(r *runCtx, args []string) (any, error) {
 	}
 	b := &gateBaseline{Head: strings.TrimSpace(head), At: clock.Format(r.env.Clock.Now()), Exits: map[string]int{}, Tests: gates.TestRun{Tests: map[string]string{}, BrokenPackages: []string{}}}
 	for _, gate := range g.defaults() {
-		if len(gate.Command) == 0 || r.gateRefusal(g.dir, gate.Command) != "" {
+		if len(gate.Command) == 0 {
 			continue
 		}
-		exit, out, _, err := r.runGateCommand(g.dir, gate.Command)
-		if err != nil {
-			continue // a gate that cannot run on base has no baseline; its run reports why
+		argv, profile, done := withProfile(gate.Command)
+		exit, out, err := 0, "", errors.New(r.gateRefusal(g.dir, argv))
+		if err.Error() == "" {
+			exit, out, _, err = r.runGateCommand(g.dir, argv)
 		}
-		b.Exits[gate.ID] = exit
-		switch gate.Pass {
-		case gates.NewFindings:
-			b.Lint = out
-		case gates.Tests:
-			if g.lang == gates.Go {
-				b.Tests = gates.ParseGoTest(out)
-			}
+		if err == nil {
+			b.record(gate, g, exit, out, profile)
 		}
+		done()
 	}
 	f.Baseline = b
 	return f, r.saveGates(g, f)
@@ -298,15 +296,22 @@ func (r *runCtx) evaluateGate(g gateTask, base *gateBaseline, gate gates.Gate, n
 	if o.Command == nil {
 		o.Command = []string{}
 	}
-	if len(gate.Command) == 0 {
+	switch {
+	case !gate.Available():
 		o.Status, o.Summary = "unavailable", "no "+gate.ID+" command for this repo (doc 06: the gate blocks unless a human waives it)"
 		return o
+	case gate.Builtin:
+		o.Status = gates.Pass
+		r.judgeComplexity(g, base, &o)
+		return o
 	}
-	if why := r.gateRefusal(g.dir, gate.Command); why != "" {
+	argv, profile, done := withProfile(gate.Command)
+	defer done()
+	if why := r.gateRefusal(g.dir, argv); why != "" {
 		o.Status, o.Summary = "unavailable", "Athel's policy does not let the CLI run it: "+why
 		return o
 	}
-	exit, out, dur, err := r.runGateCommand(g.dir, gate.Command)
+	exit, out, dur, err := r.runGateCommand(g.dir, argv)
 	o.Exit, o.DurationMS = exit, dur.Milliseconds()
 	if err != nil {
 		o.Status, o.Summary = "unavailable", err.Error()
@@ -324,6 +329,8 @@ func (r *runCtx) evaluateGate(g gateTask, base *gateBaseline, gate gates.Gate, n
 		r.judgeLint(g, base, out, &o)
 	case gate.Pass == gates.Tests && g.lang == gates.Go:
 		r.judgeTests(g, base, out, &o)
+	case gate.Pass == gates.Coverage:
+		r.judgeCoverage(g, base, exit, out, profile, &o)
 	case exit != 0:
 		o.Status, o.Summary, o.Details = gates.Fail, gate.ID+" exited "+strconv.Itoa(exit), tail(out)
 	}
