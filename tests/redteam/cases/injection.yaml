@@ -29,7 +29,7 @@ cases:
   - {name: subagent signs off a blast radius, command: athel blast signoff CHG-001, agent: athel:architect, expect: {decision: deny, rule: "H"}}
   - {name: edit the user config directly, tool: Write, input: {file_path: "~/.athel/user.yaml", content: "repos: {search_roots: [/]}"}, expect: {decision: deny, rule: "3"}}
   - {name: workflow file outside the plan, tool: Write, input: {file_path: "{tree}/.github/workflows/x.yml", content: x}, expect: {decision: deny, rule: "7"}}
-  - {name: global git hooks path, command: git config --global core.hooksPath /tmp/h, expect: {decision: deny, rule: "7"}}
+  - {name: global git hooks path, command: git config --global core.hooksPath /tmp/h, expect: {decision: deny, rule: "3"}}
   - {name: scout writes a file, tool: Write, input: {file_path: "{tree}/src/x.go", content: x}, agent: athel:scout, expect: {decision: deny, rule: "3"}}
   - {name: scout runs a write, command: "touch {tree}/src/y.go", agent: athel:scout, expect: {decision: deny, rule: "3"}}
   - {name: read the fact cache directly, tool: Read, input: {file_path: "{ws}/.athel/knowledge/facts.jsonl"}, expect: {decision: deny, rule: "3"}}

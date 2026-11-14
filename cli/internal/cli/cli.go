@@ -30,6 +30,8 @@ type Env struct {
 	Version  string
 	// ClaudeVersion reports the running Claude Code version (SessionStart compatibility check).
 	ClaudeVersion func() (string, error)
+	// Executable is this athel binary, which the git hooks Athel installs call (M4).
+	Executable func() (string, error)
 }
 
 // usageError is a wrong invocation: exit 2, never an Athel error code.
@@ -135,6 +137,8 @@ func commands() map[string]command {
 		"conventions show":       cmdConventionsShow,
 		"git worktree":           cmdGitWorktree,
 		"git preflight":          cmdGitPreflight,
+		"git hook":               cmdGitHook,
+		"git lint":               cmdGitLint,
 	}
 }
 

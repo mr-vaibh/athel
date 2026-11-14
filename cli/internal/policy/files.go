@@ -137,11 +137,20 @@ type Environment struct {
 
 // Git is the subset of git.yaml the policy engine enforces in M1 (plus the rest for later).
 type Git struct {
-	BaseBranch        string   `json:"base_branch"`
-	Protected         []string `json:"protected"`
-	Forbidden         []string `json:"forbidden"`
-	BranchName        string   `json:"branch_name"`         // M4: the template for Athel's branches
-	SideFindingBranch string   `json:"side_finding_branch"` // M4: the template for side-finding fix branches
+	BaseBranch        string    `json:"base_branch"`
+	Protected         []string  `json:"protected"`
+	Forbidden         []string  `json:"forbidden"`
+	BranchName        string    `json:"branch_name"`         // M4: the template for Athel's branches
+	SideFindingBranch string    `json:"side_finding_branch"` // M4: the template for side-finding fix branches
+	Commit            GitCommit `json:"commit"`              // M4: how Athel's commits look (FR-GIT-005)
+}
+
+// GitCommit is git.yaml's commit section.
+type GitCommit struct {
+	Format   string   `json:"format"`
+	Trailer  []string `json:"trailer"`
+	MaxFiles int      `json:"max_files_per_commit"`
+	Sign     string   `json:"sign"`
 }
 
 // Set is the effective policy: every file merged, typed and hashed.

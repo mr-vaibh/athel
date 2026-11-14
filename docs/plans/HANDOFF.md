@@ -53,19 +53,24 @@ M4-plan §9:
 | 00b fake GitHub PR store and call log | `feat/m4-fixture-prs` | #79 | open, gate green |
 | 01 worktrees, `change@4`, `OwnBranches` | `feat/m4-worktrees` | #80 | open, gate green |
 | 02 git preflight, overlap card, `building` guard | `feat/m4-preflight` | #81 | open, gate green |
-| 03 commit, branch and title lint; pre-commit checks | `feat/m4-git-lint` | — | **next** |
-| 04–17 | see M4-plan §9 | — | not started |
+| 03 commit, branch and title lint; pre-commit checks | `feat/m4-git-lint` | #82 | open, gate green |
+| 04 push and PRs through the CLI (ADR 026) | `feat/m4-push-pr` | — | **next** |
+| 05–17 | see M4-plan §9 | — | not started |
 
 Next:
-1. **Task 03** on `feat/m4-git-lint`, branched from `feat/m4-preflight`. It covers FR-GIT-005
-   and FR-BUILD-012:
-   - a new package `internal/gitlint` checks commit messages against git.yaml `commit`:
-     conventional format, the `Athel-Change` and `Athel-Task` trailers, and at most 15 files
-     per commit;
-   - it also lints branch names and PR titles;
-   - pre-commit checks block a file over 1 MB and secret patterns (M1 scrubber);
-   - the PreToolUse hook checks `git commit` in change mode;
-   - `athel git lint` is the command.
+1. **Task 04** on `feat/m4-push-pr`, branched from `feat/m4-git-lint`. It covers FR-GIT-004,
+   006, 007, 009 and 010:
+   - **`athel git push CHG REPO`:**
+     - re-fetch, and stop with a card if anyone else pushed to Athel's branch;
+     - rebase on base if the branch was never pushed, otherwise merge base in;
+     - a conflict outside the plan's paths aborts and raises a card;
+     - `git lint` must pass;
+     - then push and mark the branch pushed.
+   - **`athel pr open|update|ready|body`:** a draft until the gates pass; a size limit of 400
+     changed lines without git.yaml's exclusions (oversized raises a split proposal); doc 04's
+     PR body sections; never merge.
+   - **ADR 026:** in change mode, agents' raw `git push` and `gh pr create|ready|edit` are
+     denied, with a next action naming the athel command. Add red-team cases.
 2. Continue the tasks in order, each its own PR stacked on the previous one.
 3. Paid evals only with the owner's go-ahead each time, smoke runs first.
 
