@@ -90,7 +90,7 @@ func cmdGitPreflight(r *runCtx, args []string) (any, error) {
 // the branches pushed in the last 14 days and the commits to base in the last 7.
 func (r *runCtx) activeWork(tree worktreeMade) (preflight.Work, error) {
 	var w preflight.Work
-	out, err := r.tool("gh", "pr", "list", "--repo", ghRepo(tree.Remote), "--state", "open", "--limit", "200",
+	out, err := r.gh("pr", "list", "--repo", ghRepo(tree.Remote), "--state", "open", "--limit", "200",
 		"--json", "number,author,headRefName,files")
 	if err != nil {
 		return w, err
@@ -214,14 +214,15 @@ func (r *runCtx) gitOut(dir string, args ...string) (string, error) {
 	return out, nil
 }
 
-// tool runs a read-only command-line tool found on the session's PATH, with the developer's
-// own login (gh keeps it under HOME), and returns its standard output.
-func (r *runCtx) tool(name string, args ...string) ([]byte, error) {
+// gh runs the GitHub CLI found on the session's PATH, with the developer's own login (gh keeps
+// it under HOME), and returns its standard output.
+func (r *runCtx) gh(args ...string) ([]byte, error) {
+	const name = "gh"
 	path := lookPath(r.env.Getenv("PATH"), name)
 	if path == "" {
 		return nil, aerr.New(aerr.ToolUnreachable, name+" is not on PATH").WithNextAction("install " + name + " and log in, then retry")
 	}
-	cmd := exec.Command(path, args...) //nolint:gosec // a read-only tool command with fixed subcommands; values are arguments, never shell
+	cmd := exec.Command(path, args...) //nolint:gosec // gh with subcommands Athel fixes in code; values are arguments, never shell
 	cmd.Env = gitro.NetworkEnv(r.env.Getenv)
 	var out, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &stderr
