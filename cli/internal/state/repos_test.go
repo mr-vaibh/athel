@@ -168,3 +168,23 @@ func TestFrozen(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 }
+
+func TestChildChange(t *testing.T) {
+	s, _ := newTestStore(t)
+	parent := mustCreate(t, s, "parent")
+	child, err := s.Create(NewChange{Title: "fix", CreatedBy: "dev", PRD: []byte("p"), PRDSource: "text", Parent: parent.ID, Finding: 3})
+	if err != nil || child.ID != parent.ID+"-F3" || child.Parent == nil || *child.Parent != parent.ID {
+		t.Fatalf("%+v %v", child, err)
+	}
+	if next := mustCreate(t, s, "next"); next.ID != "CHG-002" {
+		t.Errorf("a child never takes a top-level number: %s", next.ID)
+	}
+	for _, n := range []NewChange{
+		{Parent: parent.ID, Finding: 3}, {Parent: "CHG-404", Finding: 1}, {Parent: child.ID, Finding: 1}, {Parent: parent.ID},
+	} {
+		n.Title, n.CreatedBy, n.PRD, n.PRDSource = "x", "dev", []byte("p"), "text"
+		if _, err := s.Create(n); err == nil {
+			t.Errorf("%+v: want an error", n)
+		}
+	}
+}

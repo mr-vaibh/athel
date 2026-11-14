@@ -5,6 +5,9 @@ import (
 	"testing"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/gitw"
+	"github.com/mr-vaibh/athel/cli/internal/policy"
+	"github.com/mr-vaibh/athel/cli/internal/state"
 )
 
 const sideFinding = `found_by: reviewer
@@ -59,5 +62,53 @@ func TestSideFindings(t *testing.T) {
 	h.humanPrompt("/athel:triage CHG-001 SF-9=ignore")
 	if _, env := h.runJSON("finding", "triage", "CHG-001", "SF-9=ignore"); errCode(env) != string(aerr.StateNotFound) {
 		t.Errorf("an unknown finding: %v", env)
+	}
+}
+
+// TestFindingFix (FR-FIND-004): a finding the developer chose to fix becomes its own change,
+// <parent>-F<n>, linked to the parent, on the side-finding branch.
+func TestFindingFix(t *testing.T) {
+	h, _ := goGates(t)
+	for range 2 {
+		h.stdin = sideFinding
+		h.mustOK("finding", "add", "CHG-001", "-")
+	}
+	h.stdin = ""
+	if _, env := h.runJSON("finding", "fix", "CHG-001", "SF-1"); errCode(env) != string(aerr.StateInvalid) {
+		t.Errorf("not chosen for a fix yet: %v", env)
+	}
+	h.humanPrompt("/athel:triage CHG-001 SF-1=fix_pr SF-2=ticket")
+	h.mustOK("finding", "triage", "CHG-001", "SF-1=fix_pr", "SF-2=ticket")
+	child := h.mustOK("finding", "fix", "CHG-001", "SF-1")
+	if child["id"] != "CHG-001-F1" || child["state"] != "draft" {
+		t.Fatalf("child: %v", child)
+	}
+	show := h.mustOK("change", "show", "CHG-001-F1")
+	if show["parent"] != "CHG-001" || !strings.HasPrefix(show["title"].(string), "Fix SF-1: bug in users/src/address.go:88") {
+		t.Errorf("the child names its parent: %v", show)
+	}
+	if list := asJSON(t, h.mustOK("finding", "list", "CHG-001")); !strings.Contains(list, `"child":"CHG-001-F1"`) {
+		t.Errorf("the finding names its fix: %s", list)
+	}
+	if _, env := h.runJSON("finding", "fix", "CHG-001", "SF-1"); errCode(env) != "E-CONFLICT-VERSION" {
+		t.Errorf("fixed twice: %v", env)
+	}
+	if _, env := h.runJSON("finding", "fix", "CHG-001", "SF-2"); errCode(env) != string(aerr.StateInvalid) {
+		t.Errorf("a ticket is not a fix: %v", env)
+	}
+	if _, env := h.runJSON("finding", "fix", "CHG-001", "SF-9"); errCode(env) != string(aerr.StateNotFound) {
+		t.Errorf("an unknown finding: %v", env)
+	}
+}
+
+func TestBranchTemplate(t *testing.T) {
+	g := policy.Git{BranchName: "athel/{change_id}-{slug}", SideFindingBranch: "athel/{change_id}-fix-{finding_id}"}
+	if tmpl, change, finding := branchTemplate(g, &state.Change{ID: "CHG-001"}); tmpl != g.BranchName || change != "CHG-001" || finding != "" {
+		t.Errorf("top level: %s %s %s", tmpl, change, finding)
+	}
+	parent := "CHG-001"
+	tmpl, change, finding := branchTemplate(g, &state.Change{ID: "CHG-001-F3", Parent: &parent})
+	if gitw.BranchName(tmpl, change, "x", finding) != "athel/CHG-001-fix-SF-3" {
+		t.Errorf("a fix: %s %s %s", tmpl, change, finding)
 	}
 }

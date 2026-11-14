@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -13,6 +15,7 @@ import (
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/findings"
 	"github.com/mr-vaibh/athel/cli/internal/grants"
+	prdpkg "github.com/mr-vaibh/athel/cli/internal/prd"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
 
@@ -164,4 +167,48 @@ func (r *runCtx) prFindings(s *state.Store, id string) ([]string, error) {
 		out = append(out, x.ID+" ("+x.Category+", "+x.Severity+") "+x.Location+": "+x.Evidence+" → "+choice)
 	}
 	return out, nil
+}
+
+// cmdFindingFix turns a finding the developer chose to fix into its own change, <parent>-F<n>,
+// linked to its parent (doc 07 FR-FIND-004): it then goes through the same spec, plan, gates,
+// review and PR as any change, on its side_finding_branch.
+func cmdFindingFix(r *runCtx, args []string) (any, error) {
+	pos, err := parse(r.newFlags("finding fix"), args, 2)
+	if err != nil {
+		return nil, err
+	}
+	s, _, err := r.mutating()
+	if err != nil {
+		return nil, err
+	}
+	f, err := r.readFindings(s, pos[0])
+	if err != nil {
+		return nil, err
+	}
+	i := slices.IndexFunc(f.Findings, func(x findings.Finding) bool { return x.ID == pos[1] })
+	switch {
+	case i < 0:
+		return nil, aerr.New(aerr.StateNotFound, pos[0]+" has no side finding "+pos[1])
+	case f.Findings[i].Disposition == nil || *f.Findings[i].Disposition != findings.FixPR:
+		return nil, aerr.New(aerr.StateInvalid, pos[1]+" is not chosen for a fix PR").WithNextAction("ask the developer: /athel:triage " + pos[0] + " " + pos[1] + "=fix_pr")
+	case f.Findings[i].Child != "":
+		return nil, aerr.New(aerr.ConflictVersion, pos[1]+" is already being fixed in "+f.Findings[i].Child)
+	}
+	x := f.Findings[i]
+	n, _ := strconv.Atoi(strings.TrimPrefix(x.ID, "SF-")) // IDs are SF-<n>
+	prd := []byte("# Fix " + x.ID + " of " + pos[0] + "\n\n" + x.Evidence + "\n\nWhere: " + x.Location + " (" + x.Category + ", " + x.Severity +
+		").\n\nSuggested fix: " + x.SuggestedFix + "\n")
+	set := r.cfg.Settings()
+	child, err := s.Create(state.NewChange{Title: "Fix " + x.ID + ": " + x.Category + " in " + x.Location, CreatedBy: cmpOr(set.Identity, "unknown"),
+		PRD: prd, PRDSource: "text", Parent: pos[0], Finding: n,
+		IndexFor: func(id, sha string) []byte { return prdpkg.Encode(prdpkg.Build(id, "v1", sha, prd, nil)) },
+		Budget:   state.Budget{MaxCostUSD: set.BudgetMaxCostUSD, MaxHours: set.BudgetMaxHours, MaxToolCalls: set.BudgetMaxToolCalls}})
+	if err != nil {
+		return nil, err
+	}
+	err = r.editFindings(pos[0], func(f *findings.File) error {
+		f.Findings[i].Child = child.ID
+		return nil
+	})
+	return summarize(child), err
 }

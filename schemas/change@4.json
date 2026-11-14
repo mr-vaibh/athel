@@ -529,8 +529,12 @@
       "description": "reserved: multi-repo change set (M5)"
     },
     "parent": {
-      "type": "null",
-      "description": "reserved: parent change of a split or side-finding change (M3/M6)"
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^CHG-[0-9]{3,}$",
+      "description": "the change a side-finding fix belongs to (doc 07 FR-FIND-004); null for a top-level change"
     },
     "flags": {
       "type": "array",

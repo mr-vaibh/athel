@@ -230,7 +230,8 @@ func (r *runCtx) lintBranch(s *state.Store, c *state.Change, w state.RepoWork) (
 	pol, _ := r.policySet() // lintRules loaded it
 	dir := filepath.Join(s.WS.Root, filepath.FromSlash(w.Worktree))
 	out := lintResult{Repo: w.Name, Branch: w.Branch, OK: true, Commits: []lintedCommit{}}
-	all := gitlint.Branch(w.Branch, pol.Git.BranchName, c.ID)
+	template, change, _ := branchTemplate(pol.Git, c)
+	all := gitlint.Branch(w.Branch, template, change)
 	// Only commits on Athel's branch: neither the base it was cut from nor the base merged in since.
 	shas, err := r.gitOut(dir, "rev-list", "--reverse", "--no-merges", "HEAD", "^"+w.BaseHead, "^refs/heads/"+w.Base)
 	if err != nil {
