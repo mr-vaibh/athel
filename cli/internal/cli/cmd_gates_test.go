@@ -281,7 +281,7 @@ func TestGateFullStage(t *testing.T) {
 			t.Fatalf("%v %s", err, out)
 		}
 	}
-	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 9 {
+	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 10 {
 		t.Fatalf("a tested, simple change is green on the full stage: %v", run)
 	}
 	untested := "package src\n\n// Sub subtracts.\nfunc Sub(a, b int) int {\n\tc := a - b\n\tc++\n\tc--\n\treturn c\n}\n"
@@ -307,13 +307,16 @@ func TestGateFullStage(t *testing.T) {
 
 func TestGateFullStageBroken(t *testing.T) {
 	h, tree := goGates(t)
+	h.stdin = plannedBlast() // CRITICAL, so the mutation gate runs and must read the broken file
+	h.mustOK("blast", "save", "--change", "CHG-001", "-")
+	h.stdin = ""
 	h.mustOK("gate", "baseline", "CHG-001", "T-01")
 	if out, err := commit(t, h, tree, "src/broken.go", "package src\n\nfunc Broken( {\n", goodMsg); err != nil {
 		t.Fatalf("%v %s", err, out)
 	}
 	_, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
 	msg := asJSON(t, env)
-	for _, want := range []string{"coverage fail: the tests did not run to a coverage profile", "complexity fail: src/broken.go does not parse"} {
+	for _, want := range []string{"coverage fail: the tests did not run to a coverage profile", "complexity fail: src/broken.go does not parse", "mutation unavailable"} {
 		if !strings.Contains(msg, want) {
 			t.Errorf("lacks %q: %s", want, msg)
 		}
@@ -384,7 +387,49 @@ func TestGateContractNeedsAReadablePlan(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(h.root, ".athel", "changes", "CHG-001", "blast-radius.md"), []byte("no report block"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01"); !strings.Contains(asJSON(t, env), "contract unavailable") {
-		t.Errorf("%v", env)
+	_, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
+	for _, want := range []string{"contract unavailable", "mutation unavailable"} {
+		if !strings.Contains(asJSON(t, env), want) {
+			t.Errorf("lacks %q: %v", want, env)
+		}
+	}
+}
+
+// TestGateMutation: a CRITICAL change's changed lines are mutated; a mutant the tests miss
+// (a > that could be >=, with no test at the boundary) is named, and the score is judged.
+func TestGateMutation(t *testing.T) {
+	h, tree := goGates(t)
+	h.stdin = plannedBlast()
+	h.mustOK("blast", "save", "--change", "CHG-001", "-")
+	h.stdin = ""
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	pinned := map[string]string{
+		"src/pos.go":      "package src\n\n// Pos reports a positive number.\nfunc Pos(a int) bool {\n\treturn a > 0\n}\n",
+		"src/pos_test.go": "package src\n\nimport \"testing\"\n\nfunc TestPos(t *testing.T) {\n\tif Pos(0) || !Pos(1) {\n\t\tt.Fatal(\"pos\")\n\t}\n}\n",
+	}
+	for file, body := range pinned {
+		if out, err := commit(t, h, tree, file, body, goodMsg); err != nil {
+			t.Fatalf("%v %s", err, out)
+		}
+	}
+	run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01")
+	if !strings.Contains(asJSON(t, run), `"gate":"mutation","output":null,"status":"pass"`) {
+		t.Fatalf("a boundary test kills the mutant: %v", run)
+	}
+	loose := map[string]string{
+		"src/big.go":      "package src\n\n// Big reports a number over 10.\nfunc Big(a int) bool {\n\treturn a > 10\n}\n",
+		"src/big_test.go": "package src\n\nimport \"testing\"\n\nfunc TestBig(t *testing.T) {\n\tif Big(0) || !Big(20) {\n\t\tt.Fatal(\"big\")\n\t}\n}\n",
+	}
+	for file, body := range loose {
+		if out, err := commit(t, h, tree, file, body, goodMsg); err != nil {
+			t.Fatalf("%v %s", err, out)
+		}
+	}
+	_, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
+	if !strings.Contains(asJSON(t, env), "mutation fail: mutation score 50% (1 of 2 killed)") {
+		t.Errorf("an untested boundary: %v", env)
+	}
+	if show := asJSON(t, h.mustOK("gate", "show", "CHG-001", "T-01")); !strings.Contains(show, "survived: src/big.go line 5: \\u003e to \\u003e=") {
+		t.Errorf("the surviving mutant is named: %s", show)
 	}
 }

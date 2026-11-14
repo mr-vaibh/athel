@@ -278,7 +278,7 @@ func cmdGateRun(r *runCtx, args []string) (any, error) {
 			continue
 		}
 		o := r.evaluateGate(g, f.Baseline, gate, run.N)
-		run.Green = run.Green && o.Status == gates.Pass
+		run.Green = run.Green && (o.Status == gates.Pass || o.Status == gates.Skipped)
 		run.Results = append(run.Results, o)
 	}
 	f.Runs = append(f.Runs, run)
@@ -292,7 +292,7 @@ func cmdGateRun(r *runCtx, args []string) (any, error) {
 func redError(g gateTask, run gateRun) error {
 	var red []string
 	for _, o := range run.Results {
-		if o.Status != gates.Pass {
+		if o.Status != gates.Pass && o.Status != gates.Skipped {
 			red = append(red, o.Gate+" "+o.Status+": "+o.Summary)
 		}
 	}
