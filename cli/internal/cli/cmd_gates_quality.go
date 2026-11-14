@@ -45,6 +45,8 @@ func (b *gateBaseline) record(gate gates.Gate, g gateTask, exit int, out, profil
 		if g.lang == gates.Go {
 			b.Tests = gates.ParseGoTest(out)
 		}
+	case gates.Security:
+		b.Security = gates.GosecLines(out)
 	case gates.Coverage:
 		if p, err := readProfile(g.dir, profile); err == nil {
 			total := p.Total()
@@ -310,4 +312,53 @@ func (r *runCtx) judgeContract(g gateTask, o *gateOutcome) {
 	if drift := blast.Drift(blast.ParseDiff(diff), planned); len(drift) > 0 {
 		o.Status, o.Summary, o.Details = gates.Fail, "the diff changes contracts the plan does not name", drift
 	}
+}
+
+// judgeSecurity is doc 06's security-scan: gosec findings new against the baseline, secrets in
+// the added lines, and, when a dependency manifest changed, govulncheck's findings.
+func (r *runCtx) judgeSecurity(g gateTask, base *gateBaseline, out string, o *gateOutcome) {
+	for _, f := range gates.NewLines(base.Security, gates.GosecLines(out)) {
+		o.Details = append(o.Details, "new SAST finding: "+f)
+	}
+	diff, err := r.gitOut(g.dir, "diff", "-U0", "--no-color", "--no-ext-diff", base.Head)
+	if err != nil {
+		o.Status, o.Summary = "unavailable", err.Error()
+		return
+	}
+	for _, s := range gates.SecretsIn(addedLines(diff)) {
+		o.Details = append(o.Details, "secret in the added lines of "+s)
+	}
+	names, err := r.gitOut(g.dir, "diff", "--name-only", base.Head)
+	if err != nil {
+		o.Status, o.Summary = "unavailable", err.Error()
+		return
+	}
+	if gates.DependencyChanged(strings.Fields(names)) {
+		if why := r.auditDependencies(g, o); why != "" {
+			o.Status, o.Summary = "unavailable", "a dependency changed and the audit could not run: "+why
+			return
+		}
+	}
+	if len(o.Details) > 0 {
+		o.Status, o.Summary = gates.Fail, "security findings the security owner must see"
+	}
+}
+
+// auditDependencies runs govulncheck and adds its findings; it returns why it could not run.
+func (r *runCtx) auditDependencies(g gateTask, o *gateOutcome) string {
+	argv := []string{"govulncheck", "./..."}
+	if why := r.gateRefusal(g.dir, argv); why != "" {
+		return why
+	}
+	exit, out, _, err := r.runGateCommand(g.dir, argv)
+	switch {
+	case err != nil:
+		return err.Error()
+	case exit != 0 && len(gates.Vulnerabilities(out)) == 0:
+		return "govulncheck exited " + fmt.Sprint(exit) + ": " + strings.Join(tail(out), " ")
+	}
+	for _, v := range gates.Vulnerabilities(out) {
+		o.Details = append(o.Details, "vulnerable dependency: "+v)
+	}
+	return ""
 }

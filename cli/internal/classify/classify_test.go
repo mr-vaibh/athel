@@ -313,10 +313,10 @@ func TestNetworkDatabaseAndRemoteShells(t *testing.T) {
 // engine can decide them without asking a human (ADR 023).
 func TestGoCheckersAreKnown(t *testing.T) {
 	pol := testPolicy(t, nil)
-	for cmd, tier := range map[string]Tier{"gofmt -l .": W0, "goimports -l .": W0, "golangci-lint run ./...": W0, "golangci-lint version": R0, "staticcheck ./...": W0} {
+	for cmd, tier := range map[string]Tier{"gofmt -l .": W0, "goimports -l .": W0, "golangci-lint run ./...": W0, "golangci-lint version": R0, "staticcheck ./...": W0, "govulncheck ./...": R1} {
 		r := bash(t, pol, cmd, Options{})
-		if a := r.Actions[0]; a.Tier != tier || a.Uncertain != "" {
-			t.Errorf("%s: tier %s uncertain %q", cmd, a.Tier, a.Uncertain)
+		if a := r.Actions[0]; a.Tier != tier || a.Uncertain != "" || a.Remote != (tier == R1) {
+			t.Errorf("%s: tier %s uncertain %q remote %v", cmd, a.Tier, a.Uncertain, a.Remote)
 		}
 	}
 }

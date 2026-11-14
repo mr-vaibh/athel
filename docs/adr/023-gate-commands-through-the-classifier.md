@@ -41,3 +41,14 @@ A build changes nothing in the repo and is not a task's verb.
 ## Spec references
 Doc 06 §Quality gates, the per-task build loop steps 4–5, and the edge case "gate tool not
 installed"; doc 04 edge case "a script in the repo wraps a forbidden command"; M4-plan G2.
+
+## Follow-up (2026-11-14, M4 task 07b)
+One exception to "local only": `govulncheck` may read the network. It is the security-scan
+gate's dependency audit, and the owner approved it, limited to Go's vulnerability database at
+`vuln.go.dev` (M4-plan Q3).
+- The classifier names it a remote read (R1).
+- The gate runner allows R1 for that tool alone.
+- It runs only when a dependency manifest or lockfile changed since the task's baseline.
+
+If it cannot run then, the gate is unavailable, not green: only the security owner can waive
+it.
