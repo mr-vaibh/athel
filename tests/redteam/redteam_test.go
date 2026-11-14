@@ -175,6 +175,7 @@ func newFixture(t *testing.T) *fixture {
 	prompt, _ := json.Marshal(map[string]any{"session_id": session, "prompt_id": "p-1", "prompt": "/athel:approve CHG-001", "cwd": f.ws})
 	f.run(t, string(prompt), "hook", "user-prompt-submit")
 	f.run(t, "", "state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "red team")
+	write(t, filepath.Join(f.ws, ".athel", "changes", "CHG-001", "preflight", "svc.md"), m3docs.Preflight("svc", []string{"src/**"}))
 	f.run(t, "", "state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "red team")
 	return f
 }

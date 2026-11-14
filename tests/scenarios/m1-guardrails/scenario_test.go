@@ -110,6 +110,13 @@ func setup(t *testing.T) *athel {
 	}
 	a.hook("user-prompt-submit", map[string]any{"prompt_id": "p-approve", "prompt": "/athel:approve CHG-001"})
 	a.ok("state", "transition", "CHG-001", "--to", "plan_approved", "--by", "human", "--reason", "approved")
+	pre := filepath.Join(a.ws, ".athel", "changes", "CHG-001", "preflight", "svc.md")
+	if err := os.MkdirAll(filepath.Dir(pre), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(pre, []byte(m3docs.Preflight("svc", []string{"src/**"})), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	a.ok("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "build")
 	return a
 }

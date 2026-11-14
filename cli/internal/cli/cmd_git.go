@@ -27,35 +27,44 @@ func cmdGitWorktree(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	c, err := s.Get(pos[0])
+	return r.ensureWorktree(s, session, pos[0], pos[1])
+}
+
+// ensureWorktree records and makes the worktree of repo for change id, or returns the recorded
+// one. Making it fetches the cache clone first.
+func (r *runCtx) ensureWorktree(s *state.Store, session, id, repo string) (worktreeMade, error) {
+	c, err := s.Get(id)
 	if err != nil {
-		return nil, err
+		return worktreeMade{}, err
 	}
 	pol, err := r.policySet()
 	if err != nil {
-		return nil, err
+		return worktreeMade{}, err
 	}
-	var cache cacheReady
 	reused := false
-	tree := gitw.Tree{Git: func(dir string, a ...string) (int, string, error) {
-		return gitro.RunEnv(gitro.NetworkEnv(r.env.Getenv), dir, a...)
-	}}
-	got, created, err := s.AddRepo(c.ID, session, pos[1], func(c *state.Change) (state.RepoWork, error) {
-		if cache, err = r.cacheClone(pos[1]); err != nil {
+	tree := gitw.Tree{Git: r.networkGit}
+	got, created, err := s.AddRepo(c.ID, session, repo, func(c *state.Change) (state.RepoWork, error) {
+		cache, err := r.cacheClone(repo)
+		if err != nil {
 			return state.RepoWork{}, err
 		}
-		rel := filepath.Join("repos", pos[1]+"@"+c.ID)
+		rel := filepath.Join("repos", repo+"@"+c.ID)
 		added, err := tree.Add(gitw.Request{Cache: cache.Path, Dir: filepath.Join(s.WS.Root, rel), Base: pol.Git.BaseBranch,
 			Branch: gitw.BranchName(pol.Git.BranchName, c.ID, c.Title), Change: c.ID, Prefix: gitw.Prefix(pol.Git.BranchName)})
 		if err != nil {
 			return state.RepoWork{}, err
 		}
 		reused = added.Reused
-		return state.RepoWork{Name: pos[1], Remote: cache.Remote, Base: pol.Git.BaseBranch, BaseHead: added.BaseHead,
+		return state.RepoWork{Name: repo, Remote: cache.Remote, Base: pol.Git.BaseBranch, BaseHead: added.BaseHead,
 			Branch: added.Branch, Worktree: filepath.ToSlash(rel)}, nil
 	})
 	if err != nil {
-		return nil, err
+		return worktreeMade{}, err
 	}
 	return worktreeMade{RepoWork: got, Path: filepath.Join(s.WS.Root, filepath.FromSlash(got.Worktree)), Created: created, Reused: reused}, nil
+}
+
+// networkGit runs git with the developer's credentials (fetches and remote reads).
+func (r *runCtx) networkGit(dir string, args ...string) (int, string, error) {
+	return gitro.RunEnv(gitro.NetworkEnv(r.env.Getenv), dir, args...)
 }
