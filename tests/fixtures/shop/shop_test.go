@@ -94,18 +94,35 @@ func TestTrapsPresent(t *testing.T) {
 	}
 }
 
-func TestGoServicesBuild(t *testing.T) {
+// TestGoServicesBuildAndTest: M4's gates run each Go service's own build, format check, vet and
+// tests, so on main every one of them must pass, and every library package must have tests
+// (a service's main package only starts the server).
+func TestGoServicesBuildAndTest(t *testing.T) {
 	t.Parallel()
 	l, err := Build(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"users", "orders", "gateway"} {
-		cmd := exec.Command("go", "vet", "./...")
-		cmd.Dir = filepath.Join(l.Root, "work", name)
-		cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local", "GOFLAGS=-mod=mod", "GOWORK=off")
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Errorf("%s does not build: %v %s", name, err, out)
+		dir := filepath.Join(l.Root, "work", name)
+		for _, args := range [][]string{{"go", "vet", "./..."}, {"go", "test", "-count=1", "./..."}, {"gofmt", "-l", "."}} {
+			cmd := exec.Command(args[0], args[1:]...)
+			cmd.Dir = dir
+			cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local", "GOFLAGS=-mod=mod", "GOWORK=off")
+			out, err := cmd.CombinedOutput()
+			if err != nil || (args[0] == "gofmt" && len(out) > 0) {
+				t.Errorf("%s: %v failed: %v %s", name, args, err, out)
+			}
+			if args[1] == "test" {
+				for _, line := range strings.Split(string(out), "\n") {
+					if strings.Contains(line, "[no test files]") && !strings.Contains(line, "shop/"+name+"\t") {
+						t.Errorf("%s: a library package has no tests: %s", name, line)
+					}
+				}
+			}
+		}
+		if _, err := os.Stat(filepath.Join(dir, ".golangci.yml")); err != nil {
+			t.Errorf("%s has no lint config: %v", name, err)
 		}
 	}
 }
