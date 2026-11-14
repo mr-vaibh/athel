@@ -167,3 +167,25 @@ func TestWaive(t *testing.T) {
 		}
 	}
 }
+
+func TestFoldReportFindings(t *testing.T) {
+	r1, _ := Next(nil, Submission{Verdict: Approved, New: []Draft{newFinding(Nit, "src/a.go:3")}}, "h1")
+	sec := Folded{From: "S1-01", Source: "security", Severity: Blocker, Location: "src/q.go:9", Rule: "security.parameterised-queries", Finding: "x", Required: "y"}
+	if n := r1.Fold([]Folded{sec}); n != 1 || r1.Findings[1].ID != "R1-02" || r1.Findings[1].From != "S1-01" || r1.Findings[1].Status != Open {
+		t.Fatalf("%d %+v", n, r1.Findings)
+	}
+	if n := r1.Fold([]Folded{sec}); n != 0 || len(r1.Findings) != 2 {
+		t.Errorf("a report finding joins once: %d", n)
+	}
+	if open := r1.Blocking(); strings.Join(open, ",") != "R1-02" {
+		t.Errorf("an approved round still blocks on a security blocker: %v", open)
+	}
+	r2, err := Next(r1, Submission{Verdict: ChangesRequested, Previous: []Resolution{{ID: "R1-01", Status: Open}, {ID: "R1-02", Status: Open}}}, "h2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	qa := Folded{From: "Q1-01", Source: "qa", Severity: Major, Location: "src/a.go:5", Rule: "tests.boundary", Finding: "x", Required: "y"}
+	if n := r2.Fold([]Folded{sec, qa}); n != 1 || r2.Findings[2].ID != "R2-01" || r2.Findings[2].Source != "qa" {
+		t.Errorf("carried report findings stay; a new one is numbered in this round: %d %+v", n, r2.Findings)
+	}
+}

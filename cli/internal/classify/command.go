@@ -342,5 +342,6 @@ var (
 		"investigation validate": true, "repos show": true, "ask show": true, "blast score": true,
 		"prd show": true, "prd scan": true, "prd diff": true, "decide list": true, "decide show": true, "spec validate": true, "spec list": true, "spec show": true, "conventions show": true, "plan summary": true, "plan diff": true, "blast diff": true, "spec template": true, "decide template": true, "plan template": true, "prd review template": true, "blast template": true,
 		"gate show": true, "review show": true, "review template": true, "git lint": true, "pr body": true, "build next": true, "finding list": true,
+		"build template": true, "qa template": true, "security template": true,
 	}
 )
