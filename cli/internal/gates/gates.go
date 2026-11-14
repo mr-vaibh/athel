@@ -35,6 +35,7 @@ const (
 	ACTests     = "ac-tests"     // every AC the task covers is named by a changed test
 	Contract    = "contract"     // API and event changes match the planned blast radius
 	Mutation    = "mutation"     // HIGH-risk changes: ≥ 70% of changed-line mutants killed
+	Security    = "security"     // no new SAST finding, no secret, no new vulnerable dependency
 )
 
 // Skipped is a gate that does not apply to this task (for example mutation below HIGH risk);
@@ -75,6 +76,7 @@ var defaultGates = []Gate{
 	{ID: "types", Stage: Cheap, Pass: ExitZero, Waivable: Never},
 	{ID: "unit", Stage: Cheap, Pass: Tests, Waivable: Never},
 	{ID: "ac-tests", Stage: Cheap, Pass: ACTests, Waivable: Never, Builtin: true},
+	{ID: "security-scan", Stage: Full, Pass: Security, Waivable: SecurityOwner},
 	{ID: "contract", Stage: Full, Pass: Contract, Waivable: Never, Builtin: true},
 	{ID: "coverage", Stage: Full, Pass: Coverage, Waivable: Human},
 	{ID: "complexity", Stage: Full, Pass: Complexity, Waivable: Human},
@@ -82,12 +84,13 @@ var defaultGates = []Gate{
 }
 
 var goCommands = map[string][]string{
-	"format":   {"gofmt", "-l", "."},
-	"lint":     {"golangci-lint", "run", "./..."},
-	"build":    {"go", "build", "./..."},
-	"types":    {"go", "vet", "./..."},
-	"unit":     {"go", "test", "-json", "-count=1", "./..."},
-	"coverage": {"go", "test", "-count=1", "-coverprofile=" + ProfilePlaceholder, "./..."},
+	"format":        {"gofmt", "-l", "."},
+	"lint":          {"golangci-lint", "run", "./..."},
+	"build":         {"go", "build", "./..."},
+	"types":         {"go", "vet", "./..."},
+	"unit":          {"go", "test", "-json", "-count=1", "./..."},
+	"coverage":      {"go", "test", "-count=1", "-coverprofile=" + ProfilePlaceholder, "./..."},
+	"security-scan": {"golangci-lint", "run", "--enable-only", "gosec", "./..."},
 }
 
 // nodeScripts are the package.json scripts a Node repo's gates run.

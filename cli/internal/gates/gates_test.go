@@ -15,7 +15,7 @@ func ids(gs []Gate) string {
 
 func TestDefaults(t *testing.T) {
 	g := Defaults(Go, nil)
-	if ids(g) != "format,lint,build,types,unit,ac-tests,contract,coverage,complexity,mutation" {
+	if ids(g) != "format,lint,build,types,unit,ac-tests,security-scan,contract,coverage,complexity,mutation" {
 		t.Fatalf("go gates in doc 06 order: %s", ids(g))
 	}
 	for i, gate := range g {
@@ -23,8 +23,8 @@ func TestDefaults(t *testing.T) {
 			t.Errorf("%+v", gate)
 		}
 	}
-	if !g[8].Builtin || len(g[8].Command) != 0 || !strings.Contains(strings.Join(g[7].Command, " "), "-coverprofile="+ProfilePlaceholder) {
-		t.Errorf("coverage runs the tests with a profile; complexity is computed by the CLI: %+v", g[7:])
+	if !g[9].Builtin || len(g[9].Command) != 0 || !strings.Contains(strings.Join(g[8].Command, " "), "-coverprofile="+ProfilePlaceholder) {
+		t.Errorf("coverage runs the tests with a profile; complexity is computed by the CLI: %+v", g[8:])
 	}
 	if g[0].Pass != NoOutput || g[1].Pass != NewFindings || g[4].Pass != Tests || g[1].Waivable != Human || g[2].Waivable != Never {
 		t.Errorf("pass criteria and waivers: %+v", g)

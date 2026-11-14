@@ -41,7 +41,8 @@
         "lint",
         "tests",
         "exits",
-        "coverage"
+        "coverage",
+        "security"
       ],
       "properties": {
         "head": {
@@ -92,6 +93,10 @@
             "null"
           ],
           "description": "total statement coverage on base, in percent"
+        },
+        "security": {
+          "type": "string",
+          "description": "gosec findings on base"
         }
       }
     },

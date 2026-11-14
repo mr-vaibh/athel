@@ -67,6 +67,8 @@ type gateBaseline struct {
 	Exits map[string]int `yaml:"exits" json:"exits"`
 	// Coverage is the total statement coverage on base, when the coverage gate ran there.
 	Coverage *float64 `yaml:"coverage" json:"coverage"`
+	// Security is the gosec findings on base.
+	Security string `yaml:"security" json:"security"`
 }
 
 type gateFile struct {
@@ -356,19 +358,26 @@ func (r *runCtx) evaluateGate(g gateTask, base *gateBaseline, gate gates.Gate, n
 		o.Output = &name
 	}
 	o.Status = gates.Pass
+	r.judgeOutput(g, base, gate, exit, out, profile, &o)
+	return o
+}
+
+// judgeOutput judges a gate command's result by the gate's pass criterion.
+func (r *runCtx) judgeOutput(g gateTask, base *gateBaseline, gate gates.Gate, exit int, out, profile string, o *gateOutcome) {
 	switch {
 	case gate.Pass == gates.NoOutput && (exit != 0 || strings.TrimSpace(out) != ""):
 		o.Status, o.Summary, o.Details = gates.Fail, "the formatter wants to change files", tail(out)
 	case gate.Pass == gates.NewFindings:
-		r.judgeLint(g, base, out, &o)
+		r.judgeLint(g, base, out, o)
 	case gate.Pass == gates.Tests && g.lang == gates.Go:
-		r.judgeTests(g, base, out, &o)
+		r.judgeTests(g, base, out, o)
 	case gate.Pass == gates.Coverage:
-		r.judgeCoverage(g, base, exit, out, profile, &o)
+		r.judgeCoverage(g, base, exit, out, profile, o)
+	case gate.Pass == gates.Security:
+		r.judgeSecurity(g, base, out, o)
 	case exit != 0:
 		o.Status, o.Summary, o.Details = gates.Fail, gate.ID+" exited "+strconv.Itoa(exit), tail(out)
 	}
-	return o
 }
 
 func (r *runCtx) judgeLint(g gateTask, base *gateBaseline, out string, o *gateOutcome) {
@@ -474,6 +483,8 @@ func gateRefusal(pol *policy.Set, dir string, argv []string) string {
 	}
 	for _, a := range res.Actions {
 		switch {
+		case a.Tool == "govulncheck" && a.Tier == classify.R1:
+			continue // the one gate command that may read the network: Go's vulnerability database (ADR 023 follow-up)
 		case a.Forbidden != "":
 			return a.Forbidden
 		case a.Uncertain != "":
