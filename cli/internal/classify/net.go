@@ -117,6 +117,10 @@ var pkgRules = map[string]pkgRule{
 	"gradle": genericPublish, "./gradlew": genericPublish, "mvn": genericPublish, "./mvnw": genericPublish, "gem": genericPublish,
 	"bundle": genericPublish, "rake": genericPublish, "dotnet": genericPublish, "swift": genericPublish, "composer": genericPublish,
 	"mix": genericPublish,
+	// The Go toolchain's local checkers (M4 gates, ADR 023): they read and at most rewrite files
+	// in the folder they run in.
+	"gofmt": {}, "goimports": {}, "staticcheck": {},
+	"golangci-lint": {read: []string{"version", "help", "linters"}},
 }
 
 // packageCommand classifies build tools and package managers: installs and builds stay local

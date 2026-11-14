@@ -70,6 +70,7 @@ const (
 	GateBlastDrift         Code = "E-GATE-BLAST-DRIFT"      // M3: the diff changes what the planned blast radius does not name
 	GateCommitLint         Code = "E-GATE-COMMIT-LINT"      // M4: a commit, branch or PR title git.yaml does not allow
 	GatePRSize             Code = "E-GATE-PR-SIZE"          // M4: a PR over git.yaml's per-PR line limit (FR-GIT-009)
+	GateRed                Code = "E-GATE-RED"              // M4: a quality gate failed or is unavailable (FR-BUILD-009)
 	IntegrityAudit         Code = "E-INTEGRITY-AUDIT"
 	IntegrityState         Code = "E-INTEGRITY-STATE"
 )
