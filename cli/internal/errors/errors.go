@@ -71,6 +71,7 @@ const (
 	GateCommitLint         Code = "E-GATE-COMMIT-LINT"      // M4: a commit, branch or PR title git.yaml does not allow
 	GatePRSize             Code = "E-GATE-PR-SIZE"          // M4: a PR over git.yaml's per-PR line limit (FR-GIT-009)
 	GateRed                Code = "E-GATE-RED"              // M4: a quality gate failed or is unavailable (FR-BUILD-009)
+	BudgetRounds           Code = "E-BUDGET-ROUNDS"         // M4: a fix-loop limit is reached (FR-BUILD-010)
 	IntegrityAudit         Code = "E-INTEGRITY-AUDIT"
 	IntegrityState         Code = "E-INTEGRITY-STATE"
 )

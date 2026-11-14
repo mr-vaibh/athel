@@ -1,0 +1,277 @@
+// Package review is doc 06's iterative review protocol (FR-BUILD-007/008/010): review rounds
+// whose findings are tracked until a verified fix or a human waiver closes them. Round 1 is a
+// full review; each later round carries every unresolved finding forward and judges it again,
+// never restarting from zero. Only the reviewer verifies; only the developer fixes or disputes.
+package review
+
+import (
+	"fmt"
+	"slices"
+	"strings"
+
+	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+)
+
+// SchemaID is a round file's format.
+const SchemaID = "athel/review@1"
+
+// MaxRounds is doc 06's round limit (FR-BUILD-010); the next round is a decision card.
+const MaxRounds = 5
+
+// Severities (doc 06 table).
+const (
+	Blocker = "blocker"
+	Major   = "major"
+	Minor   = "minor"
+	Nit     = "nit"
+)
+
+// Finding statuses (doc 06 finding format).
+const (
+	Open     = "open"
+	Fixed    = "fixed"
+	Verified = "verified"
+	Waived   = "waived"
+	Disputed = "disputed"
+)
+
+// Verdicts.
+const (
+	Approved         = "approved"
+	ChangesRequested = "changes_requested"
+)
+
+var (
+	severities = []string{Blocker, Major, Minor, Nit}
+	sources    = []string{"reviewer", "security", "qa", "gate"}
+)
+
+// Step is one status change of a finding.
+type Step struct {
+	Round  int    `yaml:"round" json:"round"`
+	Status string `yaml:"status" json:"status"`
+	Note   string `yaml:"note,omitempty" json:"note,omitempty"`
+}
+
+// Finding is doc 06's finding record.
+type Finding struct {
+	ID       string `yaml:"id" json:"id"`
+	Severity string `yaml:"severity" json:"severity"`
+	Source   string `yaml:"source" json:"source"`
+	Location string `yaml:"location" json:"location"`
+	Rule     string `yaml:"rule" json:"rule"`
+	Finding  string `yaml:"finding" json:"finding"`
+	Required string `yaml:"required" json:"required"`
+	Status   string `yaml:"status" json:"status"`
+	FixedIn  string `yaml:"fixed_in,omitempty" json:"fixed_in,omitempty"`
+	Dispute  string `yaml:"dispute,omitempty" json:"dispute,omitempty"`
+	History  []Step `yaml:"history" json:"history"`
+}
+
+// Round is one review round (reviews/<task>/round-N.yaml).
+type Round struct {
+	Schema   string    `yaml:"schema" json:"schema"`
+	Round    int       `yaml:"round" json:"round"`
+	Head     string    `yaml:"head" json:"head"` // the commit reviewed
+	Verdict  string    `yaml:"verdict" json:"verdict"`
+	Findings []Finding `yaml:"findings" json:"findings"`
+}
+
+// Draft is a new finding as the reviewer writes it; the CLI gives it its ID and status.
+type Draft struct {
+	Severity string `yaml:"severity"`
+	Source   string `yaml:"source"`
+	Location string `yaml:"location"`
+	Rule     string `yaml:"rule"`
+	Finding  string `yaml:"finding"`
+	Required string `yaml:"required"`
+}
+
+// Resolution is the reviewer's judgement of an earlier finding: verified (fixed, or the
+// dispute accepted) or still open.
+type Resolution struct {
+	ID     string `yaml:"id"`
+	Status string `yaml:"status"`
+	Note   string `yaml:"note"`
+}
+
+// Submission is what the reviewer sends for a round.
+type Submission struct {
+	Verdict  string       `yaml:"verdict"`
+	Previous []Resolution `yaml:"previous"`
+	New      []Draft      `yaml:"new"`
+}
+
+func invalid(msg string) error {
+	return aerr.New(aerr.StateInvalid, "review rejected: "+msg).
+		WithNextAction("fix the review and save it again; athel review template shows the format")
+}
+
+// Next makes round N+1 from round N (nil for the first round) and the reviewer's submission.
+func Next(prev *Round, s Submission, head string) (*Round, error) {
+	n := 1
+	if prev != nil {
+		n = prev.Round + 1
+	}
+	if n > MaxRounds {
+		return nil, aerr.New(aerr.BudgetRounds, fmt.Sprintf("the task has had %d review rounds, doc 06's limit", MaxRounds)).
+			WithNextAction("raise a decision card: continue with a human, or stop the task (FR-BUILD-010)")
+	}
+	if s.Verdict != Approved && s.Verdict != ChangesRequested {
+		return nil, invalid("verdict is approved or changes_requested")
+	}
+	r := &Round{Schema: SchemaID, Round: n, Head: head, Verdict: s.Verdict, Findings: []Finding{}}
+	if prev != nil {
+		if err := carry(prev, s.Previous, r); err != nil {
+			return nil, err
+		}
+	} else if len(s.Previous) > 0 {
+		return nil, invalid("the first round has no earlier findings to judge")
+	}
+	for i, d := range s.New {
+		if err := checkDraft(d); err != nil {
+			return nil, err
+		}
+		r.Findings = append(r.Findings, Finding{ID: fmt.Sprintf("R%d-%02d", n, i+1), Severity: d.Severity, Source: d.Source,
+			Location: d.Location, Rule: d.Rule, Finding: d.Finding, Required: d.Required, Status: Open, History: []Step{{Round: n, Status: Open}}})
+	}
+	return r, nil
+}
+
+func checkDraft(d Draft) error {
+	switch {
+	case !slices.Contains(severities, d.Severity):
+		return invalid("severity is one of " + strings.Join(severities, ", "))
+	case !slices.Contains(sources, d.Source):
+		return invalid("source is one of " + strings.Join(sources, ", "))
+	case d.Location == "" || d.Rule == "" || d.Finding == "" || d.Required == "":
+		return invalid("every finding has a location, a rule, the finding and the required fix or question (FR-BUILD-007)")
+	}
+	return nil
+}
+
+// carry copies round prev's findings into r: resolved ones as they are, and every unresolved one
+// with the reviewer's new judgement, which the submission must give (FR-BUILD-008).
+func carry(prev *Round, res []Resolution, r *Round) error {
+	byID := map[string]Resolution{}
+	for _, x := range res {
+		byID[x.ID] = x
+	}
+	var missing []string
+	for _, f := range prev.Findings {
+		f.History = slices.Clone(f.History)
+		if f.Status == Verified || f.Status == Waived {
+			r.Findings = append(r.Findings, f)
+			continue
+		}
+		x, ok := byID[f.ID]
+		delete(byID, f.ID)
+		switch {
+		case !ok:
+			missing = append(missing, f.ID)
+			continue
+		case x.Status == Verified && f.Status != Fixed && f.Status != Disputed:
+			return invalid(f.ID + " is " + f.Status + ", not fixed; only a fix or an accepted dispute is verified")
+		case x.Status != Verified && x.Status != Open:
+			return invalid(f.ID + ": the reviewer marks an earlier finding verified or open; only a human waives")
+		}
+		f.Status = x.Status
+		f.History = append(f.History, Step{Round: r.Round, Status: x.Status, Note: x.Note})
+		r.Findings = append(r.Findings, f)
+	}
+	switch {
+	case len(missing) > 0:
+		return invalid("round " + fmt.Sprint(r.Round) + " does not judge " + strings.Join(missing, ", ") + " from round " + fmt.Sprint(prev.Round))
+	case len(byID) > 0:
+		return invalid("no earlier finding to judge with that ID")
+	}
+	return nil
+}
+
+// find returns a finding of the round.
+func (r *Round) find(id string) (*Finding, error) {
+	for i := range r.Findings {
+		if r.Findings[i].ID == id {
+			return &r.Findings[i], nil
+		}
+	}
+	return nil, aerr.New(aerr.StateNotFound, "round "+fmt.Sprint(r.Round)+" has no finding "+id)
+}
+
+// Fix marks a finding fixed by a commit (the developer's action).
+func (r *Round) Fix(id, commit string) error {
+	f, err := r.find(id)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(commit) == "" {
+		return invalid("a fix names its commit")
+	}
+	f.Status, f.FixedIn = Fixed, commit
+	f.History = append(f.History, Step{Round: r.Round, Status: Fixed, Note: commit})
+	return nil
+}
+
+// Dispute marks a finding disputed with the developer's written reason.
+func (r *Round) Dispute(id, reason string) error {
+	f, err := r.find(id)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(reason) == "" {
+		return invalid("a dispute needs a written reason (doc 06 round rule 3)")
+	}
+	f.Status, f.Dispute = Disputed, reason
+	f.History = append(f.History, Step{Round: r.Round, Status: Disputed, Note: reason})
+	return nil
+}
+
+// Disputes counts the rounds in which a finding was disputed.
+func (r *Round) Disputes(id string) int {
+	f, err := r.find(id)
+	if err != nil {
+		return 0
+	}
+	rounds := map[int]bool{}
+	for _, s := range f.History {
+		if s.Status == Disputed {
+			rounds[s.Round] = true
+		}
+	}
+	return len(rounds)
+}
+
+// DisputedTwice lists the findings disputed in two rounds: each needs a decision card with both
+// arguments (doc 06 round rule 3).
+func (r *Round) DisputedTwice() []string {
+	var out []string
+	for _, f := range r.Findings {
+		if f.Status == Disputed && r.Disputes(f.ID) >= 2 {
+			out = append(out, f.ID)
+		}
+	}
+	return out
+}
+
+// Blocking lists the blocker and major findings that keep the task from done: a blocker until
+// verified, a major until verified or waived by a human (doc 06 severity table).
+func (r *Round) Blocking() []string {
+	var out []string
+	for _, f := range r.Findings {
+		closed := f.Status == Verified || (f.Severity == Major && f.Status == Waived)
+		if (f.Severity == Blocker || f.Severity == Major) && !closed {
+			out = append(out, f.ID)
+		}
+	}
+	return out
+}
+
+// Done reports whether review ends for the task: the reviewer approved and nothing blocks
+// (doc 06 round rule 4).
+func (r *Round) Done() bool { return r.Verdict == Approved && len(r.Blocking()) == 0 }
+
+// LocationFile is the file part of a finding's location ("path:42-58").
+func LocationFile(loc string) string {
+	file, _, _ := strings.Cut(loc, ":")
+	return file
+}
