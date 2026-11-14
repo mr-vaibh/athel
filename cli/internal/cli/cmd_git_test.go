@@ -22,13 +22,14 @@ func approvedOnUsers(t *testing.T) *harness {
 }
 
 // approvedOnUsersRemote is approvedOnUsers plus the folder of bare remotes and a git runner, so
-// a test can push someone else's work.
-func approvedOnUsersRemote(t *testing.T) (*harness, string, func(string, ...string)) {
+// a test can push someone else's work. plan holds extra old/new replacements of the original
+// plan text (one pass over it, so they cannot match what another replacement wrote).
+func approvedOnUsersRemote(t *testing.T, plan ...string) (*harness, string, func(string, ...string)) {
 	t.Helper()
 	h, _, src, git := cacheFixture(t)
 	h.mustOK("state", "transition", "CHG-001", "--to", "investigating", "--by", "athel", "--reason", "r")
 	m3Spec(t, h)
-	h.mustOK("plan", "set", "CHG-001", writeTemp(t, "users-plan.yaml", strings.NewReplacer("repo: r,", "repo: users,", "verbs: [edit, test]", "verbs: [edit, test, commit, push], rollback: revert the commit").Replace(m3PlanDoc)))
+	h.mustOK("plan", "set", "CHG-001", writeTemp(t, "users-plan.yaml", strings.NewReplacer(append([]string{"repo: r,", "repo: users,", "verbs: [edit, test]", "verbs: [edit, test, commit, push], rollback: revert the commit"}, plan...)...).Replace(m3PlanDoc)))
 	for _, to := range []string{"specified", "awaiting_decisions", "planned"} {
 		h.mustOK("state", "transition", "CHG-001", "--to", to, "--by", "athel", "--reason", "r")
 	}
