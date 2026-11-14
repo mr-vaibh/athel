@@ -146,7 +146,10 @@ func TestRuleOrder(t *testing.T) {
 		{"8 planned shared write needs a human", "mcp__jira__create_issue", map[string]any{"summary": "x"}, nil, Approve, "8", ""},
 		{"7 unplanned shared write", "mcp__jira__create_issue", map[string]any{"summary": "x"}, func(c *Context) { c.Plan.Tasks[1].EnvActions = nil }, Deny, "7", aerr.PolicyScope},
 		{"11 registered MCP read", "mcp__jira__get_issue", map[string]any{"id": "x"}, nil, Allow, "11", ""},
-		{"9 own branch", "Bash", b("git push origin athel/CHG-001-svc"), nil, Allow, "9", ""},
+		{"9 own branch only through athel", "Bash", b("git push origin athel/CHG-001-svc"), nil, Deny, "9", aerr.PolicyUseAthel},
+		{"9 own PR only through athel", "Bash", b("gh pr ready 901"), func(c *Context) {
+			c.Plan.Tasks[0].Verbs = append(c.Plan.Tasks[0].Verbs, "pr")
+		}, Deny, "9", aerr.PolicyUseAthel},
 		{"9 foreign branch", "Bash", b("git push origin feature/x"), func(c *Context) {
 			c.Plan.Tasks[0].Verbs = append(c.Plan.Tasks[0].Verbs, "push")
 		}, Deny, "9", aerr.PolicyForeignBranch},
