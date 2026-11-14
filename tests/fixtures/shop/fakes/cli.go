@@ -3,6 +3,7 @@ package fakes
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -19,6 +20,7 @@ import (
 type Shim struct {
 	Data    *Data
 	Sources string // the fixture's source trees, searched by `gh search code`
+	State   string // the fake GitHub's pull requests and call log (SHOP_GH_STATE); "" means read-only
 	Out     io.Writer
 	Err     io.Writer
 }
@@ -32,7 +34,8 @@ type args struct {
 // valueFlags take the next word as their value.
 var valueFlags = map[string]bool{"--context": true, "-n": true, "--namespace": true, "-l": true, "-o": true, "--since": true,
 	"--tail": true, "--field-selector": true, "--project": true, "--filter": true, "--format": true, "--repo": true,
-	"--state": true, "--json": true, "--owner": true, "--limit": true, "--jq": true, "--region": true, "--git": true, "--agent": true}
+	"--state": true, "--json": true, "--owner": true, "--limit": true, "--jq": true, "--region": true, "--git": true, "--agent": true,
+	"--head": true, "--base": true, "--title": true, "--body": true, "--body-file": true}
 
 func parseArgs(words []string) args {
 	a := args{flags: map[string]string{}}
@@ -64,7 +67,12 @@ func (s Shim) Run(argv []string) int {
 	case "gcloud":
 		err = s.gcloud(a)
 	case "gh":
-		err = s.gh(a)
+		if s.State != "" {
+			err = s.logCall(argv[1:])
+		}
+		if err == nil {
+			err = s.gh(a)
+		}
 	case "praxis":
 		err = s.praxis(a)
 	default:
@@ -286,10 +294,8 @@ func (s Shim) gh(a args) error {
 	case cmd == "auth status":
 		s.printf("github.com\n  ✓ Logged in to github.com account dev (keyring)\n")
 		return nil
-	case cmd == "pr list":
-		return s.prList(a.flags["--repo"])
-	case cmd == "pr view" && len(a.pos) == 3:
-		return s.prView(a.flags["--repo"], a.pos[2])
+	case strings.HasPrefix(cmd, "pr "):
+		return s.ghPR(cmd, a)
 	case cmd == "search prs":
 		return s.searchPRs(strings.Join(a.pos[2:], " ") + " " + a.flags["--repo"])
 	case cmd == "search code" && len(a.pos) >= 3:
@@ -302,8 +308,36 @@ func (s Shim) gh(a args) error {
 	return unmodelled("gh", a)
 }
 
-// prView shows one pull request of a repo by number, or fails as gh does.
+// ghPR runs the pull request commands: the seeded ones are read-only, Athel's own are stored.
+func (s Shim) ghPR(cmd string, a args) error {
+	switch {
+	case cmd == "pr list":
+		return s.prList(a.flags["--repo"])
+	case cmd == "pr view" && len(a.pos) == 3:
+		return s.prView(a.flags["--repo"], a.pos[2])
+	case cmd == "pr create":
+		return s.prCreate(a)
+	case cmd == "pr edit" && len(a.pos) == 3:
+		return s.prEdit(a)
+	case cmd == "pr ready" && len(a.pos) == 3:
+		return s.prReady(a)
+	case cmd == "pr merge":
+		return errors.New("the shop fixture never merges, and Athel must never ask it to")
+	}
+	return unmodelled("gh", a)
+}
+
+// prView shows one pull request of a repo by number, Athel's own first, or fails as gh does.
 func (s Shim) prView(repo, number string) error {
+	stored, err := s.loadPRs()
+	if err != nil {
+		return err
+	}
+	for _, p := range stored {
+		if p.Repo == repo && strconv.Itoa(p.Number) == strings.TrimPrefix(number, "#") {
+			return s.json(p)
+		}
+	}
 	for _, p := range s.Data.GitHub.PRs {
 		if p.Repo == repo && strconv.Itoa(p.Number) == strings.TrimPrefix(number, "#") {
 			return s.json(p)
@@ -326,8 +360,17 @@ func (s Shim) searchPRs(query string) error {
 }
 
 func (s Shim) prList(repo string) error {
-	out := []PR{}
+	stored, err := s.loadPRs()
+	if err != nil {
+		return err
+	}
+	out := []any{}
 	for _, p := range s.Data.GitHub.PRs {
+		if p.Repo == repo && p.State == "open" {
+			out = append(out, p)
+		}
+	}
+	for _, p := range stored {
 		if p.Repo == repo && p.State == "open" {
 			out = append(out, p)
 		}
