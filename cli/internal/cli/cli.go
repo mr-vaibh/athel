@@ -161,6 +161,12 @@ func commands() map[string]command {
 		"finding list":           cmdFindingList,
 		"finding triage":         cmdFindingTriage,
 		"finding fix":            cmdFindingFix,
+		"build template":         cmdBuildTemplate,
+		"build save":             cmdBuildSave,
+		"qa template":            cmdQATemplate,
+		"qa save":                cmdQASave,
+		"security template":      cmdSecurityTemplate,
+		"security save":          cmdSecuritySave,
 	}
 }
 

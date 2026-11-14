@@ -1,0 +1,23 @@
+# A QA report, as QA sends it to `athel qa save CHG-NNN T-NN -`. Every case is a test you wrote
+# in a test file this task changed. A failing test shows a bug: list it under findings for the
+# developer and never fix product code yourself.
+cases:
+  - category: negative            # negative | boundary | failure
+    file: internal/library/fines_test.go
+    name: TestFineRejectsNegativeDays
+    covers: AC-3                  # optional
+    result: pass                  # pass | fail
+  - category: boundary
+    file: internal/library/fines_test.go
+    name: TestFineCappedAtBookPrice
+    covers: AC-2
+    result: fail
+suite: {command: go test ./..., result: fail}
+gaps:
+  - No test for a loan returned exactly at midnight in another time zone.
+findings:
+  - severity: major               # blocker | major | minor | nit
+    location: internal/library/fines.go:31-40
+    rule: correctness.boundary
+    finding: The cap compares cents with whole currency units, so a fine can exceed the price.
+    required: Compare in cents and add the case to TestFineCappedAtBookPrice.

@@ -91,6 +91,11 @@ func cmdReviewSave(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	all, err := r.reportFindings(g)
+	if err != nil {
+		return nil, err
+	}
+	next.Fold(all)
 	return next, r.saveRound(g, next)
 }
 
@@ -194,9 +199,16 @@ func cmdReviewShow(r *runCtx, args []string) (any, error) {
 // waivable; doc 06).
 func (r *runCtx) judgeReview(g gateTask, o *gateOutcome) {
 	rd, err := r.latestRound(g)
+	var missing []string
+	if err == nil {
+		missing, err = r.unfolded(g, rd)
+	}
 	switch {
 	case err != nil:
 		o.Status, o.Summary = "unavailable", err.Error()
+	case len(missing) > 0:
+		o.Status, o.Summary = gates.Fail, "QA or security findings are not in a review round yet: "+strings.Join(missing, ", ")
+		o.Details = []string{"the reviewer's next round takes them in: athel review save"}
 	case rd == nil:
 		o.Status, o.Summary = gates.Fail, "no review round yet"
 	case !rd.Done():
