@@ -367,6 +367,10 @@ func TestAthelCalls(t *testing.T) {
 		{"athel state transition CHG-001 --to investigating --by athel --reason ok", W0, "state transition", false},
 		{"athel hook user-prompt-submit", X, "hook user-prompt-submit", false}, {"athel", R0, "", false},
 		{"athel fact find --subject users", R0, "fact find", false}, {"athel fact show F-0001", R0, "fact show", false},
+		{"athel gate show CHG-001 T-01", R0, "gate show", false}, {"athel review show CHG-001 T-01", R0, "review show", false},
+		{"athel review template", R0, "review template", false}, {"athel git lint CHG-001 users", R0, "git lint", false},
+		{"athel pr body CHG-001 users", R0, "pr body", false}, {"athel gate run CHG-001 T-01", W0, "gate run", false},
+		{"athel gate waive CHG-001 T-01 lint --until 2026-11-20 --reason ok", W0, "gate waive", true},
 		{"athel fact add -", W0, "fact add", false}, {"athel fact use F-0001 --purpose decision --change CHG-001", W0, "fact use", false},
 		{"athel fact archive", W0, "fact archive", false}, {"athel fact verify F-0001 --observed 0=toolu_1", W0, "fact verify", false},
 	}
