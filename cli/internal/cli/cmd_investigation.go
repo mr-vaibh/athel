@@ -142,7 +142,7 @@ func (r *runCtx) investigationStart(ref facts.Ref) (time.Time, error) {
 			text = c.Step.StartedAt
 		}
 	}
-	since, _ := clock.Parse(text) // ask@1 and change@3 guarantee the timestamp format
+	since, _ := clock.Parse(text) // ask@1 and change@4 guarantee the timestamp format
 	return since, nil
 }
 

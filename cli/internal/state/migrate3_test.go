@@ -87,3 +87,57 @@ func TestChangeFlagsRoundTrip(t *testing.T) {
 		t.Errorf("invalid flag kind: %v, want E-STATE-SCHEMA", err)
 	}
 }
+
+// toV3 turns a current change file into the sealed change@3 file M2 and M3 wrote: repos was
+// always empty then, so only the schema line differs.
+func toV3(t *testing.T, current string) string {
+	t.Helper()
+	v3 := strings.Replace(current, "schema: "+SchemaID, "schema: "+SchemaV3, 1)
+	h, err := ContentHash([]byte(v3))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sealHash.ReplaceAllString(v3, "  hash: "+h)
+}
+
+func TestMigrateChange3To4(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "sealed v3")
+	b, _ := os.ReadFile(s.WS.ChangeFile(c.ID))
+	if err := os.WriteFile(s.WS.ChangeFile(c.ID), []byte(toV3(t, string(b))), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	read, err := s.Get(c.ID)
+	if err != nil || read.Schema != SchemaID || read.Tampered() || len(read.Repos) != 0 {
+		t.Fatalf("sealed v3 read: %+v %v", read, err)
+	}
+	if ids, err := s.Migrate(false); err != nil || strings.Join(ids, ",") != c.ID {
+		t.Fatalf("migrate = %v %v", ids, err)
+	}
+	after, _ := os.ReadFile(s.WS.ChangeFile(c.ID))
+	if !strings.Contains(string(after), "schema: athel/change@4") || IsLegacy(after) {
+		t.Errorf("not upgraded:\n%s", after)
+	}
+}
+
+func TestRepoWorkRoundTrip(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "with a worktree")
+	want := RepoWork{Name: "users", Remote: "github.com/acme/users", Base: "main",
+		BaseHead: strings.Repeat("a", 40), Branch: "athel/CHG-001-with-a-worktree",
+		Worktree: "repos/users@CHG-001"}
+	if _, err := s.Update(c.ID, func(c *Change) error { c.Repos = []RepoWork{want}; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	read, err := s.Get(c.ID)
+	if err != nil || len(read.Repos) != 1 || read.Repos[0] != want || read.Tampered() {
+		t.Fatalf("round trip: %+v %v", read, err)
+	}
+	if got := read.OwnBranches(); len(got) != 1 || got[0] != want.Branch {
+		t.Errorf("own branches = %v", got)
+	}
+	_, err = s.Update(c.ID, func(c *Change) error { c.Repos[0].Worktree = "repos/users@elsewhere"; return nil })
+	if !aerr.HasCode(err, aerr.StateSchema) {
+		t.Errorf("a worktree outside repos/<name>@<change> must be refused: %v", err)
+	}
+}

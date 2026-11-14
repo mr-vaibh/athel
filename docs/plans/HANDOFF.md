@@ -51,17 +51,24 @@ M4-plan §9:
 | plan | `docs/m4-plan` | #77 (base main) | open |
 | 00a buildable Go fixture repos | `feat/m4-fixture-build` | #78 | open, gate green |
 | 00b fake GitHub PR store and call log | `feat/m4-fixture-prs` | #79 | open, gate green |
-| 01 worktrees, `change@4`, `OwnBranches` | `feat/m4-worktrees` | — | **next** |
-| 02–17 | see M4-plan §9 | — | not started |
+| 01 worktrees, `change@4`, `OwnBranches` | `feat/m4-worktrees` | #80 | open, gate green |
+| 02 git preflight, overlap card, `building` guard | `feat/m4-preflight` | — | **next** |
+| 03–17 | see M4-plan §9 | — | not started |
 
 Next:
-1. **Task 01** on `feat/m4-worktrees`, branched from `feat/m4-fixture-prs`:
-   - a new package `internal/gitw` makes worktrees `workspace/repos/<repo>@<CHG>` from Athel's
-     cache clone (`repos.Cache`), never from the developer's clone;
-   - branch names come from `git.yaml` `branch_name`;
-   - `change@4` adds `repos[]` and `build.tasks[]`, with a `change@3` migration;
-   - `OwnBranches` in the engine context is filled from `change.yaml`;
-   - tests: `TestWorktreeFromCacheNotClone`, `TestDeveloperCloneUnchanged`.
+1. **Task 02** on `feat/m4-preflight`, branched from `feat/m4-worktrees`. It covers doc 04's
+   preflight algorithm:
+   - fetch, and record the base head;
+   - collect active work on the planned paths: open PRs with their files (`gh pr list`),
+     branches pushed in the last 14 days, commits to base in the last 7 days, and tickets;
+   - compute the file-level overlap;
+   - on overlap with someone else's work, raise an A4 card (wait, coordinate, narrow) and make
+     no commit;
+   - write `preflight/<repo>.md`;
+   - guard `plan_approved → building` on a clean preflight for every repo.
+
+   `athel git worktree` (task 01) already gives the worktree and branch. The shop fixture's
+   teammate PR #812 and branch `teammate/profile-phone` are the trap.
 2. Continue the tasks in order, each its own PR stacked on the previous one.
 3. Paid evals only with the owner's go-ahead each time, smoke runs first.
 

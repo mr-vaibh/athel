@@ -90,7 +90,7 @@ func (r *runCtx) engineContext(session, agent string) (engine.Context, error) {
 	if err != nil || c == nil {
 		return ctx, err
 	}
-	ctx.Mode, ctx.ChangeID = engine.Change, c.ID
+	ctx.Mode, ctx.ChangeID, ctx.OwnBranches = engine.Change, c.ID, c.OwnBranches()
 	if p, ok := s.ApprovedPlan(c); ok {
 		ctx.Plan = p
 	}
