@@ -48,6 +48,9 @@ Save your report, starting from `athel qa template`:
 - List every case you added, with its category, file, test name, the AC it covers, and its
   result.
 - Give the suite command and its result, and the gaps you could not cover.
+- Give every location as `path:line-line`, with the path from the repository root
+  and the file's own line numbers (open it with Read in the worktree), never positions in the
+  diff.
 - Write one finding per bug. Each cites a rule ID from `athel review rules`.
 
 A problem outside the task's scope is a side finding instead, starting from

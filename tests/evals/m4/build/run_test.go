@@ -103,6 +103,16 @@ func DecidePrompt(list map[string]any) string {
 }
 
 func (r *runner) run(prd string) error {
+	for _, phase := range []func(string) error{r.specify, r.build, r.ship} {
+		if err := phase(prd); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// specify is start and spec, then plan and approve, each after any open cards are answered.
+func (r *runner) specify(prd string) error {
 	for _, st := range []struct{ name, text string }{{"start", "/athel:start " + prd}, {"spec", "/athel:spec " + Change}} {
 		if err := r.prompt(st.name, st.text); err != nil {
 			return err
@@ -116,7 +126,20 @@ func (r *runner) run(prd string) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// build runs /athel:build until every task is done, answering cards between sessions; a block
+// with no card to answer ends the run.
+func (r *runner) build(string) error {
 	for i := 0; i < buildSessions && r.state() != "ready_for_pr" && r.state() != "in_review"; i++ {
+		open, err := r.athelJSON("decide", "list", Change, "--open")
+		if err != nil {
+			return err
+		}
+		if r.state() == "blocked" && DecidePrompt(open) == "" {
+			return fmt.Errorf("the build is blocked with no card to answer")
+		}
 		if err := r.decide(); err != nil {
 			return err
 		}
@@ -124,16 +147,39 @@ func (r *runner) run(prd string) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// ship runs /athel:ship, the developer's /athel:triage when a finding is undecided, and ship
+// again if the change is not in review yet.
+func (r *runner) ship(string) error {
 	if err := r.prompt("ship", "/athel:ship "+Change); err != nil {
 		return err
 	}
-	if err := r.prompt("triage", "/athel:triage "+Change+" all=ticket"); err != nil {
+	f, err := r.athelJSON("finding", "list", Change)
+	if err != nil {
 		return err
+	}
+	if hasUndecided(f) {
+		if err := r.prompt("triage", "/athel:triage "+Change+" all=ticket"); err != nil {
+			return err
+		}
 	}
 	if r.state() != "in_review" {
 		return r.prompt("ship", "/athel:ship "+Change)
 	}
 	return nil
+}
+
+// hasUndecided reports whether `finding list` shows a finding the developer has not decided.
+func hasUndecided(list map[string]any) bool {
+	fs, _ := list["findings"].([]any)
+	for _, x := range fs {
+		if f, _ := x.(map[string]any); f["disposition"] == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func runOne(t *testing.T, c Case, run int, tl evalkit.Tools, set evalkit.Settings) Result {

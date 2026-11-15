@@ -117,6 +117,7 @@ type BodyInput struct {
 	Rollback                             []string
 	Waivers                              []string // FR-BUILD-014: every waiver appears in the PR body
 	Findings                             []string // FR-FIND-003: side findings, not fixed here
+	Actions                              []string // the plan's env_actions, for the developer (ADR 027)
 }
 
 // Body is the PR description with doc 04's sections, in order.
@@ -157,6 +158,13 @@ func Body(in BodyInput) string {
 	}
 	for i, l := range in.Linked {
 		fmt.Fprintf(&b, "%d. %s: %s\n", i+1, l.Repo, l.PR)
+	}
+	b.WriteString("\n## Shared actions for the developer\n\n")
+	if len(in.Actions) == 0 {
+		b.WriteString("None in the plan.\n")
+	}
+	for _, a := range in.Actions {
+		b.WriteString("- " + a + "\n")
 	}
 	b.WriteString("\n## Rollback\n\n")
 	if len(in.Rollback) == 0 {

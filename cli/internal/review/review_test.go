@@ -190,3 +190,18 @@ func TestFoldReportFindings(t *testing.T) {
 		t.Errorf("carried report findings stay; a new one is numbered in this round: %d %+v", n, r2.Findings)
 	}
 }
+
+func TestCheckLocation(t *testing.T) {
+	lines := func(file string) (int, bool) { return 49, file == "prefs/prefs.go" }
+	cases := map[string]string{
+		"prefs/prefs.go": "", "prefs/prefs.go:44": "", "prefs/prefs.go:44-48": "", "prefs/prefs.go:1-49": "",
+		"prefs/prefs.go:49-55": "has 49 lines", "prefs/prefs.go:0": "has 49 lines", "prefs/prefs.go:9-3": "has 49 lines",
+		"prefs/prefs.go:x": "has 49 lines", "prefs/other.go:3": "no such file", ":3": "no such file",
+	}
+	for loc, want := range cases {
+		err := CheckLocation(loc, lines)
+		if (want == "") != (err == nil) || (err != nil && !strings.Contains(err.Error(), want)) {
+			t.Errorf("%s: %v", loc, err)
+		}
+	}
+}

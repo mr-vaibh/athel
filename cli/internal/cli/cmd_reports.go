@@ -73,6 +73,45 @@ func (r *runCtx) taskChanges(g gateTask) ([]string, error) {
 	return slices.Compact(out), nil
 }
 
+// lineCount counts a worktree file's lines, for finding locations.
+func lineCount(g gateTask) func(string) (int, bool) {
+	return func(file string) (int, bool) {
+		if file == "" || filepath.IsAbs(file) || strings.Contains(file, "..") {
+			return 0, false
+		}
+		b, err := os.ReadFile(filepath.Join(g.dir, filepath.FromSlash(file)))
+		if err != nil {
+			return 0, false
+		}
+		return strings.Count(string(b), "\n") + boolInt(len(b) > 0 && b[len(b)-1] != '\n'), true
+	}
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// checkLocations refuses a finding whose file or lines are not in the worktree.
+func checkLocations(g gateTask, locs ...string) error {
+	for _, l := range locs {
+		if err := review.CheckLocation(l, lineCount(g)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func reportLocations(fs []reports.Finding) []string {
+	out := make([]string, len(fs))
+	for i, f := range fs {
+		out[i] = f.Location
+	}
+	return out
+}
+
 // nextReport is the number of a task's next report of a kind: 1 more than the files saved.
 func nextReport(g gateTask, dir, prefix string) int {
 	n := 1
@@ -135,6 +174,9 @@ func cmdQASave(r *runCtx, args []string) (any, error) {
 	if err := reports.CheckQA(d, gates.IsTestFile, changed); err != nil {
 		return nil, err
 	}
+	if err := checkLocations(g, reportLocations(d.Findings)...); err != nil {
+		return nil, err
+	}
 	n := nextReport(g, "reviews", "qa")
 	rep := reports.QA{Schema: reports.QASchema, Change: g.c.ID, Task: g.task.ID, N: n, Head: head,
 		Cases: d.Cases, Suite: d.Suite, Gaps: nonNil(d.Gaps), Findings: reports.Number("Q", n, d.Findings)}
@@ -152,6 +194,9 @@ func cmdSecuritySave(r *runCtx, args []string) (any, error) {
 		return nil, err
 	}
 	if err := reports.CheckSecurity(d); err != nil {
+		return nil, err
+	}
+	if err := checkLocations(g, reportLocations(d.Findings)...); err != nil {
 		return nil, err
 	}
 	n := nextReport(g, "reviews", "security")

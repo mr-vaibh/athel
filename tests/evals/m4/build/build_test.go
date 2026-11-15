@@ -247,3 +247,11 @@ func TestBuildSandbox(t *testing.T) {
 		t.Error("nothing touched the clones")
 	}
 }
+
+func TestHasUndecided(t *testing.T) {
+	decided := map[string]any{"findings": []any{map[string]any{"id": "SF-1", "disposition": "ticket"}}}
+	open := map[string]any{"findings": []any{map[string]any{"id": "SF-1", "disposition": "ticket"}, map[string]any{"id": "SF-2", "disposition": nil}}}
+	if hasUndecided(decided) || !hasUndecided(open) || hasUndecided(map[string]any{}) {
+		t.Error("hasUndecided")
+	}
+}

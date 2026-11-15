@@ -46,6 +46,9 @@ Read their results with `athel gate show CHG-NNN T-NN`; do not run them yourself
 Save your report, starting from `athel security template`:
 `athel security save CHG-NNN T-NN - <<'EOF' … EOF`.
 - List what you checked.
+- Give every location as `path:line-line`, with the path from the repository root
+  and the file's own line numbers (open it with Read in the worktree), never positions in the
+  diff.
 - Write one finding per problem, with its CWE category (`CWE-89`), the location, a rule ID
   from `athel review rules` (most are `security.*`), and the required fix.
 - Severity follows the review scale. **blocker** is exploitable as written. **major** is a

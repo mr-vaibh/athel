@@ -33,18 +33,28 @@ func TestLintPassesAGoodPlan(t *testing.T) {
 	}
 }
 
+// TestLintTaskWithoutCode (ADR 027): a task with no paths may cover a criterion that a code task
+// also covers, with its test.
+func TestLintTaskWithoutCode(t *testing.T) {
+	doc := planV2 + "  - {id: T-05, title: Confirm the rollout window, repo: users, kind: internal, paths: [], verbs: [comment], covers: [AC-1], depends_on: [], size: S, gates: [], env_actions: [comment on SHOP-12 with the window]}\n"
+	if p := lintPlan(t, doc, "MEDIUM"); len(p) != 0 {
+		t.Errorf("problems: %v", p)
+	}
+}
+
 func TestLintProblems(t *testing.T) {
 	tests := map[string]struct{ from, to, want string }{
-		"task covers nothing":      {"covers: [AC-4]", "covers: []", "T-04 covers no acceptance criterion"},
-		"criterion uncovered":      {"covers: [AC-3]", "covers: [AC-2]", "AC-3 is covered by no task"},
-		"unknown criterion":        {"covers: [AC-4]", "covers: [AC-4, AC-9]", "T-04 covers AC-9, which no spec"},
-		"consumer before provider": {"depends_on: [T-02], size: M, gates: [build, unit]}", "depends_on: [], size: M, gates: [build, unit]}", "T-03 moves a consumer but depends on no expand task"},
-		"contract not deferred":    {"kind: contract, deferred: true", "kind: contract", "mark it deferred"},
-		"contract before consumer": {"depends_on: [T-03, T-01]", "depends_on: [T-01]", "T-04 must come after T-03"},
-		"large without reason":     {"size: S, gates: [build, unit], rollback: drop", "size: L, gates: [build, unit], rollback: drop", "T-01 is size L without a size_reason"},
-		"behaviour without test":   {"verbs: [edit, test, commit], covers: [AC-3]", "verbs: [edit, commit], covers: [AC-3]", "T-03 changes behaviour without the test verb"},
-		"deploy in env actions":    {"env_actions: [comment on SHOP-12]", "env_actions: [deploy users to staging]", `env action "deploy users to staging" deploys`},
-		"risky without rollback":   {", rollback: flag users_v2_events off", "", "T-02 (expand) needs a rollback at HIGH risk"},
+		"task covers nothing":                   {"covers: [AC-4]", "covers: []", "T-04 covers no acceptance criterion"},
+		"criterion uncovered":                   {"covers: [AC-3]", "covers: [AC-2]", "AC-3 is covered by no task"},
+		"unknown criterion":                     {"covers: [AC-4]", "covers: [AC-4, AC-9]", "T-04 covers AC-9, which no spec"},
+		"consumer before provider":              {"depends_on: [T-02], size: M, gates: [build, unit]}", "depends_on: [], size: M, gates: [build, unit]}", "T-03 moves a consumer but depends on no expand task"},
+		"contract not deferred":                 {"kind: contract, deferred: true", "kind: contract", "mark it deferred"},
+		"contract before consumer":              {"depends_on: [T-03, T-01]", "depends_on: [T-01]", "T-04 must come after T-03"},
+		"large without reason":                  {"size: S, gates: [build, unit], rollback: drop", "size: L, gates: [build, unit], rollback: drop", "T-01 is size L without a size_reason"},
+		"behaviour without test":                {"verbs: [edit, test, commit], covers: [AC-3]", "verbs: [edit, commit], covers: [AC-3]", "T-03 changes behaviour without the test verb"},
+		"deploy in env actions":                 {"env_actions: [comment on SHOP-12]", "env_actions: [deploy users to staging]", `env action "deploy users to staging" deploys`},
+		"risky without rollback":                {", rollback: flag users_v2_events off", "", "T-02 (expand) needs a rollback at HIGH risk"},
+		"criterion only in a task without code": {`paths: ["api/**"]`, "paths: []", "AC-4 is covered only by tasks that change no code"},
 	}
 	for name, tt := range tests {
 		doc := strings.Replace(planV2, tt.from, tt.to, 1)

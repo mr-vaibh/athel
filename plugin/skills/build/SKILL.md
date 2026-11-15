@@ -34,6 +34,10 @@ gates and the git steps around them.
      and stop. Otherwise say the next step is `/athel:ship $ARGUMENTS` and stop.
 5. Run `athel --json --session ${CLAUDE_SESSION_ID} state enter $ARGUMENTS build --task <T>`. Note the task's repo and the
    worktree folder (`repos/<repo>@$ARGUMENTS` under the workspace).
+   **A task with no `paths` changes no code** (ADR 027). Its `env_actions` are for the developer
+   and appear in the PR body, and Athel never performs them. Run
+   `athel --json --session ${CLAUDE_SESSION_ID} build done $ARGUMENTS <T>` at once, with no
+   developer, gates or checkers. End the step with `--result ok` and go back to step 4.
 6. Run `athel --json --session ${CLAUDE_SESSION_ID} gate baseline $ARGUMENTS <T>`. It records the untouched
    worktree once and does nothing after that.
 

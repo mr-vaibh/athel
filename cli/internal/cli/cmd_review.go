@@ -80,6 +80,11 @@ func cmdReviewSave(r *runCtx, args []string) (any, error) {
 	if err := decodeStrict(data, &sub, "review"); err != nil {
 		return nil, draftError(err, "review template")
 	}
+	for _, d := range sub.New {
+		if err := checkLocations(g, d.Location); err != nil {
+			return nil, err
+		}
+	}
 	prev, err := r.latestRound(g)
 	if err != nil {
 		return nil, err

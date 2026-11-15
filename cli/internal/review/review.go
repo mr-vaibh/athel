@@ -7,6 +7,7 @@ package review
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
@@ -303,6 +304,40 @@ func (r *Round) Blocking() []string {
 // Done reports whether review ends for the task: the reviewer approved and nothing blocks
 // (doc 06 round rule 4).
 func (r *Round) Done() bool { return r.Verdict == Approved && len(r.Blocking()) == 0 }
+
+func badLocation(msg string) error {
+	return aerr.New(aerr.StateInvalid, "finding rejected: "+msg).WithNextAction("fix the finding's location and save again")
+}
+
+// CheckLocation checks a finding's location against the code it points at: path, path:line or
+// path:from-to, with the file in the worktree and the lines inside it. lines returns the file's
+// line count, or false when there is no such file. A wrong location sends the developer to the
+// wrong place and cannot be verified later, so it is refused at once.
+func CheckLocation(loc string, lines func(file string) (int, bool)) error {
+	file, rng, ranged := strings.Cut(loc, ":")
+	n, ok := lines(file)
+	if file == "" || !ok {
+		return badLocation(loc + ": no such file in the task's worktree; give the path from the repository root")
+	}
+	if !ranged {
+		return nil
+	}
+	from, to := 0, 0
+	a, b, span := strings.Cut(rng, "-")
+	if !span {
+		b = a
+	}
+	if x, err := strconv.Atoi(a); err == nil {
+		from = x
+	}
+	if y, err := strconv.Atoi(b); err == nil {
+		to = y
+	}
+	if from < 1 || to < from || to > n {
+		return badLocation(fmt.Sprintf("%s: %s has %d lines; give line numbers of the file itself (Read it), not of the diff", loc, file, n))
+	}
+	return nil
+}
 
 // LocationFile is the file part of a finding's location ("path:42-58").
 func LocationFile(loc string) string {

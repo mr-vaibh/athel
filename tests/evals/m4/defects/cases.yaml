@@ -114,11 +114,11 @@ cases:
     category: errors
     rules: [errors.no-magic-return, errors.typed]
     security: false
-    requirement: "When the orders service checks stock, it shall read the units held from the warehouse service."
+    requirement: "When stock is checked, the orders service shall read the units held from the warehouse service."
     criterion:
       given: "the warehouse holds 7 units of mug-blue"
       when: "orders checks whether 7 units are in stock"
-      then: "the check reports they are in stock"
+      then: "the check returns true for in stock"
     files:
       inventory/inventory.go: |
         // Package inventory reads stock levels from the warehouse service.
@@ -493,7 +493,7 @@ cases:
     criterion:
       given: "customers named Ada and Bob"
       when: "support searches for \"ada\""
-      then: "the response lists Ada"
+      then: "the response contains Ada"
     files:
       search/search.go: |
         // Package search finds customers by name for the support console.
@@ -818,7 +818,7 @@ cases:
     criterion:
       given: "a customer with two orders"
       when: "they open their invoices"
-      then: "both orders are listed with their lines and totals"
+      then: "the response returns both orders with their lines and totals"
     files:
       invoices/invoices.go: |
         // Package invoices builds the invoice list of a customer.
@@ -1050,7 +1050,7 @@ cases:
     criterion:
       given: "a packed order of 500 grams"
       when: "orders books a collection"
-      then: "the courier's tracking number is returned"
+      then: "the response returns the courier's tracking number"
     files:
       shipping/shipping.go: |
         // Package shipping books parcel collections with the courier.
@@ -1338,7 +1338,7 @@ cases:
     criterion:
       given: "a session with a lifetime"
       when: "the lifetime has passed"
-      then: "the session is no longer valid"
+      then: "the session check returns signed out"
     files:
       sessions/sessions.go: |
         // Package sessions keeps signed-in sessions for a fixed lifetime.
@@ -1611,7 +1611,7 @@ cases:
     criterion:
       given: "an order placed at 13:30 UTC"
       when: "orders computes its ship date"
-      then: "the ship date is that day"
+      then: "the function returns that day as the ship date"
     files:
       delivery/delivery.go: |
         // Package delivery decides the day an order leaves the warehouse.
@@ -2088,7 +2088,7 @@ cases:
     criterion:
       given: "users with full names"
       when: "the migration runs"
-      then: "each user has a given name and a family name"
+      then: "each stored user has a given name and a family name"
     files:
       migrations/002_split_user_name.up.sql: |
         ALTER TABLE users ADD COLUMN given_name TEXT;
@@ -2406,11 +2406,11 @@ cases:
     category: errors
     rules: []
     security: false
-    requirement: "When the orders service checks stock, it shall read the units held from the warehouse service and report an unknown product or a failed call as an error."
+    requirement: "When stock is checked, the orders service shall read the units held from the warehouse service and report an unknown product or a failed call as an error."
     criterion:
       given: "the warehouse holds 7 units of mug-blue"
       when: "orders asks for the units of mug-blue"
-      then: "it gets 7"
+      then: "it returns 7"
     files:
       stock/stock.go: |
         // Package stock reads stock levels from the warehouse service.
@@ -2537,7 +2537,7 @@ cases:
     criterion:
       given: "existing users"
       when: "the migration runs"
-      then: "every user has marketing_opt_in false, and the down migration removes the column"
+      then: "every stored user has marketing_opt_in false, and the down migration removes the column"
     files:
       migrations/002_add_user_marketing_opt_in.down.sql: |
         ALTER TABLE users DROP COLUMN marketing_opt_in;
