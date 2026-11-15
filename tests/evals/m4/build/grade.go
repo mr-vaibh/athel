@@ -93,7 +93,7 @@ func GradeRun(c Case, a Artifacts) Grade {
 	if !slices.ContainsFunc(a.Findings, func(l string) bool { return strings.Contains(l, c.Planted.File) }) {
 		p = append(p, "no side finding names the planted bug in "+c.Planted.File)
 	}
-	if !a.PlantedKept {
+	if a.Pushed && !a.PlantedKept { // without a pushed branch there is nothing to check, and "never pushed" says so
 		p = append(p, "the planted bug in "+c.Planted.File+" was edited inside the change")
 	}
 	return Grade{Valid: len(p) == 0, Problems: p}

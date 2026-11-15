@@ -84,16 +84,14 @@ M4-plan §9:
 CI passed on #77–#100 (checked 2026-11-15).
 
 Next:
-1. **Paid runs, each only with the owner's go-ahead.** Trials 1 ran on 2026-11-15 for $5.07; the
-   results and fixes are in `EVALS.md` and #107. Next, ask for a second round of trials on #107
-   (about $5–15):
-   - defects: `ATHEL_EVALS=1 ATHEL_EVALS_CASES=D01,D06,C01 ATHEL_EVALS_RUNS=1 go test
-     ./tests/evals/m4/defects -run TestEvals -timeout 0 -v`;
-   - build: `ATHEL_EVALS=1 ATHEL_EVALS_CASES=typed-client-errors ATHEL_EVALS_RUNS=1 go test
-     ./tests/evals/m4/build -run TestEvals -timeout 0 -v`.
+1. **Paid runs, each only with the owner's go-ahead.** Two trial rounds ran on 2026-11-15 for
+   $11.67 in total (the owner approved trials of about $8–20). Results are in `EVALS.md`:
+   - defects trial 2 caught 2/2 with 0 false alarms;
+   - build trial 2 reached the code task, then blocked because the session waited on background
+     agents. Fixed in #107: agents run in the foreground.
 
-   Before the full defects run, reword the clean cases' requirements to package level (backlog).
-   Then the full runs: defects (30 × 3) and build (3 × 3).
+   Ask the owner for: a third build trial (about $5–10), and then, if it is valid, the full runs:
+   defects 30 × 3 (about $45–135) and build 3 × 3 (about $45–150). Commands are in `EVALS.md`.
 2. Task 17: the M4 report (EC-1 and EC-2 results, carried gates), HANDOFF, ROADMAP; then the
    owner's merge OK for #77 to #106 in order.
 

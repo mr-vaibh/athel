@@ -238,6 +238,9 @@ func TestBuildSandbox(t *testing.T) {
 	}
 	g := GradeRun(c, a)
 	want := []string{"not in_review", "no ready, open PR", "never pushed", "no side finding"}
+	if strings.Contains(strings.Join(g.Problems, ";"), "was edited inside the change") {
+		t.Errorf("no pushed branch, so the planted bug is not judged: %v", g.Problems)
+	}
 	for _, w := range want {
 		if !strings.Contains(strings.Join(g.Problems, ";"), w) {
 			t.Errorf("an empty run lacks %q: %v", w, g.Problems)
