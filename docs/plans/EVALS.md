@@ -114,3 +114,22 @@ radius recall of at least 95%. Card recall and precision and blast precision are
 How to run (owner's go-ahead each time):
 `ATHEL_EVALS=1 ATHEL_EVALS_KEEP=<folder> go test -count=1 -run '^TestEvals$' -v -timeout 0 ./tests/evals/m3/`,
 with `ATHEL_EVALS_CASES` and `ATHEL_EVALS_RUNS` to narrow it.
+
+## M4 evals (build and review)
+
+Targets (M4-plan):
+- **EC-1:** every run of the 3 build PRDs is valid: in review, a draft PR then marked ready, the
+  gates re-run green by the grader, commit lint, size, no merge, clones unchanged, and the planted
+  bug filed as a side finding and not edited.
+- **EC-2:** the reviewer catches at least 90% of 24 seeded defects. False alarms on 6 clean
+  diffs are reported, not gated.
+
+| Run | Date | What ran | Result | Cost | Notes |
+|---|---|---|---|---|---|
+| defects trial 1 | 2026-11-15 | D01, D06, C01, 1 run (`m4-defects-2026-11-15T151822Z.json`) | 0/2 caught (EC-2 not measured yet) | $0.71 | D01: the reviewer found the silent catch (a blocker, the right rule) but cited lines 49-55 of a 49-line file: diff positions, not file lines. D06: setup failed, because its AC "then" was not observable and `spec save` refused it. C01 (clean): 2 major findings (handler not wired in `main.go`, header-based auth), fair for a package-level diff. Fixed in #107: the CLI refuses findings with lines the file does not have, the prompts say to use file lines, and all 30 specs are validated offline |
+| build trial 1 | 2026-11-15 | `typed-client-errors`, 1 run (`m4-build-2026-11-15T151828Z.json`) | not valid: `blocked` in build | $4.36 | Start, spec (3 cards), decide, plan and approve all worked. The plan held a no-code "verify first" task (env actions only) covering AC-7, and its `ac-tests` gate could never pass. Fixed in #107 (ADR 027): every AC needs a code task, a no-code task is done at once, and its env actions go to the developer in the PR body. The runner stops when blocked with no card |
+
+How to run (owner's go-ahead each time):
+- `ATHEL_EVALS=1 ATHEL_EVALS_KEEP=<folder> go test -count=1 -run '^TestEvals$' -v -timeout 0 ./tests/evals/m4/defects/`
+- the same for `./tests/evals/m4/build/`
+- narrow with `ATHEL_EVALS_CASES` and `ATHEL_EVALS_RUNS`.
