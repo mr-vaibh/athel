@@ -23,4 +23,9 @@ Read-only. Do not change any state. Never read or edit files under `.athel/` dir
    - budget: status and used/max for cost, time and tool calls
    - lock: holder session and whether it is stale (or "free")
    - next allowed states: `allowed_next`
+   - from `building` on (M4):
+     - tasks done, in progress and ready, from `athel --json build next <ID>`;
+     - for the task in progress, its last gate run (`athel --json gate show <ID> <T>`): each
+       gate's status, and the open review findings (`athel --json review show <ID> <T>`);
+     - side findings: the `summary` of `athel --json finding list <ID>`.
 4. Keep it short. Do not suggest actions beyond what the data says.
