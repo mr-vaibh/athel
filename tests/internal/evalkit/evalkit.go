@@ -89,7 +89,13 @@ func (s Settings) Selected(id string) bool {
 type Tools struct {
 	Athel, Shopctl, Shopmcp, Git, Claude string
 	Repo                                 string
+	// Toolchain are the Go tools the build evals' developer and gates run (M4): go, gofmt and,
+	// when installed, golangci-lint and govulncheck. They are local tools, not cloud CLIs.
+	Toolchain []string
 }
+
+// toolchain are the Go tools linked onto the session PATH; go is required, the others optional.
+var toolchain = []string{"go", "gofmt", "golangci-lint", "govulncheck"}
 
 // BuildTools builds the CLI and the fixture's fakes from the repository at repo into dir.
 func BuildTools(repo, dir string) (Tools, error) {
@@ -105,6 +111,13 @@ func BuildTools(repo, dir string) (Tools, error) {
 			return tl, fmt.Errorf("build %s: %w\n%s", b.pkg, err, out)
 		}
 	}
+	for _, name := range toolchain {
+		if p, err := exec.LookPath(name); err == nil {
+			tl.Toolchain = append(tl.Toolchain, p)
+		} else if name == "go" {
+			return tl, err
+		}
+	}
 	var err error
 	tl.Git, err = exec.LookPath("git")
 	return tl, err
@@ -113,7 +126,9 @@ func BuildTools(repo, dir string) (Tools, error) {
 // Sandbox is one run's isolated world.
 type Sandbox struct {
 	Dir, Home, AthelHome, WS, Plugin, Path, MCP string
-	Tools                                       Tools
+	// GHState is where the fake GitHub keeps the pull requests Athel opens and its call log.
+	GHState string
+	Tools   Tools
 }
 
 // NewSandbox builds the fixture under dir and wires the fake HOME, PATH, plugin copy, MCP fakes
@@ -124,7 +139,11 @@ func NewSandbox(dir string, tl Tools) (*Sandbox, error) {
 		return nil, err
 	}
 	s := &Sandbox{Dir: dir, Home: layout.Home, AthelHome: filepath.Join(dir, "athel-home"), WS: filepath.Join(dir, "ws"),
-		Plugin: filepath.Join(dir, "plugin"), Path: filepath.Join(dir, "path"), MCP: filepath.Join(dir, "mcp.json"), Tools: tl}
+		Plugin: filepath.Join(dir, "plugin"), Path: filepath.Join(dir, "path"), MCP: filepath.Join(dir, "mcp.json"),
+		GHState: filepath.Join(dir, "github"), Tools: tl}
+	if err := os.MkdirAll(s.GHState, 0o700); err != nil {
+		return nil, err
+	}
 	steps := []func(*shop.Layout) error{s.writeHome, s.writePath, s.writePlugin, s.writeMCP, s.initWorkspace}
 	for _, step := range steps {
 		if err := step(layout); err != nil {
@@ -179,7 +198,8 @@ func (s *Sandbox) writeHome(l *shop.Layout) error {
 	return nil
 }
 
-// writePath builds the session's PATH folder: the fake CLIs and git, nothing else.
+// writePath builds the session's PATH folder: the fake CLIs, git and the Go toolchain, nothing
+// else.
 func (s *Sandbox) writePath(*shop.Layout) error {
 	if err := os.MkdirAll(s.Path, 0o700); err != nil {
 		return err
@@ -189,7 +209,18 @@ func (s *Sandbox) writePath(*shop.Layout) error {
 			return err
 		}
 	}
+	for _, tool := range s.Tools.Toolchain {
+		if err := os.Symlink(tool, filepath.Join(s.Path, filepath.Base(tool))); err != nil {
+			return err
+		}
+	}
 	return os.Symlink(s.Tools.Git, filepath.Join(s.Path, "git"))
+}
+
+// Env is what every command of the run sees besides PATH and HOME: the fake GitHub's state, and
+// a Go that never downloads a toolchain.
+func (s *Sandbox) Env() []string {
+	return []string{"SHOP_GH_STATE=" + s.GHState, "GOTOOLCHAIN=local"}
 }
 
 // SessionPath is the PATH Claude Code and every command it runs see.
@@ -212,7 +243,8 @@ func (s *Sandbox) writePlugin(*shop.Layout) error {
 	if err := os.Remove(wrapper); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	body := fmt.Sprintf("#!/bin/sh\nexec env HOME=%q ATHEL_HOME=%q PATH=%q %q \"$@\"\n", s.Home, s.AthelHome, s.SessionPath(), s.Tools.Athel)
+	body := fmt.Sprintf("#!/bin/sh\nexec env HOME=%q ATHEL_HOME=%q PATH=%q SHOP_GH_STATE=%q GOTOOLCHAIN=local %q \"$@\"\n",
+		s.Home, s.AthelHome, s.SessionPath(), s.GHState, s.Tools.Athel)
 	return os.WriteFile(wrapper, []byte(body), 0o700) //nolint:gosec // the wrapper must be executable
 }
 
@@ -291,7 +323,7 @@ func (s *Sandbox) RunClaude(ctx context.Context, p Prompt) (Session, error) {
 	}
 	cmd := exec.CommandContext(ctx, s.Tools.Claude, args...) //nolint:gosec // the claude binary the caller found on PATH
 	cmd.Dir = s.WS
-	cmd.Env = append(os.Environ(), "PATH="+s.SessionPath())
+	cmd.Env = append(append(os.Environ(), "PATH="+s.SessionPath()), s.Env()...)
 	path := filepath.Join(s.Dir, p.Transcript)
 	transcript, err := os.Create(path) //nolint:gosec // a file in the run's own temporary folder
 	if err != nil {

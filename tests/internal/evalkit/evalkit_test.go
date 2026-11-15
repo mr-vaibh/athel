@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -50,10 +51,24 @@ func TestSandbox(t *testing.T) {
 			t.Errorf("%s on the session PATH is %q (%v), want the fixture's fake", name, target, err)
 		}
 	}
+	checkBuildWiring(t, sb, tl)
 	if _, err := sb.Athel("", "no-such-command"); err == nil {
 		t.Error("a failing CLI call must return its error")
 	}
 	runFakeClaude(t, sb)
+}
+
+// checkBuildWiring: the build evals' tools are on the session PATH, and the athel wrapper and the
+// session see the fake GitHub's state and a Go that never downloads a toolchain.
+func checkBuildWiring(t *testing.T, sb *Sandbox, tl Tools) {
+	t.Helper()
+	if target, err := os.Readlink(filepath.Join(sb.Path, "go")); err != nil || target != tl.Toolchain[0] {
+		t.Errorf("go on the session PATH is %q (%v)", target, err)
+	}
+	if w, err := os.ReadFile(filepath.Join(sb.Plugin, "bin", "athel")); err != nil || !strings.Contains(string(w), "SHOP_GH_STATE=\""+sb.GHState) ||
+		!strings.Contains(string(w), "GOTOOLCHAIN=local") || !slices.Contains(sb.Env(), "GOTOOLCHAIN=local") {
+		t.Errorf("the athel wrapper and the session see the fake GitHub's state and a local Go: %s %v", w, err)
+	}
 }
 
 // checkClones proves cache clones resolve to the fixture's bare repositories, whatever URL form
