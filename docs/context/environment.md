@@ -87,6 +87,16 @@ the real kube, gcloud and aws config files are never read. Keep it that way in n
 Claude Code checks use `claude --plugin-dir ./plugin` against a temporary fixture workspace
 only, never by installing the plugin into user settings.
 
+The network-deny test (`tests/sandbox`, doc 08 Practices) has two parts:
+- **The journey:** a change from `init` to an approved plan runs under a sandbox that denies
+  network access. That is `sandbox-exec` on macOS (built in), or `unshare -rn` on Linux where
+  the kernel allows unprivileged user namespaces. The test proves the sandbox works with a
+  connection to its own listener on 127.0.0.1; nothing leaves the machine. Where neither
+  sandbox is available (GitHub's Ubuntu runners restrict user namespaces), the journey is
+  skipped with its reason.
+- **The dependency check:** the `athel` binary must not link Go's network packages. This part
+  runs everywhere.
+
 ## Removing everything
 
 The tools are ordinary Homebrew formulae (`brew uninstall go golangci-lint gh`). Go keeps its
