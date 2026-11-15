@@ -41,9 +41,13 @@ func TestStopHookKeepsTheBuildGoing(t *testing.T) {
 }
 
 func TestStopHookAfterTheTaskIsDone(t *testing.T) {
-	h, _ := goGates(t)
+	h, tree := goGates(t)
 	h.mustOK("state", "enter", "CHG-001", "build", "--task", "T-01")
 	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	if out, err := commit(t, h, tree, "src/edge_test.go", "package src\n", goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	h.checked(t, "src/edge_test.go")
 	h.reviewRound(t, "verdict: approved\n")
 	h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01")
 	h.mustOK("build", "done", "CHG-001", "T-01")
@@ -57,8 +61,15 @@ func TestStopHookAfterTheTaskIsDone(t *testing.T) {
 // the pushed head.
 func TestReadyForPRAndPRReady(t *testing.T) {
 	h, tree := goGates(t)
+	h.stdin = plannedBlast()
+	h.mustOK("blast", "save", "--change", "CHG-001", "-")
+	h.stdin = ""
 	h.mustOK("state", "enter", "CHG-001", "build", "--task", "T-01")
 	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	if out, err := commit(t, h, tree, "src/edge_test.go", "package src\n", goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	h.checked(t, "src/edge_test.go")
 	h.reviewRound(t, "verdict: approved\n")
 	h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01")
 	if _, env := h.runJSON("state", "transition", "CHG-001", "--to", "ready_for_pr", "--by", "athel", "--reason", "r"); !strings.Contains(asJSON(t, env), "not every plan task is done") {

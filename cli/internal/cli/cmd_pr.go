@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mr-vaibh/athel/cli/internal/blast"
 	"github.com/mr-vaibh/athel/cli/internal/build"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/gitlint"
@@ -309,8 +310,31 @@ func (r *runCtx) readyGuard(s *state.Store, id string) error {
 		if _, err := r.lintBranch(s, c, w); err != nil {
 			problems = append(problems, w.Name+": "+err.Error())
 		}
+		problems = append(problems, r.blastDrift(s, c, w)...)
 	}
 	return guardError(id, state.ReadyForPR, problems)
+}
+
+// blastDrift compares the repo's real diff, base to the worktree's head, with the planned blast
+// radius: an impact the plan does not name blocks the PR (FR-BLAST-001/005).
+func (r *runCtx) blastDrift(s *state.Store, c *state.Change, w state.RepoWork) []string {
+	planned, err := r.plannedReport(s, c.ID)
+	if err != nil {
+		return []string{"the planned blast radius: " + err.Error()}
+	}
+	head, err := r.gitOut(filepath.Join(s.WS.Root, filepath.FromSlash(w.Worktree)), "rev-parse", "HEAD")
+	if err != nil {
+		return []string{w.Name + ": " + err.Error()}
+	}
+	_, surface, err := r.diffSurface(w.Remote, w.BaseHead, strings.TrimSpace(head))
+	if err != nil {
+		return []string{w.Name + ": " + err.Error()}
+	}
+	if drift := blast.Drift(surface, planned); len(drift) > 0 {
+		return []string{w.Name + " changes what the planned blast radius does not name (" + strings.Join(drift, "; ") +
+			"): update the spec, the blast radius and the plan, and get it approved again (FR-BLAST-005)"}
+	}
+	return nil
 }
 
 // cmdPRReady marks a draft PR ready for review once the change is ready_for_pr and the remote
