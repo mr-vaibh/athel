@@ -23,4 +23,3 @@
 | 2026-11-15 | Per-repo test-file patterns for QA's write scope (for example from a structured field in conventions) | ADR 024 uses the language defaults of the gates package, since `conventions.md` is free text | M5, with multi-service repos |
 | 2026-11-15 | Per-command limits for the scout and the architect, like ADR 024's table for the build roles | They may run any writing `athel` command today; human-only commands are still denied by rule H | M5 |
 | 2026-11-15 | Perform a plan's approved `env_actions` (ticket comments, chat messages) from the build loop, under the tools policy | ADR 027: in M4 they go to the developer in the PR body | M5 or M6 |
-| 2026-11-15 | Clean defect-eval cases whose requirement is package-level, so a strict reviewer does not ask for wiring in main.go | Trial: C01 drew 2 major findings (handler not registered, header-based auth); false alarms are reported, not gated | Before the full EC-2 run |
