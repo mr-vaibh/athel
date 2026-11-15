@@ -1,0 +1,2858 @@
+# M4 reviewer eval corpus (EC-2): each case is applied alone to a fresh copy of its fixture repo.
+cases:
+  - id: D01
+    repo: users
+    kind: defect
+    category: errors
+    rules: [errors.no-silent-catch]
+    security: false
+    requirement: "When a customer asks for their notification preferences, the users service shall return the saved preferences, or the defaults if the customer has never saved any."
+    criterion:
+      given: "a customer who has never saved preferences"
+      when: "they request GET /v1/users/{id}/preferences"
+      then: "the response is 200 with the default preferences"
+    files:
+      preferences/preferences.go: |
+        // Package preferences serves the channels a customer accepts notifications on.
+        package preferences
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"errors"
+        	"net/http"
+        )
+
+        // Preferences are the channels a customer accepts notifications on.
+        type Preferences struct {
+        	Email bool `json:"email"`
+        	SMS   bool `json:"sms"`
+        	Push  bool `json:"push"`
+        }
+
+        // ErrNotFound means the customer has never saved preferences.
+        var ErrNotFound = errors.New("preferences not found")
+
+        // Store reads saved preferences.
+        type Store interface {
+        	Get(ctx context.Context, userID string) (Preferences, error)
+        }
+
+        // Defaults are the preferences of a customer who has not chosen any.
+        func Defaults() Preferences { return Preferences{Email: true} }
+
+        // Handler serves GET /v1/users/{id}/preferences.
+        type Handler struct{ Store Store }
+
+        // Register adds the preferences route.
+        func (h Handler) Register(mux *http.ServeMux) {
+        	mux.HandleFunc("GET /v1/users/{id}/preferences", h.get)
+        }
+
+        func (h Handler) get(w http.ResponseWriter, r *http.Request) {
+        	w.Header().Set("Content-Type", "application/json")
+        	_ = json.NewEncoder(w).Encode(h.load(r.Context(), r.PathValue("id")))
+        }
+
+        // load returns the customer's saved preferences, or the defaults for a new customer.
+        func (h Handler) load(ctx context.Context, userID string) Preferences {
+        	p, err := h.Store.Get(ctx, userID)
+        	if err != nil {
+        		return Defaults()
+        	}
+        	return p
+        }
+      preferences/preferences_test.go: |
+        package preferences
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"net/http"
+        	"net/http/httptest"
+        	"testing"
+        )
+
+        type fakeStore map[string]Preferences
+
+        func (f fakeStore) Get(_ context.Context, userID string) (Preferences, error) {
+        	p, ok := f[userID]
+        	if !ok {
+        		return Preferences{}, ErrNotFound
+        	}
+        	return p, nil
+        }
+
+        func TestGetPreferences(t *testing.T) {
+        	tests := []struct {
+        		name string
+        		id   string
+        		want Preferences
+        	}{
+        		{"saved preferences", "u-1", Preferences{SMS: true, Push: true}},
+        		{"never saved", "u-2", Defaults()},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			mux := http.NewServeMux()
+        			Handler{Store: fakeStore{"u-1": {SMS: true, Push: true}}}.Register(mux)
+        			rec := httptest.NewRecorder()
+        			mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/users/"+tt.id+"/preferences", nil))
+        			var got Preferences
+        			if err := json.NewDecoder(rec.Body).Decode(&got); err != nil || rec.Code != http.StatusOK || got != tt.want {
+        				t.Fatalf("status %d, got %+v, %v", rec.Code, got, err)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: preferences/preferences.go
+      lines: [44, 48]
+  - id: D02
+    repo: orders
+    kind: defect
+    category: errors
+    rules: [errors.no-magic-return, errors.typed]
+    security: false
+    requirement: "When the orders service checks stock, it shall read the units held from the warehouse service."
+    criterion:
+      given: "the warehouse holds 7 units of mug-blue"
+      when: "orders checks whether 7 units are in stock"
+      then: "the check reports they are in stock"
+    files:
+      inventory/inventory.go: |
+        // Package inventory reads stock levels from the warehouse service.
+        package inventory
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"net/http"
+        	"net/url"
+        )
+
+        // Client calls the warehouse service.
+        type Client struct {
+        	Base string
+        	HTTP *http.Client
+        }
+
+        // Units returns how many units of sku the warehouse holds.
+        func (c Client) Units(ctx context.Context, sku string) int {
+        	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.Base+"/v1/stock/"+url.PathEscape(sku), nil)
+        	if err != nil {
+        		return -1
+        	}
+        	resp, err := c.HTTP.Do(req)
+        	if err != nil {
+        		return -1
+        	}
+        	defer resp.Body.Close()
+        	if resp.StatusCode != http.StatusOK {
+        		return -1
+        	}
+        	var body struct {
+        		Units int `json:"units"`
+        	}
+        	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+        		return -1
+        	}
+        	return body.Units
+        }
+
+        // InStock reports whether at least qty units of sku can be sold.
+        func (c Client) InStock(ctx context.Context, sku string, qty int) bool {
+        	return c.Units(ctx, sku) >= qty
+        }
+      inventory/inventory_test.go: |
+        package inventory
+
+        import (
+        	"context"
+        	"net/http"
+        	"net/http/httptest"
+        	"testing"
+        )
+
+        func warehouse(t *testing.T) *httptest.Server {
+        	t.Helper()
+        	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        		if r.URL.Path != "/v1/stock/mug-blue" {
+        			http.NotFound(w, r)
+        			return
+        		}
+        		_, _ = w.Write([]byte(`{"units":7}`))
+        	}))
+        	t.Cleanup(srv.Close)
+        	return srv
+        }
+
+        func TestInStock(t *testing.T) {
+        	srv := warehouse(t)
+        	c := Client{Base: srv.URL, HTTP: srv.Client()}
+        	tests := []struct {
+        		name string
+        		sku  string
+        		qty  int
+        		want bool
+        	}{
+        		{"enough units", "mug-blue", 7, true},
+        		{"too few units", "mug-blue", 8, false},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			if got := c.InStock(context.Background(), tt.sku, tt.qty); got != tt.want {
+        				t.Fatalf("InStock(%s, %d) = %v, want %v", tt.sku, tt.qty, got, tt.want)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: inventory/inventory.go
+      lines: [18, 29]
+  - id: D03
+    repo: users
+    kind: defect
+    category: errors
+    rules: [errors.typed]
+    security: false
+    requirement: "When a customer adds a delivery address, the users service shall store it, and shall reject an address without line1, city or postcode as a client error."
+    criterion:
+      given: "a customer"
+      when: "they POST an address with line1, city and postcode"
+      then: "the response is 201 and the address is stored"
+    files:
+      addresses/addresses.go: |
+        // Package addresses stores a customer's delivery addresses.
+        package addresses
+
+        import (
+        	"encoding/json"
+        	"net/http"
+        	"sync"
+        )
+
+        // Address is one delivery address.
+        type Address struct {
+        	Line1    string `json:"line1"`
+        	Line2    string `json:"line2,omitempty"`
+        	City     string `json:"city"`
+        	Postcode string `json:"postcode"`
+        }
+
+        // Book holds the addresses of each customer.
+        type Book struct {
+        	mu     sync.Mutex
+        	byUser map[string][]Address
+        }
+
+        // NewBook returns an empty address book.
+        func NewBook() *Book { return &Book{byUser: map[string][]Address{}} }
+
+        // Register adds the address routes.
+        func (b *Book) Register(mux *http.ServeMux) {
+        	mux.HandleFunc("POST /v1/users/{id}/addresses", b.add)
+        }
+
+        func (b *Book) add(w http.ResponseWriter, r *http.Request) {
+        	var a Address
+        	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
+        		http.Error(w, "malformed address", http.StatusBadRequest)
+        		return
+        	}
+        	if a.Line1 == "" || a.City == "" || a.Postcode == "" {
+        		http.Error(w, "line1, city and postcode are required", http.StatusInternalServerError)
+        		return
+        	}
+        	id := r.PathValue("id")
+        	b.mu.Lock()
+        	b.byUser[id] = append(b.byUser[id], a)
+        	b.mu.Unlock()
+        	w.Header().Set("Content-Type", "application/json")
+        	w.WriteHeader(http.StatusCreated)
+        	_ = json.NewEncoder(w).Encode(a)
+        }
+      addresses/addresses_test.go: |
+        package addresses
+
+        import (
+        	"net/http"
+        	"net/http/httptest"
+        	"strings"
+        	"testing"
+        )
+
+        func TestAddAddress(t *testing.T) {
+        	tests := []struct {
+        		name     string
+        		body     string
+        		wantCode int
+        	}{
+        		{"complete address", `{"line1":"1 High St","city":"Leeds","postcode":"LS1 1AA"}`, http.StatusCreated},
+        		{"malformed JSON", `{"line1":`, http.StatusBadRequest},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			mux := http.NewServeMux()
+        			NewBook().Register(mux)
+        			rec := httptest.NewRecorder()
+        			mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/users/u-1/addresses", strings.NewReader(tt.body)))
+        			if rec.Code != tt.wantCode {
+        				t.Fatalf("status %d, want %d", rec.Code, tt.wantCode)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: addresses/addresses.go
+      lines: [38, 42]
+  - id: D04
+    repo: orders
+    kind: defect
+    category: errors
+    rules: [errors.path-tested, tests.failure-paths]
+    security: false
+    requirement: "When support refunds an order, the orders service shall record the refund unless the order's refunds would exceed the amount paid."
+    criterion:
+      given: "an order paid at 1000 pence"
+      when: "support refunds 400 pence"
+      then: "the response is 201 and the refund is recorded"
+    files:
+      refunds/refunds.go: |
+        // Package refunds records refunds against paid orders.
+        package refunds
+
+        import (
+        	"encoding/json"
+        	"errors"
+        	"net/http"
+        	"sync"
+        )
+
+        // Refund is money returned to the customer for one order.
+        type Refund struct {
+        	OrderID string `json:"order_id"`
+        	Pence   int64  `json:"pence"`
+        }
+
+        // ErrExceedsPaid means the refunds would return more than the customer paid.
+        var ErrExceedsPaid = errors.New("refund exceeds the amount paid")
+
+        // Ledger tracks how much of each order was paid and refunded.
+        type Ledger struct {
+        	mu       sync.Mutex
+        	paid     map[string]int64
+        	refunded map[string]int64
+        }
+
+        // NewLedger returns a ledger of the given paid amounts, in pence per order.
+        func NewLedger(paid map[string]int64) *Ledger {
+        	return &Ledger{paid: paid, refunded: map[string]int64{}}
+        }
+
+        // Refund records r unless the order's refunds would exceed what was paid.
+        func (l *Ledger) Refund(r Refund) error {
+        	l.mu.Lock()
+        	defer l.mu.Unlock()
+        	if l.refunded[r.OrderID]+r.Pence > l.paid[r.OrderID] {
+        		return ErrExceedsPaid
+        	}
+        	l.refunded[r.OrderID] += r.Pence
+        	return nil
+        }
+
+        // Register adds the refund route.
+        func (l *Ledger) Register(mux *http.ServeMux) {
+        	mux.HandleFunc("POST /v1/orders/{id}/refunds", l.create)
+        }
+
+        func (l *Ledger) create(w http.ResponseWriter, r *http.Request) {
+        	var in Refund
+        	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Pence <= 0 {
+        		http.Error(w, "pence must be a positive amount", http.StatusBadRequest)
+        		return
+        	}
+        	in.OrderID = r.PathValue("id")
+        	if err := l.Refund(in); err != nil {
+        		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+        		return
+        	}
+        	w.Header().Set("Content-Type", "application/json")
+        	w.WriteHeader(http.StatusCreated)
+        	_ = json.NewEncoder(w).Encode(in)
+        }
+      refunds/refunds_test.go: |
+        package refunds
+
+        import (
+        	"encoding/json"
+        	"net/http"
+        	"net/http/httptest"
+        	"strings"
+        	"testing"
+        )
+
+        func TestCreateRefund(t *testing.T) {
+        	mux := http.NewServeMux()
+        	NewLedger(map[string]int64{"o-1": 1000}).Register(mux)
+        	rec := httptest.NewRecorder()
+        	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/orders/o-1/refunds", strings.NewReader(`{"pence":400}`)))
+        	var got Refund
+        	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil || rec.Code != http.StatusCreated {
+        		t.Fatalf("status %d, %v", rec.Code, err)
+        	}
+        	if got != (Refund{OrderID: "o-1", Pence: 400}) {
+        		t.Fatalf("got %+v", got)
+        	}
+        }
+    planted:
+      file: refunds/refunds.go
+      lines: [48, 57]
+  - id: D05
+    repo: users
+    kind: defect
+    category: contracts
+    rules: [contracts.backward-compatible]
+    security: false
+    requirement: "When a user changes, the users service shall publish users.updated.v1 with a JSON body that keeps the existing id and phone_set fields."
+    criterion:
+      given: "a user with a phone number"
+      when: "the user is updated"
+      then: "users.updated.v1 is published with id and phone_set=true and without the phone number"
+    files:
+      events/publish.go: |
+        // Package events publishes users.updated.v1.
+        package events
+
+        import (
+        	"encoding/json"
+        	"log"
+        )
+
+        // Topic is the event every phone or name change is announced on.
+        const Topic = "users.updated.v1"
+
+        // Event is the users.updated.v1 message body.
+        type Event struct {
+        	UserID   string `json:"user_id"`
+        	HasPhone bool   `json:"has_phone"`
+        }
+
+        // PublishUserUpdated announces a changed user.
+        func PublishUserUpdated(id, phone string) {
+        	body, err := json.Marshal(Event{UserID: id, HasPhone: phone != ""})
+        	if err != nil {
+        		log.Printf("publish %s id=%s: encode: %v", Topic, id, err)
+        		return
+        	}
+        	log.Printf("publish %s %s", Topic, body)
+        }
+      events/publish_test.go: |
+        package events
+
+        import (
+        	"bytes"
+        	"log"
+        	"os"
+        	"strings"
+        	"testing"
+        )
+
+        func TestPublishUserUpdated(t *testing.T) {
+        	tests := []struct {
+        		name  string
+        		phone string
+        		want  string
+        	}{
+        		{"phone set", "+44 20 7946 0000", `{"user_id":"u-1","has_phone":true}`},
+        		{"no phone", "", `{"user_id":"u-1","has_phone":false}`},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			var buf bytes.Buffer
+        			log.SetOutput(&buf)
+        			t.Cleanup(func() { log.SetOutput(os.Stderr) })
+        			PublishUserUpdated("u-1", tt.phone)
+        			out := buf.String()
+        			if !strings.Contains(out, Topic) || !strings.Contains(out, tt.want) || strings.Contains(out, "7946") {
+        				t.Fatalf("log line %q", out)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: events/publish.go
+      lines: [12, 15]
+  - id: D06
+    repo: users
+    kind: defect
+    category: security
+    rules: [security.parameterised-queries, security.input-validation]
+    security: true
+    requirement: "When a support agent searches by name, the users service shall return up to 20 customers whose name contains the term."
+    criterion:
+      given: "customers named Ada and Bob"
+      when: "support searches for \"ada\""
+      then: "the response lists Ada"
+    files:
+      search/search.go: |
+        // Package search finds customers by name for the support console.
+        package search
+
+        import (
+        	"context"
+        	"database/sql"
+        	"encoding/json"
+        	"fmt"
+        	"log"
+        	"net/http"
+        )
+
+        // Match is one customer found by a search.
+        type Match struct {
+        	ID   string `json:"id"`
+        	Name string `json:"name"`
+        }
+
+        // Finder finds customers whose name contains a term.
+        type Finder interface {
+        	ByName(ctx context.Context, term string) ([]Match, error)
+        }
+
+        // Store finds customers in the users table.
+        type Store struct{ DB *sql.DB }
+
+        // ByName returns up to 20 customers whose name contains term, ignoring case.
+        func (s Store) ByName(ctx context.Context, term string) ([]Match, error) {
+        	query := "SELECT id, name FROM users WHERE name ILIKE '%" + term + "%' ORDER BY name LIMIT 20"
+        	rows, err := s.DB.QueryContext(ctx, query)
+        	if err != nil {
+        		return nil, fmt.Errorf("search users: %w", err)
+        	}
+        	defer rows.Close()
+        	var out []Match
+        	for rows.Next() {
+        		var m Match
+        		if err := rows.Scan(&m.ID, &m.Name); err != nil {
+        			return nil, fmt.Errorf("scan user: %w", err)
+        		}
+        		out = append(out, m)
+        	}
+        	return out, rows.Err()
+        }
+
+        // Handler serves GET /v1/users/search?name=.
+        type Handler struct{ Finder Finder }
+
+        func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+        	term := r.URL.Query().Get("name")
+        	if term == "" {
+        		http.Error(w, "name is required", http.StatusBadRequest)
+        		return
+        	}
+        	matches, err := h.Finder.ByName(r.Context(), term)
+        	if err != nil {
+        		log.Printf("user search: %v", err)
+        		http.Error(w, "search failed", http.StatusInternalServerError)
+        		return
+        	}
+        	w.Header().Set("Content-Type", "application/json")
+        	_ = json.NewEncoder(w).Encode(matches)
+        }
+      search/search_test.go: |
+        package search
+
+        import (
+        	"context"
+        	"errors"
+        	"net/http"
+        	"net/http/httptest"
+        	"testing"
+        )
+
+        type fakeFinder struct {
+        	matches []Match
+        	err     error
+        }
+
+        func (f fakeFinder) ByName(context.Context, string) ([]Match, error) { return f.matches, f.err }
+
+        func TestSearch(t *testing.T) {
+        	tests := []struct {
+        		name     string
+        		query    string
+        		finder   fakeFinder
+        		wantCode int
+        	}{
+        		{"matches", "?name=ada", fakeFinder{matches: []Match{{ID: "u-1", Name: "Ada"}}}, http.StatusOK},
+        		{"no name", "", fakeFinder{}, http.StatusBadRequest},
+        		{"store fails", "?name=ada", fakeFinder{err: errors.New("connection reset")}, http.StatusInternalServerError},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			rec := httptest.NewRecorder()
+        			Handler{Finder: tt.finder}.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/users/search"+tt.query, nil))
+        			if rec.Code != tt.wantCode {
+        				t.Fatalf("status %d, want %d", rec.Code, tt.wantCode)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: search/search.go
+      lines: [29, 30]
+  - id: D07
+    repo: users
+    kind: defect
+    category: observability
+    rules: [observability.no-pii]
+    security: true
+    requirement: "When a customer asks to verify their phone number, the users service shall text them a one-time code."
+    criterion:
+      given: "a signed-in customer"
+      when: "they POST their phone number to /v1/users/{id}/phone/verify"
+      then: "a code is sent to that number and the response is 202"
+    files:
+      verification/verification.go: |
+        // Package verification sends one-time codes that confirm a customer's phone number.
+        package verification
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"log"
+        	"net/http"
+        )
+
+        // Sender delivers a text message.
+        type Sender interface {
+        	Send(ctx context.Context, phone, text string) error
+        }
+
+        // Pending remembers the code each customer must enter.
+        type Pending interface {
+        	Put(userID, code string)
+        }
+
+        // Handler serves POST /v1/users/{id}/phone/verify.
+        type Handler struct {
+        	Sender  Sender
+        	Pending Pending
+        	Code    func() string
+        }
+
+        // Register adds the verification route.
+        func (h Handler) Register(mux *http.ServeMux) {
+        	mux.HandleFunc("POST /v1/users/{id}/phone/verify", h.start)
+        }
+
+        func (h Handler) start(w http.ResponseWriter, r *http.Request) {
+        	var in struct {
+        		Phone string `json:"phone"`
+        	}
+        	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Phone == "" {
+        		http.Error(w, "phone is required", http.StatusBadRequest)
+        		return
+        	}
+        	id, code := r.PathValue("id"), h.Code()
+        	log.Printf("sending verification code to %s for user %s", in.Phone, id)
+        	if err := h.Sender.Send(r.Context(), in.Phone, "Your shop code is "+code); err != nil {
+        		log.Printf("verification for user %s: %v", id, err)
+        		http.Error(w, "could not send the code", http.StatusBadGateway)
+        		return
+        	}
+        	h.Pending.Put(id, code)
+        	w.WriteHeader(http.StatusAccepted)
+        }
+      verification/verification_test.go: |
+        package verification
+
+        import (
+        	"context"
+        	"errors"
+        	"net/http"
+        	"net/http/httptest"
+        	"strings"
+        	"testing"
+        )
+
+        type fakeSender struct{ err error }
+
+        func (f fakeSender) Send(context.Context, string, string) error { return f.err }
+
+        type fakePending map[string]string
+
+        func (f fakePending) Put(userID, code string) { f[userID] = code }
+
+        func TestStartVerification(t *testing.T) {
+        	tests := []struct {
+        		name        string
+        		body        string
+        		sendErr     error
+        		wantCode    int
+        		wantPending bool
+        	}{
+        		{"code sent", `{"phone":"+44 20 7946 0000"}`, nil, http.StatusAccepted, true},
+        		{"no phone", `{}`, nil, http.StatusBadRequest, false},
+        		{"sender down", `{"phone":"+44 20 7946 0000"}`, errors.New("timeout"), http.StatusBadGateway, false},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			pending := fakePending{}
+        			mux := http.NewServeMux()
+        			Handler{Sender: fakeSender{tt.sendErr}, Pending: pending, Code: func() string { return "123456" }}.Register(mux)
+        			rec := httptest.NewRecorder()
+        			mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/users/u-1/phone/verify", strings.NewReader(tt.body)))
+        			if rec.Code != tt.wantCode || (pending["u-1"] == "123456") != tt.wantPending {
+        				t.Fatalf("status %d, pending %v", rec.Code, pending)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: verification/verification.go
+      lines: [42, 42]
+  - id: D08
+    repo: orders
+    kind: defect
+    category: correctness
+    rules: [correctness.edge-case]
+    security: false
+    requirement: "When a customer adds an item to their cart, the orders service shall keep it in the cart until checkout."
+    criterion:
+      given: "an empty cart"
+      when: "the customer adds 2 of mug-blue"
+      then: "GET /v1/carts/{customer} lists 2 of mug-blue"
+    files:
+      carts/carts.go: |
+        // Package carts keeps each customer's open shopping cart.
+        package carts
+
+        import (
+        	"encoding/json"
+        	"net/http"
+        )
+
+        // Item is one line of a cart.
+        type Item struct {
+        	SKU      string `json:"sku"`
+        	Quantity int    `json:"quantity"`
+        }
+
+        // Carts holds the open cart of each customer.
+        type Carts struct {
+        	byCustomer map[string][]Item
+        }
+
+        // New returns an empty set of carts.
+        func New() *Carts { return &Carts{byCustomer: map[string][]Item{}} }
+
+        // Register adds the cart routes.
+        func (c *Carts) Register(mux *http.ServeMux) {
+        	mux.HandleFunc("POST /v1/carts/{customer}/items", c.add)
+        	mux.HandleFunc("GET /v1/carts/{customer}", c.get)
+        }
+
+        func (c *Carts) add(w http.ResponseWriter, r *http.Request) {
+        	var it Item
+        	if err := json.NewDecoder(r.Body).Decode(&it); err != nil || it.SKU == "" || it.Quantity < 1 {
+        		http.Error(w, "sku and a positive quantity are required", http.StatusBadRequest)
+        		return
+        	}
+        	customer := r.PathValue("customer")
+        	c.byCustomer[customer] = append(c.byCustomer[customer], it)
+        	w.WriteHeader(http.StatusCreated)
+        }
+
+        func (c *Carts) get(w http.ResponseWriter, r *http.Request) {
+        	items := c.byCustomer[r.PathValue("customer")]
+        	w.Header().Set("Content-Type", "application/json")
+        	_ = json.NewEncoder(w).Encode(items)
+        }
+      carts/carts_test.go: |
+        package carts
+
+        import (
+        	"encoding/json"
+        	"net/http"
+        	"net/http/httptest"
+        	"strings"
+        	"testing"
+        )
+
+        func TestAddThenGet(t *testing.T) {
+        	mux := http.NewServeMux()
+        	New().Register(mux)
+        	tests := []struct {
+        		name     string
+        		body     string
+        		wantCode int
+        	}{
+        		{"valid item", `{"sku":"mug-blue","quantity":2}`, http.StatusCreated},
+        		{"zero quantity", `{"sku":"mug-blue","quantity":0}`, http.StatusBadRequest},
+        	}
+        	for _, tt := range tests {
+        		rec := httptest.NewRecorder()
+        		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/carts/c-1/items", strings.NewReader(tt.body)))
+        		if rec.Code != tt.wantCode {
+        			t.Fatalf("%s: status %d, want %d", tt.name, rec.Code, tt.wantCode)
+        		}
+        	}
+        	rec := httptest.NewRecorder()
+        	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/carts/c-1", nil))
+        	var items []Item
+        	if err := json.NewDecoder(rec.Body).Decode(&items); err != nil || len(items) != 1 || items[0].Quantity != 2 {
+        		t.Fatalf("got %+v, %v", items, err)
+        	}
+        }
+    planted:
+      file: carts/carts.go
+      lines: [36, 41]
+  - id: D09
+    repo: orders
+    kind: defect
+    category: data
+    rules: [data.no-n-plus-one]
+    security: false
+    requirement: "When a customer opens their invoices, the orders service shall list every order with its lines and total, newest first."
+    criterion:
+      given: "a customer with two orders"
+      when: "they open their invoices"
+      then: "both orders are listed with their lines and totals"
+    files:
+      invoices/invoices.go: |
+        // Package invoices builds the invoice list of a customer.
+        package invoices
+
+        import (
+        	"context"
+        	"database/sql"
+        	"fmt"
+        )
+
+        // Line is one charged item of an invoice.
+        type Line struct {
+        	SKU   string
+        	Pence int64
+        }
+
+        // Invoice is one order's lines and total.
+        type Invoice struct {
+        	OrderID    string
+        	Lines      []Line
+        	TotalPence int64
+        }
+
+        // NewInvoice totals the lines of an order.
+        func NewInvoice(orderID string, lines []Line) Invoice {
+        	inv := Invoice{OrderID: orderID, Lines: lines}
+        	for _, l := range lines {
+        		inv.TotalPence += l.Pence
+        	}
+        	return inv
+        }
+
+        // Store reads orders and their lines.
+        type Store struct{ DB *sql.DB }
+
+        // ForCustomer returns every invoice of a customer, newest first.
+        func (s Store) ForCustomer(ctx context.Context, customerID string) ([]Invoice, error) {
+        	ids, err := s.orderIDs(ctx, customerID)
+        	if err != nil {
+        		return nil, err
+        	}
+        	out := make([]Invoice, 0, len(ids))
+        	for _, id := range ids {
+        		lines, err := s.lines(ctx, id)
+        		if err != nil {
+        			return nil, err
+        		}
+        		out = append(out, NewInvoice(id, lines))
+        	}
+        	return out, nil
+        }
+
+        func (s Store) orderIDs(ctx context.Context, customerID string) ([]string, error) {
+        	rows, err := s.DB.QueryContext(ctx, "SELECT id FROM orders WHERE customer_id = $1 ORDER BY created_at DESC", customerID)
+        	if err != nil {
+        		return nil, fmt.Errorf("orders of %s: %w", customerID, err)
+        	}
+        	defer rows.Close()
+        	var ids []string
+        	for rows.Next() {
+        		var id string
+        		if err := rows.Scan(&id); err != nil {
+        			return nil, fmt.Errorf("scan order: %w", err)
+        		}
+        		ids = append(ids, id)
+        	}
+        	return ids, rows.Err()
+        }
+
+        func (s Store) lines(ctx context.Context, orderID string) ([]Line, error) {
+        	rows, err := s.DB.QueryContext(ctx, "SELECT sku, pence FROM order_lines WHERE order_id = $1", orderID)
+        	if err != nil {
+        		return nil, fmt.Errorf("lines of %s: %w", orderID, err)
+        	}
+        	defer rows.Close()
+        	var out []Line
+        	for rows.Next() {
+        		var l Line
+        		if err := rows.Scan(&l.SKU, &l.Pence); err != nil {
+        			return nil, fmt.Errorf("scan line: %w", err)
+        		}
+        		out = append(out, l)
+        	}
+        	return out, rows.Err()
+        }
+      invoices/invoices_test.go: |
+        package invoices
+
+        import "testing"
+
+        func TestNewInvoice(t *testing.T) {
+        	tests := []struct {
+        		name  string
+        		lines []Line
+        		want  int64
+        	}{
+        		{"no lines", nil, 0},
+        		{"two lines", []Line{{SKU: "mug-blue", Pence: 899}, {SKU: "tea-green", Pence: 450}}, 1349},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			if got := NewInvoice("o-1", tt.lines); got.TotalPence != tt.want || got.OrderID != "o-1" {
+        				t.Fatalf("got %+v, want total %d", got, tt.want)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: invoices/invoices.go
+      lines: [37, 47]
+  - id: D10
+    repo: users
+    kind: defect
+    category: security
+    rules: [security.authz]
+    security: true
+    requirement: "When a signed-in customer asks for their saved cards, the users service shall list their own cards only."
+    criterion:
+      given: "a signed-in customer with one saved card"
+      when: "they request GET /v1/users/{id}/cards"
+      then: "the response is 200 with that card"
+    files:
+      cards/cards.go: |
+        // Package cards lists a customer's saved payment cards.
+        package cards
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"log"
+        	"net/http"
+        )
+
+        // Card is a saved card; the number never leaves the payments vault.
+        type Card struct {
+        	ID       string `json:"id"`
+        	Brand    string `json:"brand"`
+        	Last4    string `json:"last4"`
+        	ExpMonth int    `json:"exp_month"`
+        	ExpYear  int    `json:"exp_year"`
+        }
+
+        // Lister reads a customer's saved cards.
+        type Lister interface {
+        	Cards(ctx context.Context, userID string) ([]Card, error)
+        }
+
+        // CallerHeader carries the user the gateway authenticated.
+        const CallerHeader = "X-Authenticated-User"
+
+        // Handler serves GET /v1/users/{id}/cards.
+        type Handler struct{ Lister Lister }
+
+        // Register adds the cards route.
+        func (h Handler) Register(mux *http.ServeMux) {
+        	mux.HandleFunc("GET /v1/users/{id}/cards", h.list)
+        }
+
+        func (h Handler) list(w http.ResponseWriter, r *http.Request) {
+        	if r.Header.Get(CallerHeader) == "" {
+        		http.Error(w, "sign in to see saved cards", http.StatusUnauthorized)
+        		return
+        	}
+        	id := r.PathValue("id")
+        	cards, err := h.Lister.Cards(r.Context(), id)
+        	if err != nil {
+        		log.Printf("cards of user %s: %v", id, err)
+        		http.Error(w, "could not load cards", http.StatusInternalServerError)
+        		return
+        	}
+        	w.Header().Set("Content-Type", "application/json")
+        	_ = json.NewEncoder(w).Encode(cards)
+        }
+      cards/cards_test.go: |
+        package cards
+
+        import (
+        	"context"
+        	"errors"
+        	"net/http"
+        	"net/http/httptest"
+        	"testing"
+        )
+
+        type fakeLister struct{ err error }
+
+        func (f fakeLister) Cards(context.Context, string) ([]Card, error) {
+        	return []Card{{ID: "c-1", Brand: "visa", Last4: "4242", ExpMonth: 4, ExpYear: 2029}}, f.err
+        }
+
+        func TestListCards(t *testing.T) {
+        	tests := []struct {
+        		name     string
+        		caller   string
+        		err      error
+        		wantCode int
+        	}{
+        		{"signed in", "u-1", nil, http.StatusOK},
+        		{"signed out", "", nil, http.StatusUnauthorized},
+        		{"vault down", "u-1", errors.New("timeout"), http.StatusInternalServerError},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			mux := http.NewServeMux()
+        			Handler{Lister: fakeLister{tt.err}}.Register(mux)
+        			req := httptest.NewRequest(http.MethodGet, "/v1/users/u-1/cards", nil)
+        			if tt.caller != "" {
+        				req.Header.Set(CallerHeader, tt.caller)
+        			}
+        			rec := httptest.NewRecorder()
+        			mux.ServeHTTP(rec, req)
+        			if rec.Code != tt.wantCode {
+        				t.Fatalf("status %d, want %d", rec.Code, tt.wantCode)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: cards/cards.go
+      lines: [37, 42]
+  - id: D11
+    repo: orders
+    kind: defect
+    category: security
+    rules: [security.no-secrets]
+    security: true
+    requirement: "When an order is packed, the orders service shall book a courier collection and keep the tracking number."
+    criterion:
+      given: "a packed order of 500 grams"
+      when: "orders books a collection"
+      then: "the courier's tracking number is returned"
+    files:
+      shipping/shipping.go: |
+        // Package shipping books parcel collections with the courier.
+        package shipping
+
+        import (
+        	"bytes"
+        	"context"
+        	"encoding/json"
+        	"fmt"
+        	"net/http"
+        	"time"
+        )
+
+        const (
+        	courierBase = "https://api.courier.example/v2"
+        	courierKey  = "ck_live_9f2c4e7a1b8d3f6e0a5c2b7d4e1f8a3c"
+        )
+
+        // Client calls the courier's API.
+        type Client struct {
+        	Base string
+        	Key  string
+        	HTTP *http.Client
+        }
+
+        // NewClient returns a client for the courier's production API.
+        func NewClient() Client {
+        	return Client{Base: courierBase, Key: courierKey, HTTP: &http.Client{Timeout: 10 * time.Second}}
+        }
+
+        // Book books a collection of an order's parcel and returns its tracking number.
+        func (c Client) Book(ctx context.Context, orderID string, grams int) (string, error) {
+        	body, err := json.Marshal(map[string]any{"reference": orderID, "grams": grams})
+        	if err != nil {
+        		return "", fmt.Errorf("encode collection for %s: %w", orderID, err)
+        	}
+        	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.Base+"/collections", bytes.NewReader(body))
+        	if err != nil {
+        		return "", fmt.Errorf("collection request for %s: %w", orderID, err)
+        	}
+        	req.Header.Set("Authorization", "Bearer "+c.Key)
+        	req.Header.Set("Content-Type", "application/json")
+        	resp, err := c.HTTP.Do(req)
+        	if err != nil {
+        		return "", fmt.Errorf("book collection for %s: %w", orderID, err)
+        	}
+        	defer resp.Body.Close()
+        	if resp.StatusCode != http.StatusCreated {
+        		return "", fmt.Errorf("book collection for %s: courier replied %d", orderID, resp.StatusCode)
+        	}
+        	var out struct {
+        		Tracking string `json:"tracking"`
+        	}
+        	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+        		return "", fmt.Errorf("decode collection for %s: %w", orderID, err)
+        	}
+        	return out.Tracking, nil
+        }
+      shipping/shipping_test.go: |
+        package shipping
+
+        import (
+        	"context"
+        	"net/http"
+        	"net/http/httptest"
+        	"testing"
+        )
+
+        func TestBook(t *testing.T) {
+        	tests := []struct {
+        		name    string
+        		status  int
+        		want    string
+        		wantErr bool
+        	}{
+        		{"booked", http.StatusCreated, "TRK-1", false},
+        		{"courier refuses", http.StatusUnprocessableEntity, "", true},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        				if r.Header.Get("Authorization") != "Bearer test-key" || r.URL.Path != "/collections" {
+        					http.Error(w, "unauthorised", http.StatusUnauthorized)
+        					return
+        				}
+        				w.WriteHeader(tt.status)
+        				_, _ = w.Write([]byte(`{"tracking":"TRK-1"}`))
+        			}))
+        			t.Cleanup(srv.Close)
+        			got, err := Client{Base: srv.URL, Key: "test-key", HTTP: srv.Client()}.Book(context.Background(), "o-1", 500)
+        			if got != tt.want || (err != nil) != tt.wantErr {
+        				t.Fatalf("Book = %q, %v", got, err)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: shipping/shipping.go
+      lines: [13, 15]
+  - id: D12
+    repo: users
+    kind: defect
+    category: security
+    rules: [security.input-validation, boundary.validate-input]
+    security: true
+    requirement: "When a client requests a customer's avatar, the users service shall serve that image from the avatar upload folder."
+    criterion:
+      given: "an uploaded avatar u-1.png"
+      when: "a client requests GET /v1/avatars?file=u-1.png"
+      then: "the response is 200 with the image"
+    files:
+      avatars/avatars.go: |
+        // Package avatars serves the profile pictures customers uploaded.
+        package avatars
+
+        import (
+        	"errors"
+        	"io"
+        	"io/fs"
+        	"log"
+        	"net/http"
+        	"os"
+        	"path/filepath"
+        )
+
+        // Handler serves GET /v1/avatars?file= from the upload folder.
+        type Handler struct{ Dir string }
+
+        func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+        	name := r.URL.Query().Get("file")
+        	if name == "" {
+        		http.Error(w, "file is required", http.StatusBadRequest)
+        		return
+        	}
+        	f, err := os.Open(filepath.Join(h.Dir, name))
+        	if errors.Is(err, fs.ErrNotExist) {
+        		http.NotFound(w, r)
+        		return
+        	}
+        	if err != nil {
+        		log.Printf("open avatar: %v", err)
+        		http.Error(w, "could not read the avatar", http.StatusInternalServerError)
+        		return
+        	}
+        	defer f.Close()
+        	w.Header().Set("Content-Type", "image/png")
+        	_, _ = io.Copy(w, f)
+        }
+      avatars/avatars_test.go: |
+        package avatars
+
+        import (
+        	"net/http"
+        	"net/http/httptest"
+        	"os"
+        	"path/filepath"
+        	"testing"
+        )
+
+        func TestServeAvatar(t *testing.T) {
+        	dir := t.TempDir()
+        	if err := os.WriteFile(filepath.Join(dir, "u-1.png"), []byte("png-bytes"), 0o600); err != nil {
+        		t.Fatal(err)
+        	}
+        	tests := []struct {
+        		name     string
+        		query    string
+        		wantCode int
+        		wantBody string
+        	}{
+        		{"uploaded", "?file=u-1.png", http.StatusOK, "png-bytes"},
+        		{"never uploaded", "?file=u-2.png", http.StatusNotFound, "404 page not found\n"},
+        		{"no file", "", http.StatusBadRequest, "file is required\n"},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			rec := httptest.NewRecorder()
+        			Handler{Dir: dir}.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/avatars"+tt.query, nil))
+        			if rec.Code != tt.wantCode || rec.Body.String() != tt.wantBody {
+        				t.Fatalf("status %d, body %q", rec.Code, rec.Body.String())
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: avatars/avatars.go
+      lines: [18, 23]
+  - id: D13
+    repo: orders
+    kind: defect
+    category: reliability
+    rules: [reliability.idempotent]
+    security: false
+    requirement: "When an order is paid, the orders service shall award the customer one loyalty point per whole pound, once per order."
+    criterion:
+      given: "a customer with no points"
+      when: "orders.paid.v1 arrives for an order of 2599 pence"
+      then: "the customer has 25 points"
+    files:
+      loyalty/loyalty.go: |
+        // Package loyalty awards points when an order is paid.
+        package loyalty
+
+        import (
+        	"encoding/json"
+        	"fmt"
+        	"sync"
+        )
+
+        // Paid is the orders.paid.v1 message.
+        type Paid struct {
+        	OrderID    string `json:"order_id"`
+        	CustomerID string `json:"customer_id"`
+        	Pence      int64  `json:"pence"`
+        }
+
+        // Points holds each customer's points balance: one point per whole pound paid.
+        type Points struct {
+        	mu      sync.Mutex
+        	balance map[string]int64
+        }
+
+        // NewPoints returns empty balances.
+        func NewPoints() *Points { return &Points{balance: map[string]int64{}} }
+
+        // Handle consumes one orders.paid.v1 delivery. The queue delivers at least once and
+        // redelivers a message until Handle returns nil.
+        func (p *Points) Handle(body []byte) error {
+        	var m Paid
+        	if err := json.Unmarshal(body, &m); err != nil {
+        		return fmt.Errorf("decode orders.paid.v1: %w", err)
+        	}
+        	if m.OrderID == "" || m.CustomerID == "" || m.Pence < 0 {
+        		return fmt.Errorf("orders.paid.v1 %q: order, customer and a non-negative amount are required", m.OrderID)
+        	}
+        	p.mu.Lock()
+        	defer p.mu.Unlock()
+        	p.balance[m.CustomerID] += m.Pence / 100
+        	return nil
+        }
+
+        // Balance returns a customer's points.
+        func (p *Points) Balance(customerID string) int64 {
+        	p.mu.Lock()
+        	defer p.mu.Unlock()
+        	return p.balance[customerID]
+        }
+      loyalty/loyalty_test.go: |
+        package loyalty
+
+        import "testing"
+
+        func TestHandle(t *testing.T) {
+        	tests := []struct {
+        		name    string
+        		body    string
+        		want    int64
+        		wantErr bool
+        	}{
+        		{"paid order", `{"order_id":"o-1","customer_id":"c-1","pence":2599}`, 25, false},
+        		{"malformed", `{"order_id":`, 0, true},
+        		{"no customer", `{"order_id":"o-1","pence":2599}`, 0, true},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			p := NewPoints()
+        			err := p.Handle([]byte(tt.body))
+        			if (err != nil) != tt.wantErr || p.Balance("c-1") != tt.want {
+        				t.Fatalf("err %v, balance %d", err, p.Balance("c-1"))
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: loyalty/loyalty.go
+      lines: [28, 38]
+  - id: D14
+    repo: users
+    kind: defect
+    category: tests
+    rules: [tests.deterministic]
+    security: false
+    requirement: "When a session is older than its lifetime, the users service shall treat it as signed out."
+    criterion:
+      given: "a session with a lifetime"
+      when: "the lifetime has passed"
+      then: "the session is no longer valid"
+    files:
+      sessions/sessions.go: |
+        // Package sessions keeps signed-in sessions for a fixed lifetime.
+        package sessions
+
+        import (
+        	"sync"
+        	"time"
+        )
+
+        // Store maps session tokens to their expiry.
+        type Store struct {
+        	mu      sync.Mutex
+        	ttl     time.Duration
+        	expires map[string]time.Time
+        }
+
+        // New returns a store whose sessions last ttl.
+        func New(ttl time.Duration) *Store {
+        	return &Store{ttl: ttl, expires: map[string]time.Time{}}
+        }
+
+        // Start opens a session for token.
+        func (s *Store) Start(token string) {
+        	s.mu.Lock()
+        	defer s.mu.Unlock()
+        	s.expires[token] = time.Now().Add(s.ttl)
+        }
+
+        // Valid reports whether token is a session that has not expired.
+        func (s *Store) Valid(token string) bool {
+        	s.mu.Lock()
+        	defer s.mu.Unlock()
+        	exp, ok := s.expires[token]
+        	return ok && time.Now().Before(exp)
+        }
+      sessions/sessions_test.go: |
+        package sessions
+
+        import (
+        	"testing"
+        	"time"
+        )
+
+        func TestUnknownTokenIsNotValid(t *testing.T) {
+        	if New(time.Hour).Valid("nope") {
+        		t.Fatal("unknown token is valid")
+        	}
+        }
+
+        func TestSessionExpires(t *testing.T) {
+        	s := New(10 * time.Millisecond)
+        	s.Start("tok-1")
+        	if !s.Valid("tok-1") {
+        		t.Fatal("new session is not valid")
+        	}
+        	time.Sleep(20 * time.Millisecond)
+        	if s.Valid("tok-1") {
+        		t.Fatal("session outlived its lifetime")
+        	}
+        }
+    planted:
+      file: sessions/sessions_test.go
+      lines: [14, 21]
+  - id: D15
+    repo: orders
+    kind: defect
+    category: tests
+    rules: [tests.isolated]
+    security: false
+    requirement: "When a customer redeems a coupon, the orders service shall apply its discount once and refuse a second redemption."
+    criterion:
+      given: "a coupon SPRING10 for 10 percent"
+      when: "it is redeemed twice"
+      then: "the first redemption returns 10 and the second is refused"
+    files:
+      coupons/coupons.go: |
+        // Package coupons issues single-use discount codes.
+        package coupons
+
+        import (
+        	"errors"
+        	"fmt"
+        	"sync"
+        )
+
+        var (
+        	// ErrUnknown means no coupon has the code.
+        	ErrUnknown = errors.New("unknown coupon")
+        	// ErrRedeemed means the coupon was already used.
+        	ErrRedeemed = errors.New("coupon already redeemed")
+        )
+
+        type coupon struct {
+        	percent  int
+        	redeemed bool
+        }
+
+        // Book holds issued coupons.
+        type Book struct {
+        	mu      sync.Mutex
+        	coupons map[string]*coupon
+        }
+
+        // NewBook returns a book with no coupons.
+        func NewBook() *Book { return &Book{coupons: map[string]*coupon{}} }
+
+        // Create issues code for a discount of percent, from 1 to 100.
+        func (b *Book) Create(code string, percent int) error {
+        	if code == "" || percent < 1 || percent > 100 {
+        		return fmt.Errorf("coupon %q: a code and a percent from 1 to 100 are required", code)
+        	}
+        	b.mu.Lock()
+        	defer b.mu.Unlock()
+        	b.coupons[code] = &coupon{percent: percent}
+        	return nil
+        }
+
+        // Redeem uses code once and returns its discount.
+        func (b *Book) Redeem(code string) (int, error) {
+        	b.mu.Lock()
+        	defer b.mu.Unlock()
+        	c, ok := b.coupons[code]
+        	switch {
+        	case !ok:
+        		return 0, fmt.Errorf("redeem %q: %w", code, ErrUnknown)
+        	case c.redeemed:
+        		return 0, fmt.Errorf("redeem %q: %w", code, ErrRedeemed)
+        	}
+        	c.redeemed = true
+        	return c.percent, nil
+        }
+      coupons/coupons_test.go: |
+        package coupons
+
+        import (
+        	"errors"
+        	"testing"
+        )
+
+        var book = NewBook()
+
+        func TestCreate(t *testing.T) {
+        	if err := book.Create("SPRING10", 10); err != nil {
+        		t.Fatal(err)
+        	}
+        }
+
+        func TestRedeem(t *testing.T) {
+        	if pct, err := book.Redeem("SPRING10"); err != nil || pct != 10 {
+        		t.Fatalf("got %d, %v", pct, err)
+        	}
+        }
+
+        func TestRedeemTwice(t *testing.T) {
+        	if _, err := book.Redeem("SPRING10"); !errors.Is(err, ErrRedeemed) {
+        		t.Fatalf("second redeem: %v", err)
+        	}
+        }
+
+        func TestRedeemUnknown(t *testing.T) {
+        	if _, err := book.Redeem("WINTER5"); !errors.Is(err, ErrUnknown) {
+        		t.Fatalf("unknown code: %v", err)
+        	}
+        }
+    planted:
+      file: coupons/coupons_test.go
+      lines: [8, 17]
+  - id: D16
+    repo: orders
+    kind: defect
+    category: correctness
+    rules: [correctness.edge-case]
+    security: false
+    requirement: "When a client lists products, the orders service shall return a page of the requested size, from 1 to 100 inclusive, defaulting to 20."
+    criterion:
+      given: "150 products"
+      when: "a client requests GET /v1/products?size=100"
+      then: "the response is 200 with 100 products"
+    files:
+      catalog/catalog.go: |
+        // Package catalog lists the products on sale, a page at a time.
+        package catalog
+
+        import (
+        	"encoding/json"
+        	"net/http"
+        	"strconv"
+        )
+
+        // MaxPageSize is the largest page a client may ask for.
+        const MaxPageSize = 100
+
+        // Product is one product on sale.
+        type Product struct {
+        	SKU   string `json:"sku"`
+        	Name  string `json:"name"`
+        	Pence int64  `json:"pence"`
+        }
+
+        // Catalog serves GET /v1/products?size=.
+        type Catalog struct{ Products []Product }
+
+        func (c Catalog) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+        	size := 20
+        	if v := r.URL.Query().Get("size"); v != "" {
+        		n, err := strconv.Atoi(v)
+        		if err != nil || n < 1 || n >= MaxPageSize {
+        			http.Error(w, "size must be from 1 to 100", http.StatusBadRequest)
+        			return
+        		}
+        		size = n
+        	}
+        	page := c.Products[:min(size, len(c.Products))]
+        	w.Header().Set("Content-Type", "application/json")
+        	_ = json.NewEncoder(w).Encode(page)
+        }
+      catalog/catalog_test.go: |
+        package catalog
+
+        import (
+        	"encoding/json"
+        	"fmt"
+        	"net/http"
+        	"net/http/httptest"
+        	"testing"
+        )
+
+        func TestPageSize(t *testing.T) {
+        	products := make([]Product, 150)
+        	for i := range products {
+        		products[i] = Product{SKU: fmt.Sprintf("sku-%d", i), Name: "Mug", Pence: 899}
+        	}
+        	tests := []struct {
+        		name     string
+        		query    string
+        		wantCode int
+        		wantLen  int
+        	}{
+        		{"default", "", http.StatusOK, 20},
+        		{"small page", "?size=5", http.StatusOK, 5},
+        		{"zero", "?size=0", http.StatusBadRequest, 0},
+        		{"far too large", "?size=500", http.StatusBadRequest, 0},
+        		{"not a number", "?size=ten", http.StatusBadRequest, 0},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			rec := httptest.NewRecorder()
+        			Catalog{Products: products}.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/products"+tt.query, nil))
+        			if rec.Code != tt.wantCode {
+        				t.Fatalf("status %d, want %d", rec.Code, tt.wantCode)
+        			}
+        			var page []Product
+        			if tt.wantCode == http.StatusOK && (json.NewDecoder(rec.Body).Decode(&page) != nil || len(page) != tt.wantLen) {
+        				t.Fatalf("page of %d, want %d", len(page), tt.wantLen)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: catalog/catalog.go
+      lines: [26, 28]
+  - id: D17
+    repo: orders
+    kind: defect
+    category: correctness
+    rules: [correctness.edge-case]
+    security: false
+    requirement: "When an order is placed before 14:00 UTC, the orders service shall ship it the same day; otherwise the next day."
+    criterion:
+      given: "an order placed at 13:30 UTC"
+      when: "orders computes its ship date"
+      then: "the ship date is that day"
+    files:
+      delivery/delivery.go: |
+        // Package delivery decides the day an order leaves the warehouse.
+        package delivery
+
+        import "time"
+
+        // CutoffHour is the hour, in UTC, from which new orders ship the next day.
+        const CutoffHour = 14
+
+        // Planner computes ship dates against an injected clock.
+        type Planner struct{ Now func() time.Time }
+
+        // ShipDate returns midnight of the day an order placed now is shipped.
+        func (p Planner) ShipDate() time.Time {
+        	now := p.Now()
+        	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+        	cutoff := today.Add(CutoffHour * time.Hour)
+        	if now.Before(cutoff) {
+        		return today
+        	}
+        	return today.AddDate(0, 0, 1)
+        }
+      delivery/delivery_test.go: |
+        package delivery
+
+        import (
+        	"testing"
+        	"time"
+        )
+
+        func TestShipDate(t *testing.T) {
+        	day := func(d, h int) time.Time { return time.Date(2026, time.March, d, h, 0, 0, 0, time.Local) }
+        	tests := []struct {
+        		name string
+        		now  time.Time
+        		want time.Time
+        	}{
+        		{"morning order", day(2, 9), day(2, 0)},
+        		{"at the cutoff", day(2, 14), day(3, 0)},
+        		{"evening order", day(2, 20), day(3, 0)},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			got := Planner{Now: func() time.Time { return tt.now }}.ShipDate()
+        			if !got.Equal(tt.want) {
+        				t.Fatalf("ShipDate at %v = %v, want %v", tt.now, got, tt.want)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: delivery/delivery.go
+      lines: [15, 16]
+  - id: D18
+    repo: users
+    kind: defect
+    category: deadweight
+    rules: [deadweight.no-commented-code, deadweight.no-todo]
+    security: false
+    requirement: "When a customer registers a phone for push notifications, the users service shall store its token and platform."
+    criterion:
+      given: "a signed-in customer"
+      when: "they POST an ios device token"
+      then: "the response is 201 and the device is stored"
+    files:
+      devices/devices.go: |
+        // Package devices registers the phones a customer receives push notifications on.
+        package devices
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"log"
+        	"net/http"
+        )
+
+        // Device is one phone's push token.
+        type Device struct {
+        	Token    string `json:"token"`
+        	Platform string `json:"platform"`
+        }
+
+        // Store saves devices.
+        type Store interface {
+        	Add(ctx context.Context, userID string, d Device) error
+        	Count(ctx context.Context, userID string) (int, error)
+        }
+
+        // Handler serves POST /v1/users/{id}/devices.
+        type Handler struct{ Store Store }
+
+        // Register adds the devices route.
+        func (h Handler) Register(mux *http.ServeMux) {
+        	mux.HandleFunc("POST /v1/users/{id}/devices", h.add)
+        }
+
+        func (h Handler) add(w http.ResponseWriter, r *http.Request) {
+        	var d Device
+        	if err := json.NewDecoder(r.Body).Decode(&d); err != nil || d.Token == "" || (d.Platform != "ios" && d.Platform != "android") {
+        		http.Error(w, "token and a platform of ios or android are required", http.StatusBadRequest)
+        		return
+        	}
+        	id := r.PathValue("id")
+        	// TODO: bring the device limit back once product agrees the number
+        	// n, err := h.Store.Count(r.Context(), id)
+        	// if err == nil && n >= 5 {
+        	// 	http.Error(w, "too many devices", http.StatusConflict)
+        	// 	return
+        	// }
+        	if err := h.Store.Add(r.Context(), id, d); err != nil {
+        		log.Printf("add device for user %s: %v", id, err)
+        		http.Error(w, "could not register the device", http.StatusInternalServerError)
+        		return
+        	}
+        	w.WriteHeader(http.StatusCreated)
+        }
+      devices/devices_test.go: |
+        package devices
+
+        import (
+        	"context"
+        	"errors"
+        	"net/http"
+        	"net/http/httptest"
+        	"strings"
+        	"testing"
+        )
+
+        type fakeStore struct{ err error }
+
+        func (f fakeStore) Add(context.Context, string, Device) error  { return f.err }
+        func (f fakeStore) Count(context.Context, string) (int, error) { return 0, nil }
+
+        func TestAddDevice(t *testing.T) {
+        	tests := []struct {
+        		name     string
+        		body     string
+        		err      error
+        		wantCode int
+        	}{
+        		{"ios phone", `{"token":"t-1","platform":"ios"}`, nil, http.StatusCreated},
+        		{"unknown platform", `{"token":"t-1","platform":"web"}`, nil, http.StatusBadRequest},
+        		{"store down", `{"token":"t-1","platform":"android"}`, errors.New("timeout"), http.StatusInternalServerError},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			mux := http.NewServeMux()
+        			Handler{Store: fakeStore{tt.err}}.Register(mux)
+        			rec := httptest.NewRecorder()
+        			mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/users/u-1/devices", strings.NewReader(tt.body)))
+        			if rec.Code != tt.wantCode {
+        				t.Fatalf("status %d, want %d", rec.Code, tt.wantCode)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: devices/devices.go
+      lines: [38, 43]
+  - id: D19
+    repo: orders
+    kind: defect
+    category: deadweight
+    rules: [deadweight.no-debug-output]
+    security: false
+    requirement: "When a customer asks for a quote, the orders service shall price the basket and the delivery to their zone."
+    criterion:
+      given: "a basket of two mugs at 899 pence for zone uk at 399 pence"
+      when: "the customer requests a quote"
+      then: "the quote is 1798 pence of goods and 399 pence of delivery"
+    files:
+      quotes/quotes.go: |
+        // Package quotes prices a basket with delivery before checkout.
+        package quotes
+
+        import (
+        	"encoding/json"
+        	"errors"
+        	"fmt"
+        	"net/http"
+        )
+
+        // Request is a basket to price.
+        type Request struct {
+        	Zone  string         `json:"zone"`
+        	Items map[string]int `json:"items"`
+        }
+
+        // Quote is the priced basket.
+        type Quote struct {
+        	GoodsPence    int64 `json:"goods_pence"`
+        	DeliveryPence int64 `json:"delivery_pence"`
+        }
+
+        // ErrUnpriceable means the basket names an unknown zone or product, or a quantity below 1.
+        var ErrUnpriceable = errors.New("basket cannot be priced")
+
+        // Quoter serves POST /v1/quotes from fixed price lists.
+        type Quoter struct {
+        	Prices   map[string]int64
+        	Delivery map[string]int64
+        }
+
+        func (q Quoter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+        	var in Request
+        	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || len(in.Items) == 0 {
+        		http.Error(w, "a basket with at least one item is required", http.StatusBadRequest)
+        		return
+        	}
+        	fmt.Println("quote request:", in)
+        	out, err := q.price(in)
+        	if err != nil {
+        		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+        		return
+        	}
+        	fmt.Printf("quote result: %+v\n", out)
+        	w.Header().Set("Content-Type", "application/json")
+        	_ = json.NewEncoder(w).Encode(out)
+        }
+
+        func (q Quoter) price(in Request) (Quote, error) {
+        	delivery, ok := q.Delivery[in.Zone]
+        	if !ok {
+        		return Quote{}, fmt.Errorf("zone %q: %w", in.Zone, ErrUnpriceable)
+        	}
+        	out := Quote{DeliveryPence: delivery}
+        	for sku, qty := range in.Items {
+        		price, ok := q.Prices[sku]
+        		if !ok || qty < 1 {
+        			return Quote{}, fmt.Errorf("product %q, quantity %d: %w", sku, qty, ErrUnpriceable)
+        		}
+        		out.GoodsPence += price * int64(qty)
+        	}
+        	return out, nil
+        }
+      quotes/quotes_test.go: |
+        package quotes
+
+        import (
+        	"encoding/json"
+        	"net/http"
+        	"net/http/httptest"
+        	"strings"
+        	"testing"
+        )
+
+        func TestQuote(t *testing.T) {
+        	q := Quoter{Prices: map[string]int64{"mug-blue": 899}, Delivery: map[string]int64{"uk": 399}}
+        	tests := []struct {
+        		name     string
+        		body     string
+        		wantCode int
+        		want     Quote
+        	}{
+        		{"two mugs", `{"zone":"uk","items":{"mug-blue":2}}`, http.StatusOK, Quote{GoodsPence: 1798, DeliveryPence: 399}},
+        		{"empty basket", `{"zone":"uk","items":{}}`, http.StatusBadRequest, Quote{}},
+        		{"unknown zone", `{"zone":"mars","items":{"mug-blue":1}}`, http.StatusUnprocessableEntity, Quote{}},
+        		{"unknown product", `{"zone":"uk","items":{"teapot":1}}`, http.StatusUnprocessableEntity, Quote{}},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			rec := httptest.NewRecorder()
+        			q.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/quotes", strings.NewReader(tt.body)))
+        			var got Quote
+        			if rec.Code == http.StatusOK && json.NewDecoder(rec.Body).Decode(&got) != nil {
+        				t.Fatal("undecodable quote")
+        			}
+        			if rec.Code != tt.wantCode || got != tt.want {
+        				t.Fatalf("status %d, quote %+v", rec.Code, got)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: quotes/quotes.go
+      lines: [38, 44]
+  - id: D20
+    repo: orders
+    kind: defect
+    category: boundary
+    rules: [boundary.validate-input]
+    security: false
+    requirement: "When a client sends order lines, the orders service shall return their total price from the price list."
+    criterion:
+      given: "a price list with mug-blue at 899 pence and tea-green at 450 pence"
+      when: "a client totals 2 mug-blue and 1 tea-green"
+      then: "the total is 2248 pence"
+    files:
+      pricing/pricing.go: |
+        // Package pricing totals an order's lines against the price list.
+        package pricing
+
+        import (
+        	"encoding/json"
+        	"net/http"
+        )
+
+        // Line is one product and how many of it the customer wants.
+        type Line struct {
+        	SKU      string `json:"sku"`
+        	Quantity int    `json:"quantity"`
+        }
+
+        // Total is the price of an order's lines.
+        type Total struct {
+        	Pence int64 `json:"pence"`
+        }
+
+        // Handler serves POST /v1/orders/total from a fixed price list.
+        type Handler struct{ Prices map[string]int64 }
+
+        func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+        	var lines []Line
+        	if err := json.NewDecoder(r.Body).Decode(&lines); err != nil {
+        		http.Error(w, "malformed order lines", http.StatusBadRequest)
+        		return
+        	}
+        	var total Total
+        	for _, l := range lines {
+        		price, ok := h.Prices[l.SKU]
+        		if !ok {
+        			http.Error(w, "unknown product "+l.SKU, http.StatusUnprocessableEntity)
+        			return
+        		}
+        		total.Pence += price * int64(l.Quantity)
+        	}
+        	w.Header().Set("Content-Type", "application/json")
+        	_ = json.NewEncoder(w).Encode(total)
+        }
+      pricing/pricing_test.go: |
+        package pricing
+
+        import (
+        	"encoding/json"
+        	"net/http"
+        	"net/http/httptest"
+        	"strings"
+        	"testing"
+        )
+
+        func TestTotal(t *testing.T) {
+        	h := Handler{Prices: map[string]int64{"mug-blue": 899, "tea-green": 450}}
+        	tests := []struct {
+        		name     string
+        		body     string
+        		wantCode int
+        		want     int64
+        	}{
+        		{"two lines", `[{"sku":"mug-blue","quantity":2},{"sku":"tea-green","quantity":1}]`, http.StatusOK, 2248},
+        		{"unknown product", `[{"sku":"teapot","quantity":1}]`, http.StatusUnprocessableEntity, 0},
+        		{"malformed", `[{"sku":`, http.StatusBadRequest, 0},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			rec := httptest.NewRecorder()
+        			h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/orders/total", strings.NewReader(tt.body)))
+        			var got Total
+        			if rec.Code == http.StatusOK && json.NewDecoder(rec.Body).Decode(&got) != nil {
+        				t.Fatal("undecodable total")
+        			}
+        			if rec.Code != tt.wantCode || got.Pence != tt.want {
+        				t.Fatalf("status %d, total %d", rec.Code, got.Pence)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: pricing/pricing.go
+      lines: [24, 36]
+  - id: D21
+    repo: orders
+    kind: defect
+    category: observability
+    rules: [observability.trace-propagation]
+    security: false
+    requirement: "When a customer pays for an order, the orders service shall charge it through the payments gateway and return the payment reference."
+    criterion:
+      given: "an order of 2599 pence"
+      when: "the customer pays"
+      then: "the gateway charges 2599 pence and the response carries its reference"
+    files:
+      checkout/checkout.go: |
+        // Package checkout takes payment for an order.
+        package checkout
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"log"
+        	"net/http"
+        )
+
+        // Charger charges an order through the payments gateway and returns the payment reference.
+        type Charger interface {
+        	Charge(ctx context.Context, orderID string, pence int64) (string, error)
+        }
+
+        // Handler serves POST /v1/orders/{id}/pay.
+        type Handler struct{ Payments Charger }
+
+        // Register adds the checkout route.
+        func (h Handler) Register(mux *http.ServeMux) {
+        	mux.HandleFunc("POST /v1/orders/{id}/pay", h.pay)
+        }
+
+        func (h Handler) pay(w http.ResponseWriter, r *http.Request) {
+        	var in struct {
+        		Pence int64 `json:"pence"`
+        	}
+        	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Pence <= 0 {
+        		http.Error(w, "pence must be a positive amount", http.StatusBadRequest)
+        		return
+        	}
+        	id := r.PathValue("id")
+        	ref, err := h.Payments.Charge(context.Background(), id, in.Pence)
+        	if err != nil {
+        		log.Printf("charge order %s: %v", id, err)
+        		http.Error(w, "payment failed", http.StatusBadGateway)
+        		return
+        	}
+        	w.Header().Set("Content-Type", "application/json")
+        	_ = json.NewEncoder(w).Encode(map[string]string{"reference": ref})
+        }
+      checkout/checkout_test.go: |
+        package checkout
+
+        import (
+        	"context"
+        	"errors"
+        	"net/http"
+        	"net/http/httptest"
+        	"strings"
+        	"testing"
+        )
+
+        type fakeCharger struct{ err error }
+
+        func (f fakeCharger) Charge(context.Context, string, int64) (string, error) { return "pay-1", f.err }
+
+        func TestPay(t *testing.T) {
+        	tests := []struct {
+        		name     string
+        		body     string
+        		err      error
+        		wantCode int
+        	}{
+        		{"charged", `{"pence":2599}`, nil, http.StatusOK},
+        		{"zero amount", `{"pence":0}`, nil, http.StatusBadRequest},
+        		{"gateway down", `{"pence":2599}`, errors.New("timeout"), http.StatusBadGateway},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			mux := http.NewServeMux()
+        			Handler{Payments: fakeCharger{tt.err}}.Register(mux)
+        			rec := httptest.NewRecorder()
+        			mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/orders/o-1/pay", strings.NewReader(tt.body)))
+        			if rec.Code != tt.wantCode {
+        				t.Fatalf("status %d, want %d", rec.Code, tt.wantCode)
+        			}
+        		})
+        	}
+        }
+    planted:
+      file: checkout/checkout.go
+      lines: [33, 33]
+  - id: D22
+    repo: users
+    kind: defect
+    category: data
+    rules: [data.reversible-migration]
+    security: false
+    requirement: "The users service shall store each customer's given name and family name separately."
+    criterion:
+      given: "users with full names"
+      when: "the migration runs"
+      then: "each user has a given name and a family name"
+    files:
+      migrations/002_split_user_name.up.sql: |
+        ALTER TABLE users ADD COLUMN given_name TEXT;
+        ALTER TABLE users ADD COLUMN family_name TEXT;
+
+        UPDATE users
+        SET given_name  = split_part(name, ' ', 1),
+            family_name = NULLIF(substr(name, length(split_part(name, ' ', 1)) + 2), '');
+
+        ALTER TABLE users ALTER COLUMN given_name SET NOT NULL;
+        ALTER TABLE users DROP COLUMN name;
+    planted:
+      file: migrations/002_split_user_name.up.sql
+      lines: [4, 9]
+  - id: D23
+    repo: orders
+    kind: defect
+    category: security
+    rules: [security.input-validation]
+    security: true
+    requirement: "When support archives an order, the orders service shall pack the order's documents into one tar.gz file."
+    criterion:
+      given: "an order o-1 with documents"
+      when: "support POSTs {\"order_id\":\"o-1\"} to /v1/archives"
+      then: "o-1.tar.gz is created and the response is 201"
+    files:
+      archives/archives.go: |
+        // Package archives bundles an order's documents into one file for the support team.
+        package archives
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"log"
+        	"net/http"
+        	"os/exec"
+        )
+
+        // Archiver serves POST /v1/archives from the folder that holds one sub-folder per order.
+        type Archiver struct{ Dir string }
+
+        // Command returns the command that packs the documents of orderID into orderID.tar.gz.
+        func (a Archiver) Command(ctx context.Context, orderID string) *exec.Cmd {
+        	cmd := exec.CommandContext(ctx, "sh", "-c", "tar -czf "+orderID+".tar.gz "+orderID)
+        	cmd.Dir = a.Dir
+        	return cmd
+        }
+
+        func (a Archiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+        	var in struct {
+        		OrderID string `json:"order_id"`
+        	}
+        	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.OrderID == "" {
+        		http.Error(w, "order_id is required", http.StatusBadRequest)
+        		return
+        	}
+        	if out, err := a.Command(r.Context(), in.OrderID).CombinedOutput(); err != nil {
+        		log.Printf("archive order %s: %v: %s", in.OrderID, err, out)
+        		http.Error(w, "could not archive the order", http.StatusInternalServerError)
+        		return
+        	}
+        	w.WriteHeader(http.StatusCreated)
+        }
+      archives/archives_test.go: |
+        package archives
+
+        import (
+        	"context"
+        	"net/http"
+        	"net/http/httptest"
+        	"slices"
+        	"strings"
+        	"testing"
+        )
+
+        func TestCommand(t *testing.T) {
+        	cmd := Archiver{Dir: "/srv/orders"}.Command(context.Background(), "o-1")
+        	if want := []string{"sh", "-c", "tar -czf o-1.tar.gz o-1"}; !slices.Equal(cmd.Args, want) || cmd.Dir != "/srv/orders" {
+        		t.Fatalf("args %q in %s", cmd.Args, cmd.Dir)
+        	}
+        }
+
+        func TestArchiveNeedsAnOrder(t *testing.T) {
+        	for _, body := range []string{`{}`, `{"order_id":`} {
+        		rec := httptest.NewRecorder()
+        		Archiver{Dir: t.TempDir()}.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/archives", strings.NewReader(body)))
+        		if rec.Code != http.StatusBadRequest {
+        			t.Fatalf("%s: status %d", body, rec.Code)
+        		}
+        	}
+        }
+    planted:
+      file: archives/archives.go
+      lines: [16, 17]
+  - id: D24
+    repo: users
+    kind: defect
+    category: errors
+    rules: [errors.typed]
+    security: false
+    requirement: "When a client requests an account, the users service shall return it, or 404 when no account has the ID."
+    criterion:
+      given: "an account a-1"
+      when: "a client requests GET /v1/accounts/a-1"
+      then: "the response is 200 with the account"
+    files:
+      accounts/accounts.go: |
+        // Package accounts serves a customer's account summary.
+        package accounts
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"errors"
+        	"fmt"
+        	"log"
+        	"net/http"
+        )
+
+        // ErrNotFound means no account has the ID.
+        var ErrNotFound = errors.New("account not found")
+
+        // Account is a customer's account summary.
+        type Account struct {
+        	ID     string `json:"id"`
+        	Status string `json:"status"`
+        }
+
+        // Store reads accounts; it returns ErrNotFound for an unknown ID.
+        type Store interface {
+        	Get(ctx context.Context, id string) (Account, error)
+        }
+
+        // Service loads accounts.
+        type Service struct{ Store Store }
+
+        // Account returns the account with id.
+        func (s Service) Account(ctx context.Context, id string) (Account, error) {
+        	a, err := s.Store.Get(ctx, id)
+        	if err != nil {
+        		return Account{}, fmt.Errorf("load account %s: %v", id, err)
+        	}
+        	return a, nil
+        }
+
+        // ServeHTTP serves GET /v1/accounts/{id}.
+        func (s Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+        	a, err := s.Account(r.Context(), r.PathValue("id"))
+        	switch {
+        	case errors.Is(err, ErrNotFound):
+        		http.NotFound(w, r)
+        		return
+        	case err != nil:
+        		log.Printf("account: %v", err)
+        		http.Error(w, "could not load the account", http.StatusInternalServerError)
+        		return
+        	}
+        	w.Header().Set("Content-Type", "application/json")
+        	_ = json.NewEncoder(w).Encode(a)
+        }
+      accounts/accounts_test.go: |
+        package accounts
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"net/http"
+        	"net/http/httptest"
+        	"testing"
+        )
+
+        type fakeStore map[string]Account
+
+        func (f fakeStore) Get(_ context.Context, id string) (Account, error) {
+        	a, ok := f[id]
+        	if !ok {
+        		return Account{}, ErrNotFound
+        	}
+        	return a, nil
+        }
+
+        func TestGetAccount(t *testing.T) {
+        	mux := http.NewServeMux()
+        	mux.Handle("GET /v1/accounts/{id}", Service{Store: fakeStore{"a-1": {ID: "a-1", Status: "active"}}})
+        	rec := httptest.NewRecorder()
+        	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/accounts/a-1", nil))
+        	var got Account
+        	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil || rec.Code != http.StatusOK || got.Status != "active" {
+        		t.Fatalf("status %d, got %+v, %v", rec.Code, got, err)
+        	}
+        }
+    planted:
+      file: accounts/accounts.go
+      lines: [32, 34]
+  - id: C01
+    repo: users
+    kind: clean
+    category: boundary
+    rules: []
+    security: false
+    requirement: "When a customer sets their locale, the users service shall store it if it is supported."
+    criterion:
+      given: "a signed-in customer"
+      when: "they PUT locale fr-FR on their own profile"
+      then: "the response is 204 and fr-FR is stored"
+    files:
+      locales/locales.go: |
+        // Package locales stores the language a customer reads the shop in.
+        package locales
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"log"
+        	"net/http"
+        )
+
+        // CallerHeader carries the user the gateway authenticated.
+        const CallerHeader = "X-Authenticated-User"
+
+        // supported are the locales the shop is translated into.
+        var supported = map[string]bool{"en-GB": true, "fr-FR": true, "de-DE": true}
+
+        // Store saves a customer's locale.
+        type Store interface {
+        	SetLocale(ctx context.Context, userID, locale string) error
+        }
+
+        // Handler serves PUT /v1/users/{id}/locale.
+        type Handler struct{ Store Store }
+
+        // Register adds the locale route.
+        func (h Handler) Register(mux *http.ServeMux) {
+        	mux.HandleFunc("PUT /v1/users/{id}/locale", h.put)
+        }
+
+        func (h Handler) put(w http.ResponseWriter, r *http.Request) {
+        	id := r.PathValue("id")
+        	if r.Header.Get(CallerHeader) != id {
+        		http.Error(w, "a customer can change only their own locale", http.StatusForbidden)
+        		return
+        	}
+        	var in struct {
+        		Locale string `json:"locale"`
+        	}
+        	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || !supported[in.Locale] {
+        		http.Error(w, "locale must be one of en-GB, fr-FR, de-DE", http.StatusBadRequest)
+        		return
+        	}
+        	if err := h.Store.SetLocale(r.Context(), id, in.Locale); err != nil {
+        		log.Printf("set locale for user %s: %v", id, err)
+        		http.Error(w, "could not save the locale", http.StatusInternalServerError)
+        		return
+        	}
+        	w.WriteHeader(http.StatusNoContent)
+        }
+      locales/locales_test.go: |
+        package locales
+
+        import (
+        	"context"
+        	"errors"
+        	"net/http"
+        	"net/http/httptest"
+        	"strings"
+        	"testing"
+        )
+
+        type fakeStore struct {
+        	err   error
+        	saved map[string]string
+        }
+
+        func (f fakeStore) SetLocale(_ context.Context, userID, locale string) error {
+        	if f.err != nil {
+        		return f.err
+        	}
+        	f.saved[userID] = locale
+        	return nil
+        }
+
+        func TestPutLocale(t *testing.T) {
+        	tests := []struct {
+        		name      string
+        		caller    string
+        		body      string
+        		err       error
+        		wantCode  int
+        		wantSaved string
+        	}{
+        		{"supported locale", "u-1", `{"locale":"fr-FR"}`, nil, http.StatusNoContent, "fr-FR"},
+        		{"another customer", "u-2", `{"locale":"fr-FR"}`, nil, http.StatusForbidden, ""},
+        		{"unsupported locale", "u-1", `{"locale":"xx-XX"}`, nil, http.StatusBadRequest, ""},
+        		{"malformed JSON", "u-1", `{"locale":`, nil, http.StatusBadRequest, ""},
+        		{"store down", "u-1", `{"locale":"de-DE"}`, errors.New("timeout"), http.StatusInternalServerError, ""},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			store := fakeStore{err: tt.err, saved: map[string]string{}}
+        			mux := http.NewServeMux()
+        			Handler{Store: store}.Register(mux)
+        			req := httptest.NewRequest(http.MethodPut, "/v1/users/u-1/locale", strings.NewReader(tt.body))
+        			req.Header.Set(CallerHeader, tt.caller)
+        			rec := httptest.NewRecorder()
+        			mux.ServeHTTP(rec, req)
+        			if rec.Code != tt.wantCode || store.saved["u-1"] != tt.wantSaved {
+        				t.Fatalf("status %d, saved %q", rec.Code, store.saved["u-1"])
+        			}
+        		})
+        	}
+        }
+  - id: C02
+    repo: orders
+    kind: clean
+    category: errors
+    rules: []
+    security: false
+    requirement: "When the orders service checks stock, it shall read the units held from the warehouse service and report an unknown product or a failed call as an error."
+    criterion:
+      given: "the warehouse holds 7 units of mug-blue"
+      when: "orders asks for the units of mug-blue"
+      then: "it gets 7"
+    files:
+      stock/stock.go: |
+        // Package stock reads stock levels from the warehouse service.
+        package stock
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"errors"
+        	"fmt"
+        	"net/http"
+        	"net/url"
+        	"time"
+        )
+
+        // ErrUnknownSKU means the warehouse does not stock the product.
+        var ErrUnknownSKU = errors.New("unknown sku")
+
+        // StatusError is a reply the client does not expect from the warehouse.
+        type StatusError struct{ Code int }
+
+        func (e *StatusError) Error() string { return fmt.Sprintf("warehouse replied %d", e.Code) }
+
+        // Client calls the warehouse service.
+        type Client struct {
+        	Base string
+        	HTTP *http.Client
+        }
+
+        // NewClient returns a client that gives up on a call after five seconds.
+        func NewClient(base string) Client {
+        	return Client{Base: base, HTTP: &http.Client{Timeout: 5 * time.Second}}
+        }
+
+        // Units returns how many units of sku the warehouse holds.
+        func (c Client) Units(ctx context.Context, sku string) (int, error) {
+        	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.Base+"/v1/stock/"+url.PathEscape(sku), nil)
+        	if err != nil {
+        		return 0, fmt.Errorf("stock request for %s: %w", sku, err)
+        	}
+        	resp, err := c.HTTP.Do(req)
+        	if err != nil {
+        		return 0, fmt.Errorf("stock for %s: %w", sku, err)
+        	}
+        	defer resp.Body.Close()
+        	switch resp.StatusCode {
+        	case http.StatusOK:
+        	case http.StatusNotFound:
+        		return 0, fmt.Errorf("stock for %s: %w", sku, ErrUnknownSKU)
+        	default:
+        		return 0, fmt.Errorf("stock for %s: %w", sku, &StatusError{Code: resp.StatusCode})
+        	}
+        	var body struct {
+        		Units int `json:"units"`
+        	}
+        	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+        		return 0, fmt.Errorf("decode stock for %s: %w", sku, err)
+        	}
+        	return body.Units, nil
+        }
+      stock/stock_test.go: |
+        package stock
+
+        import (
+        	"context"
+        	"errors"
+        	"net/http"
+        	"net/http/httptest"
+        	"testing"
+        	"time"
+        )
+
+        func TestNewClientHasATimeout(t *testing.T) {
+        	if c := NewClient("http://warehouse"); c.HTTP.Timeout != 5*time.Second || c.Base != "http://warehouse" {
+        		t.Fatalf("got %+v", c)
+        	}
+        }
+
+        func TestUnits(t *testing.T) {
+        	tests := []struct {
+        		name   string
+        		status int
+        		body   string
+        		want   int
+        		check  func(error) bool
+        	}{
+        		{"in stock", http.StatusOK, `{"units":7}`, 7, func(err error) bool { return err == nil }},
+        		{"unknown sku", http.StatusNotFound, ``, 0, func(err error) bool { return errors.Is(err, ErrUnknownSKU) }},
+        		{"warehouse fails", http.StatusBadGateway, ``, 0, func(err error) bool {
+        			var se *StatusError
+        			return errors.As(err, &se) && se.Code == http.StatusBadGateway
+        		}},
+        		{"malformed reply", http.StatusOK, `{"units":`, 0, func(err error) bool { return err != nil }},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        				w.WriteHeader(tt.status)
+        				_, _ = w.Write([]byte(tt.body))
+        			}))
+        			t.Cleanup(srv.Close)
+        			got, err := Client{Base: srv.URL, HTTP: srv.Client()}.Units(context.Background(), "mug-blue")
+        			if got != tt.want || !tt.check(err) {
+        				t.Fatalf("Units = %d, %v", got, err)
+        			}
+        		})
+        	}
+        }
+
+        func TestUnitsWhenTheWarehouseIsUnreachable(t *testing.T) {
+        	srv := httptest.NewServer(http.NotFoundHandler())
+        	srv.Close()
+        	if _, err := (Client{Base: srv.URL, HTTP: srv.Client()}).Units(context.Background(), "mug-blue"); err == nil {
+        		t.Fatal("no error from a closed server")
+        	}
+        }
+  - id: C03
+    repo: users
+    kind: clean
+    category: data
+    rules: []
+    security: false
+    requirement: "The users service shall record whether each customer opted in to marketing, defaulting to no."
+    criterion:
+      given: "existing users"
+      when: "the migration runs"
+      then: "every user has marketing_opt_in false, and the down migration removes the column"
+    files:
+      migrations/002_add_user_marketing_opt_in.down.sql: |
+        ALTER TABLE users DROP COLUMN marketing_opt_in;
+      migrations/002_add_user_marketing_opt_in.up.sql: |
+        ALTER TABLE users ADD COLUMN marketing_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
+  - id: C04
+    repo: orders
+    kind: clean
+    category: reliability
+    rules: []
+    security: false
+    requirement: "When an order is paid, the orders service shall award the customer one loyalty point per whole pound, once per order."
+    criterion:
+      given: "a customer with no points"
+      when: "orders.paid.v1 for an order of 2599 pence is delivered twice"
+      then: "the customer has 25 points"
+    files:
+      rewards/rewards.go: |
+        // Package rewards awards points when an order is paid.
+        package rewards
+
+        import (
+        	"encoding/json"
+        	"fmt"
+        	"sync"
+        )
+
+        // Paid is the orders.paid.v1 message.
+        type Paid struct {
+        	OrderID    string `json:"order_id"`
+        	CustomerID string `json:"customer_id"`
+        	Pence      int64  `json:"pence"`
+        }
+
+        // Points holds each customer's balance, one point per whole pound paid, and the orders
+        // already counted, so a redelivered message awards nothing.
+        type Points struct {
+        	mu      sync.Mutex
+        	balance map[string]int64
+        	counted map[string]bool
+        }
+
+        // NewPoints returns empty balances.
+        func NewPoints() *Points {
+        	return &Points{balance: map[string]int64{}, counted: map[string]bool{}}
+        }
+
+        // Handle consumes one orders.paid.v1 delivery; the queue delivers at least once.
+        func (p *Points) Handle(body []byte) error {
+        	var m Paid
+        	if err := json.Unmarshal(body, &m); err != nil {
+        		return fmt.Errorf("decode orders.paid.v1: %w", err)
+        	}
+        	if m.OrderID == "" || m.CustomerID == "" || m.Pence < 0 {
+        		return fmt.Errorf("orders.paid.v1 %q: order, customer and a non-negative amount are required", m.OrderID)
+        	}
+        	p.mu.Lock()
+        	defer p.mu.Unlock()
+        	if p.counted[m.OrderID] {
+        		return nil
+        	}
+        	p.counted[m.OrderID] = true
+        	p.balance[m.CustomerID] += m.Pence / 100
+        	return nil
+        }
+
+        // Balance returns a customer's points.
+        func (p *Points) Balance(customerID string) int64 {
+        	p.mu.Lock()
+        	defer p.mu.Unlock()
+        	return p.balance[customerID]
+        }
+      rewards/rewards_test.go: |
+        package rewards
+
+        import "testing"
+
+        func TestHandle(t *testing.T) {
+        	const paid = `{"order_id":"o-1","customer_id":"c-1","pence":2599}`
+        	tests := []struct {
+        		name       string
+        		deliveries []string
+        		want       int64
+        		wantErr    bool
+        	}{
+        		{"paid order", []string{paid}, 25, false},
+        		{"redelivered", []string{paid, paid}, 25, false},
+        		{"two orders", []string{paid, `{"order_id":"o-2","customer_id":"c-1","pence":1000}`}, 35, false},
+        		{"malformed", []string{`{"order_id":`}, 0, true},
+        		{"no customer", []string{`{"order_id":"o-1","pence":2599}`}, 0, true},
+        		{"negative amount", []string{`{"order_id":"o-1","customer_id":"c-1","pence":-5}`}, 0, true},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			p := NewPoints()
+        			var err error
+        			for _, d := range tt.deliveries {
+        				err = p.Handle([]byte(d))
+        			}
+        			if (err != nil) != tt.wantErr || p.Balance("c-1") != tt.want {
+        				t.Fatalf("err %v, balance %d", err, p.Balance("c-1"))
+        			}
+        		})
+        	}
+        }
+  - id: C05
+    repo: users
+    kind: clean
+    category: boundary
+    rules: []
+    security: false
+    requirement: "When a customer sets a nickname of 1 to 32 characters, the users service shall store it."
+    criterion:
+      given: "a signed-in customer"
+      when: "they PUT the nickname Ada on their own profile"
+      then: "the response is 204 and Ada is stored"
+    files:
+      nicknames/nicknames.go: |
+        // Package nicknames stores the name a customer is greeted by.
+        package nicknames
+
+        import (
+        	"context"
+        	"encoding/json"
+        	"log"
+        	"net/http"
+        	"strings"
+        	"unicode/utf8"
+        )
+
+        // MaxRunes is the longest nickname, in characters.
+        const MaxRunes = 32
+
+        // CallerHeader carries the user the gateway authenticated.
+        const CallerHeader = "X-Authenticated-User"
+
+        // Store saves nicknames.
+        type Store interface {
+        	SetNickname(ctx context.Context, userID, nickname string) error
+        }
+
+        // Handler serves PUT /v1/users/{id}/nickname.
+        type Handler struct{ Store Store }
+
+        // Register adds the nickname route.
+        func (h Handler) Register(mux *http.ServeMux) {
+        	mux.HandleFunc("PUT /v1/users/{id}/nickname", h.put)
+        }
+
+        func (h Handler) put(w http.ResponseWriter, r *http.Request) {
+        	id := r.PathValue("id")
+        	if r.Header.Get(CallerHeader) != id {
+        		http.Error(w, "a customer can change only their own nickname", http.StatusForbidden)
+        		return
+        	}
+        	var in struct {
+        		Nickname string `json:"nickname"`
+        	}
+        	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+        		http.Error(w, "malformed request", http.StatusBadRequest)
+        		return
+        	}
+        	nick := strings.TrimSpace(in.Nickname)
+        	if n := utf8.RuneCountInString(nick); n < 1 || n > MaxRunes {
+        		http.Error(w, "nickname must be 1 to 32 characters", http.StatusBadRequest)
+        		return
+        	}
+        	if err := h.Store.SetNickname(r.Context(), id, nick); err != nil {
+        		log.Printf("set nickname for user %s: %v", id, err)
+        		http.Error(w, "could not save the nickname", http.StatusInternalServerError)
+        		return
+        	}
+        	w.WriteHeader(http.StatusNoContent)
+        }
+      nicknames/nicknames_test.go: |
+        package nicknames
+
+        import (
+        	"context"
+        	"errors"
+        	"net/http"
+        	"net/http/httptest"
+        	"strings"
+        	"testing"
+        )
+
+        type fakeStore struct{ err error }
+
+        func (f fakeStore) SetNickname(context.Context, string, string) error { return f.err }
+
+        func TestPutNickname(t *testing.T) {
+        	tests := []struct {
+        		name     string
+        		caller   string
+        		body     string
+        		err      error
+        		wantCode int
+        	}{
+        		{"short name", "u-1", `{"nickname":"Ada"}`, nil, http.StatusNoContent},
+        		{"exactly 32", "u-1", `{"nickname":"` + strings.Repeat("é", 32) + `"}`, nil, http.StatusNoContent},
+        		{"33 characters", "u-1", `{"nickname":"` + strings.Repeat("a", 33) + `"}`, nil, http.StatusBadRequest},
+        		{"only spaces", "u-1", `{"nickname":"   "}`, nil, http.StatusBadRequest},
+        		{"malformed JSON", "u-1", `{"nickname":`, nil, http.StatusBadRequest},
+        		{"another customer", "u-2", `{"nickname":"Ada"}`, nil, http.StatusForbidden},
+        		{"store down", "u-1", `{"nickname":"Ada"}`, errors.New("timeout"), http.StatusInternalServerError},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			mux := http.NewServeMux()
+        			Handler{Store: fakeStore{tt.err}}.Register(mux)
+        			req := httptest.NewRequest(http.MethodPut, "/v1/users/u-1/nickname", strings.NewReader(tt.body))
+        			req.Header.Set(CallerHeader, tt.caller)
+        			rec := httptest.NewRecorder()
+        			mux.ServeHTTP(rec, req)
+        			if rec.Code != tt.wantCode {
+        				t.Fatalf("status %d, want %d", rec.Code, tt.wantCode)
+        			}
+        		})
+        	}
+        }
+  - id: C06
+    repo: orders
+    kind: clean
+    category: correctness
+    rules: []
+    security: false
+    requirement: "When a client lists products, the orders service shall return a page of the requested size, from 1 to 100 inclusive, defaulting to 20."
+    criterion:
+      given: "150 products"
+      when: "a client requests GET /v1/products?size=100"
+      then: "the response is 200 with 100 products"
+    files:
+      products/products.go: |
+        // Package products lists the products on sale, a page at a time.
+        package products
+
+        import (
+        	"encoding/json"
+        	"net/http"
+        	"strconv"
+        )
+
+        const (
+        	// DefaultPageSize is the page size when the client does not ask for one.
+        	DefaultPageSize = 20
+        	// MaxPageSize is the largest page a client may ask for.
+        	MaxPageSize = 100
+        )
+
+        // Product is one product on sale.
+        type Product struct {
+        	SKU   string `json:"sku"`
+        	Name  string `json:"name"`
+        	Pence int64  `json:"pence"`
+        }
+
+        // List serves GET /v1/products?size= from a fixed product list.
+        type List struct{ Products []Product }
+
+        func (l List) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+        	size := DefaultPageSize
+        	if v := r.URL.Query().Get("size"); v != "" {
+        		n, err := strconv.Atoi(v)
+        		if err != nil || n < 1 || n > MaxPageSize {
+        			http.Error(w, "size must be from 1 to 100", http.StatusBadRequest)
+        			return
+        		}
+        		size = n
+        	}
+        	page := l.Products[:min(size, len(l.Products))]
+        	w.Header().Set("Content-Type", "application/json")
+        	_ = json.NewEncoder(w).Encode(page)
+        }
+      products/products_test.go: |
+        package products
+
+        import (
+        	"encoding/json"
+        	"fmt"
+        	"net/http"
+        	"net/http/httptest"
+        	"testing"
+        )
+
+        func TestPageSize(t *testing.T) {
+        	all := make([]Product, 150)
+        	for i := range all {
+        		all[i] = Product{SKU: fmt.Sprintf("sku-%d", i), Name: "Mug", Pence: 899}
+        	}
+        	tests := []struct {
+        		name     string
+        		products []Product
+        		query    string
+        		wantCode int
+        		wantLen  int
+        	}{
+        		{"default", all, "", http.StatusOK, DefaultPageSize},
+        		{"smallest page", all, "?size=1", http.StatusOK, 1},
+        		{"largest page", all, "?size=100", http.StatusOK, 100},
+        		{"fewer products than the page", all[:3], "?size=10", http.StatusOK, 3},
+        		{"zero", all, "?size=0", http.StatusBadRequest, 0},
+        		{"one over the limit", all, "?size=101", http.StatusBadRequest, 0},
+        		{"not a number", all, "?size=ten", http.StatusBadRequest, 0},
+        	}
+        	for _, tt := range tests {
+        		t.Run(tt.name, func(t *testing.T) {
+        			rec := httptest.NewRecorder()
+        			List{Products: tt.products}.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/products"+tt.query, nil))
+        			if rec.Code != tt.wantCode {
+        				t.Fatalf("status %d, want %d", rec.Code, tt.wantCode)
+        			}
+        			var page []Product
+        			if tt.wantCode == http.StatusOK && (json.NewDecoder(rec.Body).Decode(&page) != nil || len(page) != tt.wantLen) {
+        				t.Fatalf("page of %d, want %d", len(page), tt.wantLen)
+        			}
+        		})
+        	}
+        }
