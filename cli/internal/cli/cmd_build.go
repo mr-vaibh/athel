@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	"strings"
@@ -286,6 +287,7 @@ func (r *runCtx) notDone(g gateTask, head string) ([]string, string, error) {
 	if len(missing) > 0 {
 		problems = append(problems, "QA or security findings are not in a review round yet: "+strings.Join(missing, ", "))
 	}
+	problems = append(problems, reportsBehind(g, rd)...)
 	dec, err := r.readDecisions(g.c.ID)
 	if err != nil {
 		return nil, "", err
@@ -297,6 +299,21 @@ func (r *runCtx) notDone(g gateTask, head string) ([]string, string, error) {
 	}
 	sort.Strings(problems)
 	return problems, from, nil
+}
+
+// reportsBehind: QA and security check every round, like the reviewer (doc 06 step 5;
+// FR-BUILD-004/005), so each has a report for each review round.
+func reportsBehind(g gateTask, rd *review.Round) []string {
+	if rd == nil {
+		return nil
+	}
+	var out []string
+	for _, k := range []struct{ prefix, who string }{{"qa", "QA"}, {"security", "security"}} {
+		if n := nextReport(g, "reviews", k.prefix) - 1; n < rd.Round {
+			out = append(out, fmt.Sprintf("%s has reported for %d of %d review rounds (athel %s save)", k.who, n, rd.Round, k.prefix))
+		}
+	}
+	return out
 }
 
 // gateProblems is why the gates do not let a task be done: no baseline, or no green full run of
