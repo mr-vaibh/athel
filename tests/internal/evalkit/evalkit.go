@@ -217,10 +217,11 @@ func (s *Sandbox) writePath(*shop.Layout) error {
 	return os.Symlink(s.Tools.Git, filepath.Join(s.Path, "git"))
 }
 
-// Env is what every command of the run sees besides PATH and HOME: the fake GitHub's state, and
-// a Go that never downloads a toolchain.
+// Env is what every command of the run sees besides PATH and HOME: the fake GitHub's state (also
+// as GH_CONFIG_DIR, the gh setting Athel passes to gh), and a Go that never downloads a
+// toolchain.
 func (s *Sandbox) Env() []string {
-	return []string{"SHOP_GH_STATE=" + s.GHState, "GOTOOLCHAIN=local"}
+	return []string{"SHOP_GH_STATE=" + s.GHState, "GH_CONFIG_DIR=" + s.GHState, "GOTOOLCHAIN=local"}
 }
 
 // SessionPath is the PATH Claude Code and every command it runs see.
@@ -243,8 +244,8 @@ func (s *Sandbox) writePlugin(*shop.Layout) error {
 	if err := os.Remove(wrapper); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	body := fmt.Sprintf("#!/bin/sh\nexec env HOME=%q ATHEL_HOME=%q PATH=%q SHOP_GH_STATE=%q GOTOOLCHAIN=local %q \"$@\"\n",
-		s.Home, s.AthelHome, s.SessionPath(), s.GHState, s.Tools.Athel)
+	body := fmt.Sprintf("#!/bin/sh\nexec env HOME=%q ATHEL_HOME=%q PATH=%q SHOP_GH_STATE=%q GH_CONFIG_DIR=%q GOTOOLCHAIN=local %q \"$@\"\n",
+		s.Home, s.AthelHome, s.SessionPath(), s.GHState, s.GHState, s.Tools.Athel)
 	return os.WriteFile(wrapper, []byte(body), 0o700) //nolint:gosec // the wrapper must be executable
 }
 

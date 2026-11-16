@@ -84,14 +84,13 @@ M4-plan §9:
 CI passed on #77–#100 (checked 2026-11-15).
 
 Next:
-1. **Paid runs, each only with the owner's go-ahead.** Trials so far cost $17.99 (results in
+1. **Paid runs, each only with the owner's go-ahead.** Trials so far cost $29.58 (results in
    `EVALS.md`):
-   - defects trial 2: 2/2 caught, 0 false alarms;
-   - build trial 3: the whole loop worked for the code task, then `pr open` refused a 593-line
-     PR with no card. Fixed in #107 (ADR 028): a size card, resuming after the answer, and lean
-     QA tests.
+   - defects trial 2: 2/2 caught;
+   - build trial 4: every task done and pushed, the size card and the side finding worked, but
+     no PR, because `gh` lost its own settings in the CLI's scrubbed environment. Fixed in #107.
 
-   Ask the owner for one more build trial (about $5–10), then the full runs.
+   Ask the owner for the next build trial (about $10–12), then the full runs.
 2. Task 17: the M4 report (EC-1 and EC-2 results, carried gates), HANDOFF, ROADMAP; then the
    owner's merge OK for #77 to #106 in order.
 
