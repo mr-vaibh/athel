@@ -19,6 +19,10 @@ gates and the git steps around them.
      `/athel:decide` line and stop. Otherwise run
      `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to building --by athel --reason "preflight clear"`.
    - **`building`:** continue.
+   - **`blocked` from `building`:** if `athel --json decide list $ARGUMENTS --open` still shows a
+     card, show it with the `/athel:decide` line and stop. Otherwise the developer has answered:
+     run `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to building --by athel --reason "card answered"`
+     and continue.
    - **`ready_for_pr`:** say the next step is `/athel:ship $ARGUMENTS` and stop.
    - **Anything else:** say the plan must be approved first and stop.
 3. Run `athel --json config show` and note `values.models.developer`, `qa`, `security` and
@@ -28,7 +32,9 @@ gates and the git steps around them.
 4. Run `athel --json build next $ARGUMENTS`.
    - A task in `in_progress` is continued first.
    - Otherwise take the first of `ready`.
-   - When every task is done, run
+   - When every task is done, make sure each repo is pushed and has its draft PR:
+     `athel --json --session ${CLAUDE_SESSION_ID} git push $ARGUMENTS <repo>`, then `pr open` (or `pr update` when
+     the PR exists). Then run
      `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to ready_for_pr --by athel --reason "every task done"`.
      If the guard refuses, show what it lists. Blast drift means the plan must change; say so
      and stop. Otherwise say the next step is `/athel:ship $ARGUMENTS` and stop.
@@ -75,7 +81,8 @@ gates and the git steps around them.
 13. **Cards stop the loop.** When `athel --json decide list $ARGUMENTS --open` shows a card for
     this task or for `build`, end the step:
     `athel --json --session ${CLAUDE_SESSION_ID} state exit $ARGUMENTS build --result blocked --reason "<card ID>: <question>"`.
-    These are the 5-round limit, the third identical failure, a dispute twice, and an overlap.
+    These are the 5-round limit, the third identical failure, a dispute twice, an overlap, and a
+    PR over the size limit (`E-GATE-PR-SIZE`, ADR 028).
     Show the card with the `/athel:decide` line, and stop.
 
 ## Rules

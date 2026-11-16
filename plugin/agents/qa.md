@@ -40,6 +40,10 @@ You never see the developer's reasoning.
 - **failure:** each dependency failing (an error, a timeout, an empty answer) gives the
   specified result, and nothing is left half done.
 
+Keep it lean: a PR has a size limit (400 changed lines by default, tests included). Add the
+fewest cases that prove each category, as rows of the repo's existing table-driven tests where
+they exist, never a new test function per case.
+
 Then run the repo's full test suite.
 
 ## Finish

@@ -84,14 +84,14 @@ M4-plan §9:
 CI passed on #77–#100 (checked 2026-11-15).
 
 Next:
-1. **Paid runs, each only with the owner's go-ahead.** Two trial rounds ran on 2026-11-15 for
-   $11.67 in total (the owner approved trials of about $8–20). Results are in `EVALS.md`:
-   - defects trial 2 caught 2/2 with 0 false alarms;
-   - build trial 2 reached the code task, then blocked because the session waited on background
-     agents. Fixed in #107: agents run in the foreground.
+1. **Paid runs, each only with the owner's go-ahead.** Trials so far cost $17.99 (results in
+   `EVALS.md`):
+   - defects trial 2: 2/2 caught, 0 false alarms;
+   - build trial 3: the whole loop worked for the code task, then `pr open` refused a 593-line
+     PR with no card. Fixed in #107 (ADR 028): a size card, resuming after the answer, and lean
+     QA tests.
 
-   Ask the owner for: a third build trial (about $5–10), and then, if it is valid, the full runs:
-   defects 30 × 3 (about $45–135) and build 3 × 3 (about $45–150). Commands are in `EVALS.md`.
+   Ask the owner for one more build trial (about $5–10), then the full runs.
 2. Task 17: the M4 report (EC-1 and EC-2 results, carried gates), HANDOFF, ROADMAP; then the
    owner's merge OK for #77 to #106 in order.
 
