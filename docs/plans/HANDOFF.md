@@ -77,28 +77,20 @@ M4-plan §9:
 | 13b skills `/athel:build`, `/athel:ship`; status and resume updated | `feat/m4-skills` | #103 | open, gate green |
 | 14 network-deny sandbox test | `feat/m4-sandbox-net` | #104 | open, gate green |
 | 15 reviewer defect eval: corpus (24+6), setup, runner, grader; **paid run not made** | `feat/m4-evals-defects` | #105 | open, gate green |
-| 16 build eval: 3 PRDs, full journey, grader re-runs gates | `feat/m4-evals-build` | — | **next** |
-| 17 M4 report | `docs/m4-report` | — | not started |
+| 16 build eval: 3 PRDs, full-journey runner, grader re-runs gates; **paid run not made** | `feat/m4-evals-build` | #106 | open, gate green |
+| 17 M4 report | `docs/m4-report` | — | after the paid runs |
 
 CI passed on #77–#100 (checked 2026-11-15).
 
 Next:
-1. **Task 16** on `feat/m4-evals-build`, branched from `feat/m4-evals-defects` (M4-plan EC-1, §4.10):
-   - 3 one-repo PRDs on the Go fixture repos: an endpoint feature, a validation fix with error
-     paths, and an event-field addition (expand).
-   - Each eval adds its own planted nearby bug, not in the shared fixture, so the M2 and M3
-     answers don't change. The bug must become a side finding and must not be edited.
-   - Runner prompts: start, spec, `/athel:decide` (the recommended options), plan,
-     `/athel:approve`, build, ship, and `/athel:triage all=ticket`.
-   - Grader:
-     - the change is `in_review`, and the fake GitHub PR was opened as a draft, then marked
-       ready, with no merge call;
-     - it re-runs the gates itself on the pushed head, and checks commit lint and PR size;
-     - the developer's clones are unchanged.
-2. **Ask the owner** before any paid run: the defect eval (#105, `ATHEL_EVALS=1 go test
-   ./tests/evals/m4/defects -run TestEvals`, smoke run first with `ATHEL_EVALS_CASES=D01,C01
-   ATHEL_EVALS_RUNS=1`), and the build eval.
-3. Task 17: the M4 report, then the owner's merge OK for #77 to the end of the stack.
+1. **Paid runs, each only with the owner's go-ahead, smoke runs first** (ATHEL_EVALS=1):
+   - defect eval (EC-2) smoke: `ATHEL_EVALS=1 ATHEL_EVALS_CASES=D01,D06,C01 ATHEL_EVALS_RUNS=1 go test
+     ./tests/evals/m4/defects -run TestEvals -timeout 0 -v`; then the full run (30 cases × 3 runs);
+   - build eval (EC-1) smoke: `ATHEL_EVALS=1 ATHEL_EVALS_CASES=typed-client-errors ATHEL_EVALS_RUNS=1 go test
+     ./tests/evals/m4/build -run TestEvals -timeout 0 -v`; then the full run (3 PRDs × 3 runs).
+   - Keep sandboxes with `ATHEL_EVALS_KEEP=<folder>` to debug. Record the results in `EVALS.md`.
+2. Task 17: the M4 report (EC-1 and EC-2 results, carried gates), HANDOFF, ROADMAP; then the
+   owner's merge OK for #77 to #106 in order.
 
 The `cli` package's tests take about 7 minutes.
 
