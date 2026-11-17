@@ -244,6 +244,7 @@ func (s *Sandbox) writePlugin(*shop.Layout) error {
 	if err := os.Remove(wrapper); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
+	// GOTOOLCHAIN=local: a gate that runs Go never downloads a toolchain (no network in evals).
 	body := fmt.Sprintf("#!/bin/sh\nexec env HOME=%q ATHEL_HOME=%q PATH=%q SHOP_GH_STATE=%q GH_CONFIG_DIR=%q GOTOOLCHAIN=local %q \"$@\"\n",
 		s.Home, s.AthelHome, s.SessionPath(), s.GHState, s.GHState, s.Tools.Athel)
 	return os.WriteFile(wrapper, []byte(body), 0o700) //nolint:gosec // the wrapper must be executable
