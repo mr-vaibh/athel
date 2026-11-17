@@ -43,7 +43,7 @@ func TestSecurityGateDefault(t *testing.T) {
 			sec = g
 		}
 	}
-	if sec.Waivable != SecurityOwner || sec.Stage != Full || sec.Pass != Security || strings.Join(sec.Command, " ") != "golangci-lint run --enable-only gosec ./..." {
+	if sec.Waivable != SecurityOwner || sec.Stage != Full || sec.Pass != Security || strings.Join(sec.Command, " ") != "golangci-lint run --allow-parallel-runners --enable-only gosec ./..." {
 		t.Errorf("%+v", sec)
 	}
 }
