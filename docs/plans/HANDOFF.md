@@ -73,23 +73,32 @@ M4-plan §9:
 | 12a build, QA and security reports; their findings join the review round | `feat/m4-agents-policy` | #99 | open, gate green |
 | 12b per-agent write scopes in the engine (ADR 024) | `feat/m4-agents-scopes` | #100 | open, gate green |
 | 12c developer, QA, security and reviewer agents; rule IDs; prompt sync | `feat/m4-agents-prompts` | #101 | open, gate green |
-| 13 skills `/athel:build` and `/athel:ship`; status; resume inside a task | `feat/m4-skills` | — | **next** |
-| 14–17 | see M4-plan §9 | — | not started |
+| 13a `build done` needs both reports per round; `ready_for_pr` checks blast drift; resume names the task | `feat/m4-skills-cli` | #102 | open, gate green |
+| 13b skills `/athel:build`, `/athel:ship`; status and resume updated | `feat/m4-skills` | #103 | open, gate green |
+| 14 network-deny sandbox test | `feat/m4-sandbox-net` | #104 | open, gate green |
+| 15 reviewer defect eval: corpus (24+6), setup, runner, grader; **paid run not made** | `feat/m4-evals-defects` | #105 | open, gate green |
+| 16 build eval: 3 PRDs, full journey, grader re-runs gates | `feat/m4-evals-build` | — | **next** |
+| 17 M4 report | `docs/m4-report` | — | not started |
 
-CI passed on #77–#91 (checked 2026-11-14).
+CI passed on #77–#100 (checked 2026-11-15).
 
 Next:
-1. **Task 13** on `feat/m4-skills`, branched from `feat/m4-agents-prompts` (M4-plan §4.1 and §9 task 13):
-   - `/athel:build` runs the loop of §4.1. It delegates to `athel:developer`, `athel:qa`,
-     `athel:security` and `athel:reviewer` with the models from `athel config show`
-     (`values.models.*`), and commits QA's tests itself (ADR 024: QA cannot commit).
-   - `/athel:ship` covers the actual blast radius, `finding list`, `/athel:triage` and
-     `pr ready`.
-   - `status` shows tasks, gates and findings; resume works inside a task.
-   - Tests: `TestBuildSkillFollowsTheLoop`, `TestShipNeedsBothReports` (QA and security reports
-     exist for every task).
-2. Then 14 (network-deny test), 15–16 (evals: paid, so ask the owner first, smoke runs first),
-   17 (report).
+1. **Task 16** on `feat/m4-evals-build`, branched from `feat/m4-evals-defects` (M4-plan EC-1, §4.10):
+   - 3 one-repo PRDs on the Go fixture repos: an endpoint feature, a validation fix with error
+     paths, and an event-field addition (expand).
+   - Each eval adds its own planted nearby bug, not in the shared fixture, so the M2 and M3
+     answers don't change. The bug must become a side finding and must not be edited.
+   - Runner prompts: start, spec, `/athel:decide` (the recommended options), plan,
+     `/athel:approve`, build, ship, and `/athel:triage all=ticket`.
+   - Grader:
+     - the change is `in_review`, and the fake GitHub PR was opened as a draft, then marked
+       ready, with no merge call;
+     - it re-runs the gates itself on the pushed head, and checks commit lint and PR size;
+     - the developer's clones are unchanged.
+2. **Ask the owner** before any paid run: the defect eval (#105, `ATHEL_EVALS=1 go test
+   ./tests/evals/m4/defects -run TestEvals`, smoke run first with `ATHEL_EVALS_CASES=D01,C01
+   ATHEL_EVALS_RUNS=1`), and the build eval.
+3. Task 17: the M4 report, then the owner's merge OK for #77 to the end of the stack.
 
 The `cli` package's tests take about 7 minutes.
 
