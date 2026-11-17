@@ -63,7 +63,7 @@ func (r *runner) state() string {
 
 func (r *runner) prompt(name, text string) error {
 	r.n++
-	ctx, cancel := context.WithTimeout(context.Background(), r.set.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), limit(name, r.set.Timeout))
 	defer cancel()
 	s, err := r.sb.RunClaude(ctx, evalkit.Prompt{Text: text, Transcript: fmt.Sprintf("%02d-%s.jsonl", r.n, name), Model: r.set.Model})
 	r.res.Sessions = append(r.res.Sessions, s)
@@ -71,6 +71,15 @@ func (r *runner) prompt(name, text string) error {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	return nil
+}
+
+// limit is a session's time limit: a build session runs the developer, the gates and three
+// checkers, round after round, so it gets three times the others' (trial 5 hit 20 minutes).
+func limit(step string, base time.Duration) time.Duration {
+	if step == "build" {
+		return 3 * base
+	}
+	return base
 }
 
 // decide answers every open card with its recommendation, as the scripted developer.

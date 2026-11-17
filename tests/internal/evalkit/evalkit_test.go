@@ -253,3 +253,34 @@ func TestLastYAMLBlock(t *testing.T) {
 		}
 	}
 }
+
+// TestEndSession: a session stopped at its time limit has its locks released, as Claude Code's
+// SessionEnd hook would on a normal exit, so the next session can continue the change.
+func TestEndSession(t *testing.T) {
+	tl, err := BuildTools(repoRoot(t), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	sb, err := NewSandbox(t.TempDir(), tl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"change", "new", "--title", "x", "--prd-text", "# PRD"}, {"lock", "acquire", "CHG-001"}} {
+		if _, err := sb.Athel("", append([]string{"--json", "--session", "dead"}, args...)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if out, err := sb.Athel("", "--json", "--session", "next", "resume", "CHG-001"); err != nil || !strings.Contains(string(out), `"read_only":true`) {
+		t.Fatalf("the dead session still holds the lock: %v %s", err, out)
+	}
+	if err := sb.endSession(""); err != nil {
+		t.Errorf("no session, nothing to end: %v", err)
+	}
+	if err := sb.endSession("dead"); err != nil {
+		t.Fatal(err)
+	}
+	out, err := sb.Athel("", "--json", "--session", "next", "resume", "CHG-001")
+	if err != nil || !strings.Contains(string(out), `"read_only":false`) {
+		t.Errorf("the next session takes the change: %v %s", err, out)
+	}
+}

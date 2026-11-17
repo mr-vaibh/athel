@@ -339,7 +339,27 @@ func (s *Sandbox) RunClaude(ctx context.Context, p Prompt) (Session, error) {
 			return Session{}, werr
 		}
 	}
-	return ReadTranscript(path)
+	got, err := ReadTranscript(path)
+	if ctx.Err() != nil {
+		// Killed at its time limit, the session never ran Claude Code's SessionEnd hook, so its
+		// change lock would look alive for the lock's TTL and stop every later session. End it
+		// as Claude Code would have.
+		err = errors.Join(err, s.endSession(got.ID), fmt.Errorf("the session was stopped at its time limit"))
+	}
+	return got, err
+}
+
+// endSession runs the SessionEnd hook for a session, which releases its locks.
+func (s *Sandbox) endSession(id string) error {
+	if id == "" {
+		return nil
+	}
+	in, err := json.Marshal(map[string]string{"session_id": id, "cwd": s.WS, "reason": "other"})
+	if err != nil {
+		return err
+	}
+	_, err = s.Athel(string(in), "hook", "session-end")
+	return err
 }
 
 // ReadTranscript takes the session ID from the init message and cost and turns from the result.

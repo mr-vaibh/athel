@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mr-vaibh/athel/tests/fixtures/shop"
 	"github.com/mr-vaibh/athel/tests/internal/evalkit"
@@ -256,5 +257,11 @@ func TestHasUndecided(t *testing.T) {
 	open := map[string]any{"findings": []any{map[string]any{"id": "SF-1", "disposition": "ticket"}, map[string]any{"id": "SF-2", "disposition": nil}}}
 	if hasUndecided(decided) || !hasUndecided(open) || hasUndecided(map[string]any{}) {
 		t.Error("hasUndecided")
+	}
+}
+
+func TestLimit(t *testing.T) {
+	if limit("build", 20*time.Minute) != time.Hour || limit("spec", 20*time.Minute) != 20*time.Minute {
+		t.Error("limit")
 	}
 }
