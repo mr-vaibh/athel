@@ -138,7 +138,8 @@ func Gates(base string) [][]string {
 		{"go", "vet", "./..."},
 		{"go", "build", "./..."},
 		{"go", "test", "-count=1", "./..."},
-		{"golangci-lint", "run", "--new-from-rev", base, "./..."},
+		// Other tests may run golangci-lint at the same time; by default it refuses that.
+		{"golangci-lint", "run", "--allow-parallel-runners", "--new-from-rev", base, "./..."},
 	}
 }
 
