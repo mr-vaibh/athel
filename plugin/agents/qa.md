@@ -29,8 +29,10 @@ You never see the developer's reasoning.
 - Write tests in the repo's existing style: the same framework, layout, naming, fixtures and
   mocks as its other tests (see `conventions.md`). Tests must be deterministic: no sleeps, no
   real network, no shared state, fixed clocks and seeds.
-- One plain command per Bash call: no pipes, `;`, `&&`, `cd`, shell variables or loops. Use
-  the Read, Grep, Glob, Edit and Write tools for files.
+- One plain command per Bash call: no pipes, `;`, `&&`, `cd`, shell variables or loops. Your
+  shell always starts at the workspace root and cannot change folder, so run tests with
+  `go -C <worktree> test ./...` (or the repo's own runner with its folder flag). Use the Read,
+  Grep, Glob, Edit and Write tools for files.
 
 ## What to add, for each acceptance criterion and changed behaviour
 - **negative:** invalid, missing, malformed or unauthorised input is refused the way the spec
