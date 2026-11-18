@@ -107,7 +107,9 @@ func cmdPRUpdate(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	c, w, err := r.pushTarget(s, pos[0], pos[1])
+	// Editing the body pushes nothing, so it is allowed until review: /athel:ship refreshes it with
+	// the final gates, waivers and findings before marking the PR ready.
+	c, w, err := r.repoTarget(s, pos[0], pos[1], state.Building, state.ReadyForPR, state.InReview)
 	if err != nil {
 		return nil, err
 	}

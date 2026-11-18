@@ -87,6 +87,10 @@ func TestReadyForPRAndPRReady(t *testing.T) {
 		t.Errorf("pr ready while building: %v", env)
 	}
 	h.mustOK("state", "transition", "CHG-001", "--to", "ready_for_pr", "--by", "athel", "--reason", "every task done")
+	h.mustOK("pr", "update", "CHG-001", "users") // /athel:ship refreshes the body before marking it ready
+	if _, env := h.runJSON("git", "push", "CHG-001", "users"); !strings.Contains(asJSON(t, env), "Athel pushes only while building") {
+		t.Errorf("no push after building: %v", env)
+	}
 	h.mustOK("pr", "ready", "CHG-001", "users")
 	if got := calls(t, log); !strings.HasPrefix(got[len(got)-1], "pr ready 901 --repo acme/users") {
 		t.Errorf("gh pr ready: %v", got)

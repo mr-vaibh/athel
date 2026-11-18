@@ -84,13 +84,12 @@ M4-plan §9:
 CI passed on #77–#100 (checked 2026-11-15).
 
 Next:
-1. **Paid runs, each only with the owner's go-ahead.** Trials so far cost $33.09 (results in
-   `EVALS.md`): 5 build trials and 2 defect trials.
-   - Each build trial found and fixed one gap: ADR 027, foreground agents, ADR 028, gh settings,
-     and then the session time limit with lock release (harness).
-   - CI is green on #101–#107.
+1. **Paid runs, each only with the owner's go-ahead.** Trials so far cost $44.80: 6 build trials
+   and 2 defect trials (`EVALS.md`).
+   - Build trial 6 reached `ready_for_pr` with draft PR #901. Only `pr update` in ship was
+     refused (building-only). Fixed in #107.
 
-   Ask the owner for build trial 6 (about $10–15), then the full runs.
+   Ask the owner for build trial 7 (about $10–15), then the full runs.
 2. Task 17: the M4 report (EC-1 and EC-2 results, carried gates), HANDOFF, ROADMAP; then the
    owner's merge OK for #77 to #106 in order.
 
