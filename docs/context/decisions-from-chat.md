@@ -63,3 +63,4 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-16 | After trial round 2 ($11.67 so far): one more build trial, a build trial then full runs, or stop? | "One more build trial": about $5–10, the same build PRD once, then report before any full run | Build trial 3; HANDOFF |
 | 2026-11-16 | After build trial 3 ($17.99 so far): another build trial, a trial then full runs, or stop? | "One more build trial": about $5–10, then ask before the full runs | Build trial 4; HANDOFF |
 | 2026-11-17 | After build trial 4 ($29.58 so far): build trial 5, a trial then full runs, or stop? | "Yes, one more trial": about $10–15, then ask before the full runs | Build trial 5; HANDOFF |
+| 2026-11-18 | After build trial 5 ($33.09 so far): build trial 6, a trial then full runs, or stop? | "Yes, one more trial": about $10–15, then ask before the full runs | Build trial 6; HANDOFF |
