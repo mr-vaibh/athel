@@ -127,13 +127,31 @@ func (r *runner) specify(prd string) error {
 			return err
 		}
 	}
-	for _, st := range []struct{ name, text string }{{"plan", "/athel:plan " + Change}, {"approve", "/athel:approve " + Change}} {
-		if err := r.decide(); err != nil {
+	if err := r.decide(); err != nil {
+		return err
+	}
+	if err := r.prompt("plan", "/athel:plan "+Change); err != nil {
+		return err
+	}
+	if err := r.decide(); err != nil {
+		return err
+	}
+	// At CRITICAL risk the developer signs off the blast radius before approving (doc 05), as
+	// the plan step tells them to.
+	sum, err := r.athelJSON("plan", "summary", Change)
+	if err != nil {
+		return err
+	}
+	if sum["risk"] == "CRITICAL" {
+		if err := r.prompt("signoff", "/athel:signoff "+Change); err != nil {
 			return err
 		}
-		if err := r.prompt(st.name, st.text); err != nil {
-			return err
-		}
+	}
+	if err := r.prompt("approve", "/athel:approve "+Change); err != nil {
+		return err
+	}
+	if st := r.state(); st != "plan_approved" {
+		return fmt.Errorf("the plan was not approved: the change is %s", st)
 	}
 	return nil
 }
