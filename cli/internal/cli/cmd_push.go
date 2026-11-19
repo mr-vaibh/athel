@@ -73,12 +73,22 @@ func cmdGitPush(r *runCtx, args []string) (any, error) {
 
 // pushTarget is the building change and its worktree in repo, on a branch Athel may push.
 func (r *runCtx) pushTarget(s *state.Store, id, repo string) (*state.Change, state.RepoWork, error) {
+	return r.repoTarget(s, id, repo, state.Building)
+}
+
+// repoTarget is the change, in one of states, and its worktree in repo, on a branch Athel may
+// push.
+func (r *runCtx) repoTarget(s *state.Store, id, repo string, states ...state.State) (*state.Change, state.RepoWork, error) {
 	c, err := s.Get(id)
 	if err != nil {
 		return nil, state.RepoWork{}, err
 	}
-	if c.State != state.Building {
+	switch {
+	case slices.Contains(states, c.State):
+	case len(states) == 1:
 		return nil, state.RepoWork{}, aerr.New(aerr.StateInvalid, c.ID+" is "+string(c.State)+"; Athel pushes only while building")
+	default:
+		return nil, state.RepoWork{}, aerr.New(aerr.StateInvalid, c.ID+" is "+string(c.State)+"; its PR body changes only while building, ready for PR or in review")
 	}
 	w, ok := repoWork(c, repo)
 	if !ok {

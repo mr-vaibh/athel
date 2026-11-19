@@ -1,0 +1,106 @@
+{
+  "cases": {
+    "typed-client-errors": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is blocked, not in_review",
+            "no ready, open PR in acme/orders",
+            "the PR was not opened as a draft and then marked ready",
+            "the branch was never pushed",
+            "the planted bug in clients/users.go was edited inside the change",
+            "run failed: the build is blocked with no card to answer"
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "875f1505-c62a-4ea3-97a5-f5a19ad7915d",
+            "cost_usd": 0.14220619999999998,
+            "duration_s": 19.206,
+            "turns": 6,
+            "result": "I created **CHG-001**, \"Clear errors from the users client in orders\". It's in `draft`, and the PRD has been recorded and its statements numbered.\nNext, run `/athel:spec CHG-001` to investigate the system, review the PRD and write the specs."
+          },
+          {
+            "session_id": "f5340374-83bc-4b3f-ac19-051ab293d08c",
+            "cost_usd": 1.9554538000000001,
+            "duration_s": 389.578,
+            "turns": 12,
+            "result": "CHG-001 is specified and now waiting on two decisions from you before the plan. The planned blast radius is rated **LOW risk**. It is flagged for a security review because it handles personal data (the customer's phone) and adds a timeout.\n\n**What the investigation found**\n- `orders/clients/users.go:10` makes the call with plain `http.Get`: no context and no timeout. On `main` its only caller is a test (`clients_test.go:25`), so changing its signature stays inside orders.\n- Prod metrics still show about 120 requests per minute from orders to users, even though `main` has no production caller. The deployed `orders:3.1.0` image probably contains a caller that isn't on `main`, and the build step has to find it.\n- The users endpoint (`users/api/user.go:24-26`) always answers 200, with the id echoed back and an empty name and phone. It never sends 404. That is why D-1 exists.\n- We have no latency data for this call, so we don't know whether a 2 s timeout would cut off real traffic. That is why D-2 exists.\n- The users team (@acme/identity) is already changing that same file in PR #812 (SHOP-12).\n- Side finding: `LegacyProfile` calls an endpoint users has removed, and gets 0 requests in prod. The PRD puts it out of scope.\n\nThe spec is at `.athel/changes/CHG-001/spec/orders.md`, with 7 requirements and 7 acceptance criteria.\n\n---\n\n### D-1: The users service never answers 404 for an unknown customer. How should orders recognise \"customer not found\"?\n- **a: 404 only, as the PRD says.** The code is ready for when users starts sending 404. Until then, an unknown id reaches callers as a customer with an empty name and phone.\n- **b: 404, plus a 200 where name and phone are both empty.** This catches unknown ids today. But it relies on a users quirk that isn't a documented contract, and a real customer with no name or phone saved would be reported as not found.\n- **c: 404 only, and ask the users team to send 404.** Same code as (a). The plan also adds a step to comment on SHOP-12 / PR #812 asking @acme/identity to answer 404 for unknown ids. \"Not found\" starts working when they ship that.\n- **Recommended: c.** It keeps orders on the HTTP contract the PRD names, invents no workaround, and asks the owning team while they're already editing that file.\n- **Default if unanswered: a.**\n\n### D-2: We don't know how slow the orders→users call is. How should the 2 s timeout ship?\n- **a: 2 s, after a check task.** The plan starts by getting the p99 latency (from @acme/identity or the `UsersLatency` alert threshold) and records it in the PR. If it is close to 2 s, the reviewer decides before merge.\n- **b: 2 s default, configurable.** Same check task, and the timeout reads `USERS_TIMEOUT` (default 2s) so it can be raised by changing the deployment, without new code. This adds a config item and a test for it.\n- **c: 2 s, no check.** Simplest. If the p99 is above 2 s, part of the 120 requests per minute starts failing as \"users unavailable\" right after deploy.\n- **Recommended: a.** The PRD fixes the number, so what's missing is data, not design.\n- **Default if unanswered: a.**\n\n---\n\nTo accept both recommendations, type (`skip=D-n` means \"this should not have been asked\"):\n\n```\n/athel:decide CHG-001 D-1=c D-2=a\n```"
+          },
+          {
+            "session_id": "c16b15b6-43eb-4509-ab1e-e39b1173b591",
+            "cost_usd": 0.0988092,
+            "duration_s": 16.918,
+            "turns": 5,
+            "result": "Your answers for CHG-001 are saved: **D-1 = c** and **D-2 = a**.\n\n- **Default check:** no defaults were applied and there are no reminders.\n- **Open cards:** none are left.\n- **State:** CHG-001 \"Clear errors from the users client in orders\" is still in `awaiting_decisions`.\n\nNext step: `/athel:plan CHG-001`."
+          },
+          {
+            "session_id": "a45afe80-39bc-4943-881d-f6f0ef0d08c1",
+            "cost_usd": 0.38508660000000006,
+            "duration_s": 68.155,
+            "turns": 7,
+            "result": "The plan for CHG-001 is saved, and the change has moved to `planned`. All 7 acceptance criteria trace to at least one task, and no decision cards are open.\n\n**Tasks** (all in `orders`, in this order)\n1. **T-01:** checks whether a 2 s timeout is safe (card D-2). No code changes.\n   - Env action: ask `@acme/identity` for the p99 latency of `GET /v1/users/ID`, or read the UsersLatency alert threshold, and record the figure in the PR. If p99 is close to or above 2 s, the reviewer decides before merge.\n2. **T-02:** asks identity to return 404 for unknown ids (card D-1). No code changes.\n   - Env action: comment on SHOP-12 and users PR 812.\n3. **T-03:** rewrites `Users.Get` (depends on T-01). It returns a decoded `Customer`, the errors `ErrCustomerNotFound` and `ErrUsersUnavailable`, and a 2 s timeout layered on the caller's context. Size M.\n   - Files: `clients/users.go`, `clients/users_test.go`, `clients/clients_test.go`.\n   - Gates: build, unit, lint.\n\n**Risk:** LOW. The signature change breaks the old API, but its only caller is the package's own test.\n\n**Open assumptions** (no defaults were applied without your answer)\n- A-1: \"typed\" means exported errors that callers match with `errors.Is`.\n- A-2: a 2xx response whose body doesn't decode as a customer counts as a failure.\n- A-3: if the caller's deadline is shorter than 2 s, it wins; 2 s is only an upper bound.\n- A-4: users PR 812 keeps `phone` as a JSON string. This depends on another team's work.\n\n**Note:** until identity ships the 404, `ErrCustomerNotFound` won't fire in production. An unknown id will still come back as a customer with an empty name and phone, because of the D-1 choice. The spec's design notes also still list D-1 and D-2 as open. That text is out of date but harmless.\n\n**Estimate:** about 2.5 hours and $10.\n\nNext, type: `/athel:approve CHG-001`"
+          },
+          {
+            "session_id": "1776c8aa-0a81-4fa4-865e-04f2b7b7370c",
+            "cost_usd": 0.08776840000000001,
+            "duration_s": 13.85,
+            "turns": 3,
+            "result": "Plan for CHG-001 (all tasks in the orders repo):\n- **T-01** (comment): ask identity for the p99 latency of `GET /v1/users/ID` and compare it with the 2 s timeout (card D-2). The figure goes in the PR body.\n- **T-02** (comment): ask identity to make that endpoint return 404 for an unknown user ID (card D-1), on SHOP-12 and users PR 812.\n- **T-03** (edit, create, test, commit): `clients/users.go`, `clients/users_test.go`, `clients/clients_test.go`. `Users.Get` returns a decoded customer and typed errors, uses a 2 s timeout and respects the caller's context. Depends on T-01. Must pass the build, unit and lint checks.\n\nPlan hash: `sha256:088c38a7c1aa990fc0201f5beae1ae32645c02a75a6b92f4e64ab4db8ac35b8c`\n\nPlan of CHG-001 approved (hash sha256:088c38a7c1aa990fc0201f5beae1ae32645c02a75a6b92f4e64ab4db8ac35b8c).\n\nRun `/athel:build CHG-001` to start building it."
+          },
+          {
+            "session_id": "ef7e3555-5467-4965-b6bb-82d3ec1b81fe",
+            "cost_usd": 2.3674063999999997,
+            "duration_s": 7.692,
+            "turns": 1,
+            "result": "The reviewer has reported too, so all three checkers are back. T-03 is still blocked on card **D-8** and I've made no changes.\n\n**Reviewer's result:** it reviewed `e92abe3` and approved it. It found no blockers and no majors, and every acceptance criterion has a test. It could not save its round because the change is blocked, so the result exists only in its reply for now. It raised two minor findings:\n- **Not a customer still counts as success** (`clients/users.go:85-89`): a 2xx body of `null` returns an empty Customer with no error. So does a valid object followed by trailing junk. The spec says a body that isn't a valid customer must return `ErrUsersUnavailable`.\n- **Untested close-error branch** (`clients/users.go:57-61`): an error closing the body turns an already-decoded customer into `ErrUsersUnavailable`. No test covers that path and no requirement asks for it. Either remove the branch or add a test for it.\n\n**Possible compile error in QA's uncommitted tests:** the reviewer saw `strconv` added to the imports of `clients/users_test.go` with nothing using it. Go won't build a package with an unused import. QA says its boundary tests use `strconv`, so the reviewer may have looked at the file before QA finished. No one has run the tests, so the gates need to run before that file is committed.\n\n**Open findings for the next developer round:** the reviewer's two minors above and security's minor (rejecting an empty, `.` or `..` id).\n\n**To go on:** answer with `/athel:decide D-8`, then re-run `/athel:build CHG-001`. Before resuming, it's worth fixing the hook rule that stops the agents running `go` in the worktree. Otherwise QA and the reviewer can't save their reports, and T-03 can't be marked done."
+          },
+          {
+            "session_id": "9e7d917d-7757-486d-840f-46d4f5b03e0e",
+            "cost_usd": 0.1027168,
+            "duration_s": 21.298,
+            "turns": 5,
+            "result": "I recorded your answer **D-8 = a** on CHG-001.\n\n- **Decision timers:** no defaults came due and there are no reminders.\n- **Open cards:** none left on CHG-001.\n\nCHG-001 isn't waiting on decisions, so `/athel:plan` isn't the next step. The change is **blocked during build at task T-03** because the session stopped 3 times without finishing or blocking that task. Your lock on it is still active. To pick it up again, run `/athel:build CHG-001`, which continues T-03."
+          },
+          {
+            "session_id": "91c428fd-1386-4ee7-aae1-ff56e6a922d3",
+            "cost_usd": 0.1029216,
+            "duration_s": 16.047,
+            "turns": 3,
+            "result": "I didn't build anything, because CHG-001 is **blocked** and this skill only runs a change in `plan_approved` or `building`.\n\n- **Where it stopped:** task **T-03** in the build step, after 3 attempts. The Stop hook blocked it because \"the session stopped 3 times with task T-03 neither done nor blocked.\"\n- **Cards:** none are open, so nothing is waiting on `/athel:decide`.\n- **Plan:** it was already approved; the change was blocked while building.\n- **Repo:** `orders`, worktree `repos/orders@CHG-001`. Nothing has been pushed and no PR is open yet.\n\nThe CLI only allows moving the change back to `building` or to `cancelled`. Unblocking it is your call, so I've left it as is. To continue, run `/athel:resume` or put it back into building:\n\n```\nathel --json state transition CHG-001 --to building --by \u003cyou\u003e --reason \"\u003cwhy\u003e\"\n```\n\nThen re-run `/athel:build CHG-001` and it will pick up T-03. T-03 already stalled three times, so check its last round first (`athel --json gate show CHG-001 T-03`) to see what kept it from finishing."
+          }
+        ],
+        "artifacts": {
+          "state": "blocked",
+          "kinds": [
+            "internal",
+            "internal",
+            "internal"
+          ],
+          "findings": [
+            "clients/users.go:64-67"
+          ],
+          "prs": null,
+          "gate_problems": null,
+          "lines": 0,
+          "lint_ok": true,
+          "clones_unchanged": true,
+          "planted_kept": false,
+          "pushed": false
+        },
+        "error": "the build is blocked with no card to answer"
+      }
+    ]
+  },
+  "claude": "2.1.311 (Claude Code)",
+  "commit": "6be8ae1f7af3b8d1e49ac5751aa60e18573bd599",
+  "cost_usd": 5.242369,
+  "model": "",
+  "runs": 1,
+  "runs_per_case": 1,
+  "schema": "athel-evals/m4-build@1",
+  "started": "2026-11-15T16:32:23Z",
+  "valid": 0
+}

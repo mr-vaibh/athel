@@ -114,11 +114,11 @@ var matchers = []matcher{
 		}
 		return Action{}, "", false
 	},
-	func(_ *cmdClassifier, name string, cmd shellparse.Command) (Action, string, bool) {
+	func(cl *cmdClassifier, name string, cmd shellparse.Command) (Action, string, bool) {
 		if flags, ok := interpreters[name]; ok && hasAnyFlag(cmd.Args, flags) {
 			return Action{Tool: name, Tier: W0, Text: text(cmd), Uncertain: UnknownCommand}, name + " runs inline code that is not analysed", true
 		}
-		a, ok := packageCommand(name, cmd)
+		a, ok := packageCommand(name, cmd, cl.cwd)
 		return a, "", ok
 	},
 	func(cl *cmdClassifier, _ string, cmd shellparse.Command) (Action, string, bool) {

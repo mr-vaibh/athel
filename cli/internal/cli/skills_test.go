@@ -72,6 +72,9 @@ func TestBuildSkillFollowsTheLoop(t *testing.T) {
 			t.Errorf("/athel:build runs %q", never)
 		}
 	}
+	if !strings.Contains(text, "in the foreground") || !strings.Contains(text, "never start one in\n  the background") {
+		t.Error("/athel:build must keep its agents in the foreground: a turn that ends to wait counts as a stop")
+	}
 	if strings.Contains(text, "`git push origin") || strings.Contains(text, "`gh pr ") {
 		t.Error("/athel:build pushes or edits a PR without the CLI (ADR 026)")
 	}

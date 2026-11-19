@@ -216,6 +216,22 @@ func (r *runCtx) gitOut(dir string, args ...string) (string, error) {
 
 // gh runs the GitHub CLI found on the session's PATH, with the developer's own login (gh keeps
 // it under HOME), and returns its standard output.
+// ghVars are GitHub CLI's own settings: its host, config folder and tokens. gh needs them to
+// reach GitHub as the developer (a token login in CI or headless runs); they are passed through
+// to gh only, never logged.
+var ghVars = []string{"GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN", "GH_HOST", "GH_CONFIG_DIR"}
+
+// ghEnv is git's network environment plus gh's own settings.
+func ghEnv(getenv func(string) string) []string {
+	env := gitro.NetworkEnv(getenv)
+	for _, k := range ghVars {
+		if v := getenv(k); v != "" {
+			env = append(env, k+"="+v)
+		}
+	}
+	return env
+}
+
 func (r *runCtx) gh(args ...string) ([]byte, error) {
 	const name = "gh"
 	path := lookPath(r.env.Getenv("PATH"), name)
@@ -223,7 +239,7 @@ func (r *runCtx) gh(args ...string) ([]byte, error) {
 		return nil, aerr.New(aerr.ToolUnreachable, name+" is not on PATH").WithNextAction("install " + name + " and log in, then retry")
 	}
 	cmd := exec.Command(path, args...) //nolint:gosec // gh with subcommands Athel fixes in code; values are arguments, never shell
-	cmd.Env = gitro.NetworkEnv(r.env.Getenv)
+	cmd.Env = ghEnv(r.env.Getenv)
 	var out, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &stderr
 	if err := cmd.Run(); err != nil {

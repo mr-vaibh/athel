@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/mr-vaibh/athel/cli/internal/blast"
 	"github.com/mr-vaibh/athel/cli/internal/build"
+	"github.com/mr-vaibh/athel/cli/internal/decisions"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/gitlint"
 	"github.com/mr-vaibh/athel/cli/internal/pr"
@@ -104,7 +107,9 @@ func cmdPRUpdate(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	c, w, err := r.pushTarget(s, pos[0], pos[1])
+	// Editing the body pushes nothing, so it is allowed until review: /athel:ship refreshes it with
+	// the final gates, waivers and findings before marking the PR ready.
+	c, w, err := r.repoTarget(s, pos[0], pos[1], state.Building, state.ReadyForPR, state.InReview)
 	if err != nil {
 		return nil, err
 	}
@@ -132,8 +137,9 @@ func (r *runCtx) sizedDraft(s *state.Store, c *state.Change, w state.RepoWork) (
 	if p := gitlint.Title(d.Title, pol.Git.Commit.Format); len(p) > 0 {
 		return d, lintFailure("PR title refused", p)
 	}
-	if d.Lines <= d.Max {
-		return d, nil
+	allowed, err := r.sizeAllowed(c.ID, w.Name)
+	if err != nil || d.Lines <= max(d.Max, allowed) {
+		return d, err
 	}
 	if d.Split, err = r.taskLines(s, c, w, pol.Git.PR.ExcludeFromSize, d.Max); err != nil {
 		return d, err
@@ -142,9 +148,61 @@ func (r *runCtx) sizedDraft(s *state.Store, c *state.Change, w state.RepoWork) (
 	for i, g := range d.Split {
 		groups = append(groups, fmt.Sprintf("PR %d: %s (%d lines)", i+1, strings.Join(g.Tasks, ", "), g.Lines))
 	}
+	card, err := r.raiseOnce(c.ID, sizeCard(w.Name, d.Lines, d.Max, d.Split))
+	if err != nil {
+		return d, err
+	}
 	return d, aerr.New(aerr.GatePRSize, fmt.Sprintf("the diff is %d changed lines; git.yaml allows %d per PR. Proposed split: %s",
 		d.Lines, d.Max, strings.Join(groups, "; "))).
-		WithNextAction("split the plan into these PRs with a plan change request, or have the limit raised at plan approval")
+		WithNextAction("the developer answers card " + card + " with /athel:decide: raise this PR's limit, or change the plan into these PRs")
+}
+
+// sizeOption is the label of the size card's "raise" option; sizeAllowed reads the number back.
+const sizeOption = "Allow up to %d changed lines in this PR"
+
+// sizeCard asks the developer about a PR over git.yaml's limit (FR-GIT-009; ADR 028). When the
+// plan's tasks cannot be split under the limit (one task alone is over it), raising the limit is
+// recommended; otherwise changing the plan into the proposed PRs is.
+func sizeCard(repo string, lines, limit int, split []pr.Group) decisions.Draft {
+	allow := (lines*5/4 + 49) / 50 * 50 // room for fix rounds, in steps of 50
+	splittable := len(split) > 1 && !slices.ContainsFunc(split, func(g pr.Group) bool { return g.Lines > limit })
+	rec := decisions.Recommendation{Option: "a", Reason: "one task alone is over the limit, so no split of the plan brings the PR under it"}
+	if splittable {
+		rec = decisions.Recommendation{Option: "b", Reason: "the plan's tasks fit into PRs under the limit"}
+	}
+	return decisions.Draft{
+		Rule: "A6", Step: "build", Question: "The " + repo + " PR is over git.yaml's limit of " + strconv.Itoa(limit) + " changed lines. How should Athel go on?",
+		Context: fmt.Sprintf("FR-GIT-009: a PR is at most %d changed lines, without generated files and lockfiles. This one is %d.", limit, lines),
+		Options: []decisions.Option{
+			{Key: "a", Label: fmt.Sprintf(sizeOption, allow), Consequence: "Athel opens the PR as it is; reviewers get a larger diff"},
+			{Key: "b", Label: "Change the plan into smaller PRs", Consequence: "the plan changes and needs your approval again before the PR opens"},
+		},
+		Recommendation: rec, Default: "b", DefaultSafe: true, Blocks: []string{"build"},
+	}
+}
+
+// sizeAllowed is the PR size the developer allowed for repo by answering its size card with
+// "a", or 0.
+func (r *runCtx) sizeAllowed(id, repo string) (int, error) {
+	f, err := r.readDecisions(id)
+	if err != nil {
+		return 0, err
+	}
+	q := "The " + repo + " PR is over git.yaml's limit of "
+	allowed := 0
+	for _, e := range f.Decisions {
+		c := e.Card
+		if c == nil || c.Answer == nil || c.Answer.Option != "a" || !strings.HasPrefix(c.Question, q) {
+			continue
+		}
+		for _, o := range c.Options {
+			var n int
+			if _, err := fmt.Sscanf(o.Label, sizeOption, &n); err == nil && o.Key == "a" {
+				allowed = max(allowed, n)
+			}
+		}
+	}
+	return allowed, nil
 }
 
 // prDraft builds the title and body from the change's files and the branch's diff.
@@ -184,7 +242,7 @@ func (r *runCtx) prDraft(s *state.Store, c *state.Change, w state.RepoWork) (prD
 			}
 		}
 	}
-	in.Rollback, in.Waivers = planNotes(s, c, w.Name)
+	in.Rollback, in.Waivers, in.Actions = planNotes(s, c, w.Name)
 	if in.Findings, err = r.prFindings(s, c.ID); err != nil {
 		return prDraft{}, err
 	}
@@ -195,12 +253,12 @@ func (r *runCtx) prDraft(s *state.Store, c *state.Change, w state.RepoWork) (prD
 	return prDraft{Title: pr.Title(w.Name, c.Title), Body: pr.Body(in), Lines: size.Lines, Max: pol.Git.PR.MaxChangedLines, Excluded: excluded}, nil
 }
 
-// planNotes are the rollback steps and the waivers of the plan's tasks in repo.
-func planNotes(s *state.Store, c *state.Change, repo string) ([]string, []string) {
-	var rollback, waivers []string
+// planNotes are the rollback steps, the waivers and the shared actions of the plan's tasks in repo.
+func planNotes(s *state.Store, c *state.Change, repo string) ([]string, []string, []string) {
+	var rollback, waivers, actions []string
 	p, ok := s.ApprovedPlan(c)
 	if !ok {
-		return nil, nil
+		return nil, nil, nil
 	}
 	for _, t := range p.Tasks {
 		if t.Repo != repo {
@@ -209,13 +267,16 @@ func planNotes(s *state.Store, c *state.Change, repo string) ([]string, []string
 		if t.Rollback != "" {
 			rollback = append(rollback, t.ID+": "+t.Rollback)
 		}
+		for _, a := range t.EnvActions {
+			actions = append(actions, t.ID+": "+a)
+		}
 		for _, wv := range c.Waivers {
 			if wv.Task == t.ID {
 				waivers = append(waivers, wv.Task+" "+wv.Subject+" until "+wv.Until+" by "+wv.By+": "+wv.Reason)
 			}
 		}
 	}
-	return rollback, waivers
+	return rollback, waivers, actions
 }
 
 // specFor is the change's spec for repo when it has one by that name, else every spec.

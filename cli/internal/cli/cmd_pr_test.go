@@ -5,10 +5,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/pr"
 )
 
 // recordingGH puts a gh on PATH that logs every call to the returned file, prints a PR URL for
@@ -115,6 +117,31 @@ func TestPROversizedProposesSplit(t *testing.T) {
 	}
 	if len(calls(t, log)) != before {
 		t.Error("nothing reaches GitHub")
+	}
+	// ADR 028: the refusal is a card for the developer, never a dead end. One task alone is over
+	// the limit, so raising it is recommended; once answered, the PR opens.
+	open := asJSON(t, h.mustOK("decide", "list", "CHG-001", "--open"))
+	if !strings.Contains(open, "The users PR is over git.yaml's limit of 2 changed lines") || !strings.Contains(open, "Allow up to 50 changed lines in this PR") ||
+		!strings.Contains(open, `"recommendation":{"option":"a"`) || !strings.Contains(asJSON(t, env), "answers card D-") {
+		t.Fatalf("size card: %s %v", open, env)
+	}
+	if _, again := h.runJSON("pr", "open", "CHG-001", "users"); errCode(again) != string(aerr.GatePRSize) ||
+		strings.Count(asJSON(t, h.mustOK("decide", "list", "CHG-001", "--open")), "over git.yaml's limit") != 1 {
+		t.Errorf("a second refusal asks once: %v", again)
+	}
+	id := regexp.MustCompile(`"id":"(D-[0-9]+)"`).FindStringSubmatch(open)[1]
+	h.humanPrompt("/athel:decide CHG-001 " + id + "=a")
+	h.mustOK("decide", "answer", "CHG-001", id+"=a")
+	h.mustOK("pr", "open", "CHG-001", "users")
+	if len(calls(t, log)) == before {
+		t.Error("the PR opens within the allowed size")
+	}
+}
+
+func TestSizeCardRecommendsASplitWhenOneFits(t *testing.T) {
+	d := sizeCard("users", 500, 400, []pr.Group{{Tasks: []string{"T-01"}, Lines: 300}, {Tasks: []string{"T-02"}, Lines: 200}})
+	if d.Recommendation.Option != "b" || d.Options[0].Label != "Allow up to 650 changed lines in this PR" {
+		t.Errorf("%+v", d)
 	}
 }
 

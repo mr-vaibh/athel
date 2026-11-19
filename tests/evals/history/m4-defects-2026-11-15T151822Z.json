@@ -1,0 +1,162 @@
+{
+  "cases": {
+    "C01": [
+      {
+        "run": 1,
+        "grade": {
+          "caught": false,
+          "false_alarms": 2,
+          "findings": 6
+        },
+        "session": {
+          "session_id": "17354d4d-33e6-4905-aeff-0f5643968d8c",
+          "cost_usd": 0.3695772,
+          "duration_s": 81.188,
+          "turns": 4,
+          "result": "I've left T-01 as it is. The Stop hook wants me to either run the gates, fix the findings and mark the task done, or end the build step as blocked. You asked me to do only step 9 and stop when the reviewer returned, so I haven't done either. The hook says it will ask up to 3 times.\n\nT-01 is still `running`, with R1-01 and R1-02 open from the first review round. You can go one of three ways:\n\n1. **Continue the build:** run `/athel:build CHG-001`, which sends R1-01 and R1-02 back to the developer agent. R1-01 may need a plan change first, because T-01 may only touch `locales/**`.\n2. **Block the step:** run `athel state exit CHG-001 build --result blocked --reason \"...\"`, for example if you want to revise the plan for R1-01 first.\n3. **Leave it:** keep it as it is; this session holds the lock until it goes stale at 15:50 UTC.\n\nTell me which one and I'll run it."
+        },
+        "findings": [
+          {
+            "id": "R1-01",
+            "severity": "major",
+            "source": "reviewer",
+            "location": "locales/locales.go:23-34",
+            "rule": "spec.fit"
+          },
+          {
+            "id": "R1-02",
+            "severity": "major",
+            "source": "reviewer",
+            "location": "locales/locales.go:17-18",
+            "rule": "security.authz"
+          },
+          {
+            "id": "R1-03",
+            "severity": "minor",
+            "source": "reviewer",
+            "location": "locales/locales.go:45",
+            "rule": "security.input-validation"
+          },
+          {
+            "id": "R1-04",
+            "severity": "minor",
+            "source": "reviewer",
+            "location": "locales/locales.go:50",
+            "rule": "observability.structured-logs"
+          },
+          {
+            "id": "R1-05",
+            "severity": "nit",
+            "source": "reviewer",
+            "location": "locales/locales.go:21-46",
+            "rule": "readability.conventions"
+          },
+          {
+            "id": "R1-06",
+            "severity": "nit",
+            "source": "reviewer",
+            "location": "locales/locales_test.go:95-100",
+            "rule": "tests.failure-paths"
+          }
+        ]
+      }
+    ],
+    "D01": [
+      {
+        "run": 1,
+        "grade": {
+          "caught": false,
+          "false_alarms": 0,
+          "findings": 3
+        },
+        "session": {
+          "session_id": "a0283755-bec4-4b97-a348-77e9cff05921",
+          "cost_usd": 0.34128679999999995,
+          "duration_s": 51.26,
+          "turns": 4,
+          "result": "I'm stopping here as you asked, so I haven't continued the build or changed CHG-001's state. Athel's stop hook objected because T-01 is neither done nor blocked. It wants one of two things:\n\n- **Continue the build:** send R1-01 to R1-03 to the developer agent, run the gates again and finish with `athel build done CHG-001 T-01`.\n- **Mark the step blocked:** run `athel state exit CHG-001 build --result blocked --reason \"...\"`. The side finding SF-1 could justify this, since the plan seems to be missing a task to wire the handler into `main.go`.\n\nThe hook may fire again on the next stops (this was stop 1 of 3). Tell me which option you want, or whether to leave it as it is."
+        },
+        "findings": [
+          {
+            "id": "R1-01",
+            "severity": "blocker",
+            "source": "reviewer",
+            "location": "preferences/preferences.go:49-55",
+            "rule": "errors.no-silent-catch"
+          },
+          {
+            "id": "R1-02",
+            "severity": "major",
+            "source": "reviewer",
+            "location": "preferences/preferences_test.go:82-103",
+            "rule": "tests.failure-paths"
+          },
+          {
+            "id": "R1-03",
+            "severity": "minor",
+            "source": "reviewer",
+            "location": "preferences/preferences.go:43-46",
+            "rule": "errors.no-silent-catch"
+          }
+        ]
+      }
+    ],
+    "D06": [
+      {
+        "run": 1,
+        "grade": {
+          "caught": false,
+          "false_alarms": 0,
+          "findings": 0,
+          "problems": [
+            "no review round was saved",
+            "run failed: athel [--json --session eval-setup spec save CHG-001 -]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-INVALID\",\"message\":\"spec rejected: AC-1: \\\"then the response lists Ada\\\" names nothing a test can observe (a status code, a returned or stored value, an event, an error code)\",\"next_action\":\"fix the spec block and save again; `athel spec validate` checks without saving\"}}\n "
+          ]
+        },
+        "session": {
+          "session_id": "",
+          "cost_usd": 0,
+          "duration_s": 0,
+          "turns": 0
+        },
+        "findings": null,
+        "error": "athel [--json --session eval-setup spec save CHG-001 -]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-INVALID\",\"message\":\"spec rejected: AC-1: \\\"then the response lists Ada\\\" names nothing a test can observe (a status code, a returned or stored value, an event, an error code)\",\"next_action\":\"fix the spec block and save again; `athel spec validate` checks without saving\"}}\n "
+      }
+    ]
+  },
+  "claude": "2.1.311 (Claude Code)",
+  "commit": "34f2176a83a9eb00091aa3a3352e0d51a9f5f4a3",
+  "cost_usd": 0.7108639999999999,
+  "model": "",
+  "runs_per_case": 1,
+  "schema": "athel-evals/m4-defects@1",
+  "started": "2026-11-15T15:18:22Z",
+  "summary": {
+    "defect_runs": 2,
+    "caught": 0,
+    "catch_rate": 0,
+    "clean_runs": 1,
+    "false_alarm_runs": 1,
+    "by_category": {
+      "errors": [
+        0,
+        1
+      ],
+      "security": [
+        0,
+        1
+      ]
+    },
+    "missed": {
+      "D01": 1,
+      "D06": 1
+    },
+    "met": false,
+    "errors": {
+      "D06": [
+        "no review round was saved",
+        "run failed: athel [--json --session eval-setup spec save CHG-001 -]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-INVALID\",\"message\":\"spec rejected: AC-1: \\\"then the response lists Ada\\\" names nothing a test can observe (a status code, a returned or stored value, an event, an error code)\",\"next_action\":\"fix the spec block and save again; `athel spec validate` checks without saving\"}}\n "
+      ]
+    }
+  }
+}

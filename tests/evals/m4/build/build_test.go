@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mr-vaibh/athel/tests/fixtures/shop"
 	"github.com/mr-vaibh/athel/tests/internal/evalkit"
@@ -100,6 +101,7 @@ func TestGradeRun(t *testing.T) {
 		{"never pushed", func(a *Artifacts) { a.Pushed = false }},
 		{"gate go test", func(a *Artifacts) { a.GateProblems = []string{"gate go test fails"} }},
 		{"more lines than the limit", func(a *Artifacts) { a.Lines = MaxLines + 1 }},
+		{"more lines than the limit", func(a *Artifacts) { a.Lines, a.AllowedLines = 601, 600 }},
 		{"git lint", func(a *Artifacts) { a.LintOK = false }},
 		{"clones changed", func(a *Artifacts) { a.ClonesUnchanged = false }},
 		{"no side finding names", func(a *Artifacts) { a.Findings = []string{"api/user.go:3"} }},
@@ -238,6 +240,9 @@ func TestBuildSandbox(t *testing.T) {
 	}
 	g := GradeRun(c, a)
 	want := []string{"not in_review", "no ready, open PR", "never pushed", "no side finding"}
+	if strings.Contains(strings.Join(g.Problems, ";"), "was edited inside the change") {
+		t.Errorf("no pushed branch, so the planted bug is not judged: %v", g.Problems)
+	}
 	for _, w := range want {
 		if !strings.Contains(strings.Join(g.Problems, ";"), w) {
 			t.Errorf("an empty run lacks %q: %v", w, g.Problems)
@@ -245,5 +250,52 @@ func TestBuildSandbox(t *testing.T) {
 	}
 	if !a.ClonesUnchanged {
 		t.Error("nothing touched the clones")
+	}
+}
+
+func TestHasUndecided(t *testing.T) {
+	decided := map[string]any{"findings": []any{map[string]any{"id": "SF-1", "disposition": "ticket"}}}
+	open := map[string]any{"findings": []any{map[string]any{"id": "SF-1", "disposition": "ticket"}, map[string]any{"id": "SF-2", "disposition": nil}}}
+	if hasUndecided(decided) || !hasUndecided(open) || hasUndecided(map[string]any{}) {
+		t.Error("hasUndecided")
+	}
+}
+
+func TestLimit(t *testing.T) {
+	if limit("build", 20*time.Minute) != time.Hour || limit("spec", 20*time.Minute) != 20*time.Minute {
+		t.Error("limit")
+	}
+}
+
+// TestAllowedLines (ADR 028): the developer's answer to the size card raises the limit the
+// grader holds the PR to; an unanswered card, option b or another repo's card do not.
+func TestAllowedLines(t *testing.T) {
+	dir := t.TempDir()
+	card := func(repo, answer string) string {
+		a := "null"
+		if answer != "" {
+			a = "{option: " + answer + "}"
+		}
+		return "  - {question: \"The " + repo + " PR is over git.yaml's limit of 400 changed lines. How should Athel go on?\", " +
+			"options: [{key: a, label: Allow up to 600 changed lines in this PR}, {key: b, label: Change the plan}], answer: " + a + "}\n"
+	}
+	for _, tc := range []struct {
+		doc  string
+		want int
+	}{
+		{card("orders", "a"), 600}, {card("orders", "b"), 0}, {card("orders", ""), 0}, {card("users", "a"), 0}, {"", 0},
+	} {
+		write(t, dir, map[string]string{"decisions.yaml": "decisions:\n" + tc.doc})
+		if got := allowedLines(filepath.Join(dir, "decisions.yaml"), "orders"); got != tc.want {
+			t.Errorf("%q: %d", tc.doc, got)
+		}
+	}
+	if allowedLines(filepath.Join(dir, "none.yaml"), "orders") != 0 {
+		t.Error("no decisions file")
+	}
+	_, a := good()
+	a.Lines, a.AllowedLines = 479, 600
+	if g := GradeRun(Case{Kinds: []string{"internal"}, Repo: "users", Planted: Planted{File: "api/display.go"}}, a); !g.Valid {
+		t.Errorf("a PR within the limit the developer raised: %v", g.Problems)
 	}
 }

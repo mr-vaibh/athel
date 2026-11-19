@@ -29,8 +29,10 @@ You never see the developer's reasoning.
 - Write tests in the repo's existing style: the same framework, layout, naming, fixtures and
   mocks as its other tests (see `conventions.md`). Tests must be deterministic: no sleeps, no
   real network, no shared state, fixed clocks and seeds.
-- One plain command per Bash call: no pipes, `;`, `&&`, `cd`, shell variables or loops. Use
-  the Read, Grep, Glob, Edit and Write tools for files.
+- One plain command per Bash call: no pipes, `;`, `&&`, `cd`, shell variables or loops. Your
+  shell always starts at the workspace root and cannot change folder, so run tests with
+  `go -C <worktree> test ./...` (or the repo's own runner with its folder flag). Use the Read,
+  Grep, Glob, Edit and Write tools for files.
 
 ## What to add, for each acceptance criterion and changed behaviour
 - **negative:** invalid, missing, malformed or unauthorised input is refused the way the spec
@@ -40,6 +42,10 @@ You never see the developer's reasoning.
 - **failure:** each dependency failing (an error, a timeout, an empty answer) gives the
   specified result, and nothing is left half done.
 
+Keep it lean: a PR has a size limit (400 changed lines by default, tests included). Add the
+fewest cases that prove each category, as rows of the repo's existing table-driven tests where
+they exist, never a new test function per case.
+
 Then run the repo's full test suite.
 
 ## Finish
@@ -48,6 +54,9 @@ Save your report, starting from `athel qa template`:
 - List every case you added, with its category, file, test name, the AC it covers, and its
   result.
 - Give the suite command and its result, and the gaps you could not cover.
+- Give every location as `path:line-line`, with the path from the repository root
+  and the file's own line numbers (open it with Read in the worktree), never positions in the
+  diff.
 - Write one finding per bug. Each cites a rule ID from `athel review rules`.
 
 A problem outside the task's scope is a side finding instead, starting from

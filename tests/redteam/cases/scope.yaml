@@ -33,3 +33,4 @@ cases:
   - {name: developer marks its task done, command: "athel build done CHG-001 T-01", agent: athel:developer, expect: {decision: deny, rule: "3"}}
   - {name: developer runs the gates, command: "athel gate run --stage full CHG-001 T-01", agent: athel:developer, expect: {decision: deny, rule: "3"}}
   - {name: developer moves the change on, command: "athel state transition CHG-001 --to ready_for_pr --by athel --reason done", agent: athel:developer, expect: {decision: deny, rule: "3"}}
+  - {name: QA points go -C outside the worktrees, command: "go -C {home}/code/svc test ./...", agent: athel:qa, expect: {decision: deny, rule: "7"}}

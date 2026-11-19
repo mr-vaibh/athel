@@ -112,8 +112,16 @@ func commitCase(sb *evalkit.Sandbox, c Case) error {
 	return nil
 }
 
+// conventions are the repo facts a reviewer needs to judge a package-level diff: new packages
+// land with their tests first and are wired into main.go by a later task, and the gateway
+// authenticates every request; ownership checks stay each handler's job.
 const conventions = "conventions: |\n  # Conventions\n  Go with the standard library only. net/http handlers, table-driven tests with httptest,\n" +
-	"  errors returned and wrapped with %w, gofmt and go vet clean.\nmap: |\n  # Map\n  One package per folder; main.go wires the handlers.\n"
+	"  errors returned and wrapped with %w, gofmt and go vet clean.\n" +
+	"  A new package lands with its tests first; a later task wires it into main.go and gives it its\n" +
+	"  production store, so handlers take their dependencies as interfaces.\n" +
+	"  The gateway authenticates every request and passes the caller's user ID in a header it sets and\n" +
+	"  strips from client requests. Each handler checks that the caller may act on the resource.\n" +
+	"map: |\n  # Map\n  One package per folder; main.go wires the handlers.\n"
 
 func spec(c Case, remote string) string {
 	q := func(s string) string { b, _ := json.Marshal(s); return string(b) }

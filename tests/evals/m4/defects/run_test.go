@@ -2,6 +2,7 @@ package defects
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -153,6 +154,7 @@ func TestDefectSandbox(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(sb.WS, filepath.FromSlash(Manifest))); err != nil {
 		t.Fatalf("the reviewer's manifest: %v", err)
 	}
+	checkSpecs(t, sb, all)
 	if p := Prompt(sb, c); !strings.Contains(p, Manifest) || !strings.Contains(p, Worktree(sb, c)) || strings.Contains(p, c.Planted.File) {
 		t.Errorf("the prompt gives the manifest and the worktree and nothing about the defect: %s", p)
 	}
@@ -170,5 +172,40 @@ func TestDefectSandbox(t *testing.T) {
 	}
 	if g := GradeRun(c, fs, saved); !g.Caught || g.MatchedBy != "R1-01" {
 		t.Errorf("a finding on the planted lines with the defect's rule is caught: %+v", g)
+	}
+}
+
+// onlyTaken reports whether a spec check's only problems are IDs another spec of the shared check
+// change already uses.
+func onlyTaken(out string) bool {
+	var env struct {
+		Data struct {
+			Problems []string `json:"problems"`
+		} `json:"data"`
+	}
+	if json.Unmarshal([]byte(out), &env) != nil {
+		return false
+	}
+	for _, p := range env.Data.Problems {
+		if !strings.Contains(p, "is already used by the") {
+			return false
+		}
+	}
+	return true
+}
+
+// checkSpecs: every case's spec must pass the CLI's own check, or its run never reaches the
+// reviewer. They are checked in this one change, so the IDs the first case's spec already holds
+// are ignored.
+func checkSpecs(t *testing.T, sb *evalkit.Sandbox, all []Case) {
+	t.Helper()
+	if _, err := sb.Athel(conventions, "--json", "--session", "eval-check", "conventions", "save", "github.com/acme/orders", "-", "--new"); err != nil {
+		t.Fatal(err)
+	}
+	for _, other := range all {
+		out, err := sb.Athel(spec(other, "github.com/acme/"+other.Repo), "--json", "spec", "validate", Change, "-")
+		if err != nil || !strings.Contains(string(out), `"valid":true`) && !onlyTaken(string(out)) {
+			t.Errorf("%s: its spec is refused: %v %s", other.ID, err, out)
+		}
 	}
 }

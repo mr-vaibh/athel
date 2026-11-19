@@ -1,8 +1,10 @@
 package engine
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/mr-vaibh/athel/cli/internal/classify"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/hookio"
 )
@@ -94,4 +96,28 @@ func TestDeveloperCannotGradeItself(t *testing.T) {
 		{"marks the task done", "Bash", done, dev, Deny, "3", aerr.PolicyAgentScope},
 		{"the main session may", "Bash", done, nil, Allow, "7x", ""},
 	})
+}
+
+// TestGoDashCTargetsTheWorktree: subagents' shells start at the workspace root and cannot change
+// folder, so they run tests with go -C <worktree>; that folder is what the plan's rules judge.
+func TestGoDashCTargetsTheWorktree(t *testing.T) {
+	ctx := changeCtx(t)
+	as(hookio.QAAgent)(&ctx)
+	run := func(cmd string) Result {
+		raw, err := json.Marshal(map[string]any{"command": cmd})
+		if err != nil {
+			t.Fatal(err)
+		}
+		call := classify.Call{Tool: "Bash", Input: raw, Cwd: ws}
+		return Decide(call, classify.Classify(call, ctx.Policy, classify.Options{}), ctx)
+	}
+	if r := run("go -C " + tree + " test ./..."); r.Decision != Allow || r.Rule != "10" {
+		t.Errorf("tests in the worktree: %+v", r)
+	}
+	if r := run("go test ./..."); r.Decision != Deny || r.Rule != "7" {
+		t.Errorf("tests at the workspace root: %+v", r)
+	}
+	if r := run("go -C /elsewhere test ./..."); r.Decision != Deny || r.Rule != "7" {
+		t.Errorf("tests outside the worktrees: %+v", r)
+	}
 }

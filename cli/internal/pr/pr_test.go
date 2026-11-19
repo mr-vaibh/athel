@@ -62,6 +62,7 @@ func TestBody(t *testing.T) {
 		Rollback:  []string{"T-01: revert the commit"},
 		Waivers:   []string{"T-01 lint until 2026-11-30 by human: legacy finding"},
 		Findings:  []string{"SF-1 (bug, medium) users/src/a.go:88: trimmed only on create → ticket"},
+		Actions:   []string{"T-02: comment on SHOP-12 with the rollout window"},
 	})
 	for _, want := range []string{
 		"## Summary", "CHG-001", "spec/users.md", "## Why", "prd/v1.md",
@@ -70,13 +71,14 @@ func TestBody(t *testing.T) {
 		"## Tests and gates", "## Security notes", "## Side findings (not fixed here)",
 		"## Linked PRs and merge order", "orders: https://github.com/acme/orders/pull/902",
 		"## Rollback", "T-01: revert the commit", "## Waivers", "- T-01 lint until 2026-11-30 by human: legacy finding", "- SF-1 (bug, medium) users/src/a.go:88: trimmed only on create → ticket",
+		"## Shared actions for the developer\n\n- T-02: comment on SHOP-12 with the rollout window",
 	} {
 		if !strings.Contains(b, want) {
 			t.Errorf("body lacks %q:\n%s", want, b)
 		}
 	}
 	empty := Body(BodyInput{Change: "CHG-001", Title: "x", Repo: "users"})
-	for _, want := range []string{"No decisions were asked or made.", "No other repo in this change.", "No rollback steps in the plan.", "unknown", "## Waivers\n\nNone.", "## Side findings (not fixed here)\n\nNone recorded."} {
+	for _, want := range []string{"No decisions were asked or made.", "No other repo in this change.", "No rollback steps in the plan.", "unknown", "## Waivers\n\nNone.", "## Side findings (not fixed here)\n\nNone recorded.", "## Shared actions for the developer\n\nNone in the plan."} {
 		if !strings.Contains(empty, want) {
 			t.Errorf("empty body lacks %q:\n%s", want, empty)
 		}

@@ -127,19 +127,29 @@ var pkgRules = map[string]pkgRule{
 	"govulncheck": {remoteRead: true},
 }
 
+// dirFlags name the folder a build tool works in: go -C, npm --prefix, yarn --cwd.
+var dirFlags = []string{"-C", "--prefix", "--cwd"}
+
 // packageCommand classifies build tools and package managers: installs and builds stay local
-// (W0); publishing is irreversible (W3).
-func packageCommand(name string, cmd shellparse.Command) (Action, bool) {
+// (W0); publishing is irreversible (W3). A folder given with -C, --prefix or --cwd is where the
+// command acts, so the plan's rules judge that folder rather than the shell's (subagents cannot
+// change their shell's folder).
+func packageCommand(name string, cmd shellparse.Command, cwd string) (Action, bool) {
 	rule, ok := pkgRules[name]
 	if !ok {
 		return Action{}, false
 	}
-	pos, _ := positionals(cmd.Args[1:], map[string]bool{"-C": true, "--prefix": true, "-w": true, "--workspace": true})
+	pos, vals := positionals(cmd.Args[1:], map[string]bool{"-C": true, "--prefix": true, "--cwd": true, "-w": true, "--workspace": true})
 	sub := ""
 	if len(pos) > 0 {
 		sub = known(pos[0])
 	}
 	a := Action{Tool: name, Verb: sub, Text: text(cmd), Tier: W0}
+	for _, flag := range dirFlags {
+		if w, ok := vals[flag]; ok {
+			a.Paths = append(a.Paths, pathOf(cwd, w))
+		}
+	}
 	switch {
 	case rule.remoteRead:
 		a.Tier, a.Remote = R1, true
