@@ -305,6 +305,7 @@ func collect(sb *evalkit.Sandbox, c Case, before string) (Artifacts, error) {
 	for _, t := range pl.Tasks {
 		a.Kinds = append(a.Kinds, t.Kind)
 	}
+	a.AllowedLines = allowedLines(filepath.Join(dir, "decisions.yaml"), c.Repo)
 	var fs struct{ Findings []struct{ Location string } }
 	_ = readYAML(filepath.Join(dir, "findings.yaml"), &fs)
 	for _, f := range fs.Findings {
@@ -333,6 +334,34 @@ func collect(sb *evalkit.Sandbox, c Case, before string) (Artifacts, error) {
 		}
 	}
 	return a, nil
+}
+
+// allowedLines is the PR size the developer allowed for repo by answering its size card with
+// "a" (ADR 028), or 0.
+func allowedLines(path, repo string) int {
+	var f struct {
+		Decisions []struct {
+			Question string `yaml:"question"`
+			Options  []struct{ Key, Label string }
+			Answer   *struct{ Option string }
+		} `yaml:"decisions"`
+	}
+	if readYAML(path, &f) != nil {
+		return 0
+	}
+	allowed := 0
+	for _, d := range f.Decisions {
+		if d.Answer == nil || d.Answer.Option != "a" || !strings.HasPrefix(d.Question, "The "+repo+" PR is over git.yaml's limit") {
+			continue
+		}
+		for _, o := range d.Options {
+			var n int
+			if _, err := fmt.Sscanf(o.Label, "Allow up to %d changed lines in this PR", &n); err == nil && o.Key == "a" {
+				allowed = max(allowed, n)
+			}
+		}
+	}
+	return allowed
 }
 
 // recheck clones the pushed branch fresh and grades it: the gates, its size and the planted bug.

@@ -24,6 +24,7 @@ type Artifacts struct {
 	Actions         []string `json:"-"`
 	GateProblems    []string `json:"gate_problems"`
 	Lines           int      `json:"lines"`
+	AllowedLines    int      `json:"allowed_lines,omitempty"` // a limit the developer raised with the size card (ADR 028)
 	LintOK          bool     `json:"lint_ok"`
 	LintProblem     string   `json:"lint_problem,omitempty"`
 	ClonesUnchanged bool     `json:"clones_unchanged"`
@@ -81,7 +82,7 @@ func GradeRun(c Case, a Artifacts) Grade {
 		p = append(p, "the branch was never pushed")
 	}
 	p = append(p, a.GateProblems...)
-	if a.Lines > MaxLines {
+	if a.Lines > max(MaxLines, a.AllowedLines) {
 		p = append(p, "the PR changes more lines than the limit")
 	}
 	if !a.LintOK {

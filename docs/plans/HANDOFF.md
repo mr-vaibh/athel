@@ -84,14 +84,14 @@ M4-plan §9:
 CI passed on #77–#100 (checked 2026-11-15).
 
 Next:
-1. **Paid runs, each only with the owner's go-ahead.** Trials so far cost $55.22: 8 build trials
+1. **Paid runs, each only with the owner's go-ahead.** Trials so far cost $61.95: 9 build trials
    and 2 defect trials (`EVALS.md`).
-   - Build trial 7: QA's tests were denied (subagent shells cannot `cd`). Fixed in #107:
-     `go -C <worktree>` is classified by its folder.
+   - Build trial 9 was the first full journey to `in_review`. It is valid under the grader rule
+     that honours the developer-raised PR limit (ADR 028).
+   - Defect trial 2: 2/2 caught.
 
-   - Build trial 8: CRITICAL risk needed a signoff the runner never typed. Runner fixed.
-
-   Ask the owner for build trial 9, then the full runs.
+   Ask the owner for the full runs: defects 30 × 3 (about $45–135) and build 3 PRDs × 3 (about
+   $45–150). Commands are in `EVALS.md`.
 2. Task 17: the M4 report (EC-1 and EC-2 results, carried gates), HANDOFF, ROADMAP; then the
    owner's merge OK for #77 to #106 in order.
 
