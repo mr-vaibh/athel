@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/mr-vaibh/athel/cli/internal/blast"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
@@ -271,6 +273,10 @@ func (r *runCtx) changedMutants(g gateTask, base *gateBaseline) ([]gates.Mutant,
 	return out, nil
 }
 
+// defaultMutantTimeout bounds one mutant's tests, so a mutant that loops forever cannot hold
+// the gate for the whole gate timeout (ADR 025).
+const defaultMutantTimeout = time.Minute
+
 // runMutant runs one mutant's package tests: fail means the tests killed it, pass that it
 // survived, and anything else (it does not compile, it cannot run) that it does not count.
 func (r *runCtx) runMutant(g gateTask, m gates.Mutant) string {
@@ -290,7 +296,8 @@ func (r *runCtx) runMutant(g gateTask, m gates.Mutant) string {
 	if os.WriteFile(mutated, []byte(m.Src), 0o600) != nil || os.WriteFile(overlay, spec, 0o600) != nil {
 		return ""
 	}
-	argv := []string{"go", "test", "-count=1", "-json", "-overlay=" + overlay, "./" + filepath.Dir(m.File)}
+	timeout := cmp.Or(r.env.MutantTimeout, defaultMutantTimeout)
+	argv := []string{"go", "test", "-count=1", "-json", "-timeout=" + timeout.String(), "-overlay=" + overlay, "./" + filepath.Dir(m.File)}
 	if r.gateRefusal(g.dir, argv) != "" {
 		return ""
 	}
@@ -300,6 +307,10 @@ func (r *runCtx) runMutant(g gateTask, m gates.Mutant) string {
 	}
 	run := gates.ParseGoTest(out)
 	switch {
+	case strings.Contains(out, "panic: test timed out after"):
+		// The mutant made the tests hang (an endless loop): they noticed it, as mutation
+		// tools count a timeout.
+		return gates.Fail
 	case len(run.BrokenPackages) > 0:
 		return ""
 	case slices.Contains(mapValues(run.Tests), gates.Fail):

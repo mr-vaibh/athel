@@ -28,6 +28,8 @@ type harness struct {
 	cwd string
 	// exe is the athel binary the git hooks call.
 	exe string
+	// mutantTimeout bounds one mutant's tests; zero is Athel's default.
+	mutantTimeout time.Duration
 }
 
 func newHarness(t *testing.T) *harness {
@@ -58,7 +60,7 @@ func (h *harness) run(args ...string) (int, string, string) {
 			}
 			return "", errors.New("tests never use the real home")
 		},
-		Clock: h.clock, Version: "1.2.3",
+		Clock: h.clock, Version: "1.2.3", MutantTimeout: h.mutantTimeout,
 	})
 	return code, out.String(), errOut.String()
 }
