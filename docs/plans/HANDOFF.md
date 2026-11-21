@@ -137,3 +137,6 @@ The `cli` package's tests take about 7 minutes.
   `tests/evals/history/` for its file, or re-run it.
 - Owner: up to 2 more eval rounds without asking (decisions-from-chat). Round 2 counts as the
   approved re-run; rounds 3 and 4 remain. Next: run both evals on #110 once the usage limit resets.
+- Reviewer round 2 finished: **91.7% caught (66/72; bar 90%)**, false alarms on 5 of 18 clean
+  runs, $31.93 (`m4-defects-2026-11-21T103945Z.json`). Late runs that hit the usage limit
+  saved no round and count as misses, so the rate is a lower bound. EC-2 met on this run.
