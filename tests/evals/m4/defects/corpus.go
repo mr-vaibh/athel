@@ -25,10 +25,13 @@ type Criterion struct {
 	Then  string `yaml:"then"`
 }
 
-// Planted is where the defect is: a file of the case and an inclusive 1-based line range.
+// Planted is where the defect is: a file of the case and an inclusive 1-based line range. For a
+// missing test, Tests is the case's test file: a finding anywhere in it is where the test belongs,
+// so it counts too.
 type Planted struct {
 	File  string `yaml:"file"`
 	Lines [2]int `yaml:"lines"`
+	Tests string `yaml:"tests"`
 }
 
 // Case is one prepared diff: new or replaced files in a fixture repo.
@@ -94,6 +97,10 @@ func Load() ([]Case, error) {
 // planted lines.
 func (p Planted) Overlaps(location string) bool {
 	file, lines, ok := strings.Cut(location, ":")
+	if ok && p.Tests != "" && filepath.Clean(file) == filepath.Clean(p.Tests) {
+		_, err := fmt.Sscanf(lines, "%d", new(int))
+		return err == nil
+	}
 	if !ok || filepath.Clean(file) != filepath.Clean(p.File) {
 		return false
 	}

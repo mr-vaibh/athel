@@ -408,6 +408,7 @@ cases:
     planted:
       file: refunds/refunds.go
       lines: [48, 57]
+      tests: refunds/refunds_test.go
   - id: D05
     repo: users
     kind: defect
@@ -1061,14 +1062,12 @@ cases:
         	"context"
         	"encoding/json"
         	"fmt"
+        	"log/slog"
         	"net/http"
         	"time"
         )
 
-        const (
-        	courierBase = "https://api.courier.example/v2"
-        	courierKey  = "ck_live_9f2c4e7a1b8d3f6e0a5c2b7d4e1f8a3c"
-        )
+        const courierBase = "https://api.courier.example/v2"
 
         // Client calls the courier's API.
         type Client struct {
@@ -1077,9 +1076,9 @@ cases:
         	HTTP *http.Client
         }
 
-        // NewClient returns a client for the courier's production API.
-        func NewClient() Client {
-        	return Client{Base: courierBase, Key: courierKey, HTTP: &http.Client{Timeout: 10 * time.Second}}
+        // NewClient returns a client for the courier's production API with the account's key.
+        func NewClient(key string) Client {
+        	return Client{Base: courierBase, Key: key, HTTP: &http.Client{Timeout: 10 * time.Second}}
         }
 
         // Book books a collection of an order's parcel and returns its tracking number.
@@ -1094,6 +1093,7 @@ cases:
         	}
         	req.Header.Set("Authorization", "Bearer "+c.Key)
         	req.Header.Set("Content-Type", "application/json")
+        	slog.InfoContext(ctx, "booking collection", "order", orderID, "grams", grams, "headers", req.Header)
         	resp, err := c.HTTP.Do(req)
         	if err != nil {
         		return "", fmt.Errorf("book collection for %s: %w", orderID, err)
@@ -1150,7 +1150,7 @@ cases:
         }
     planted:
       file: shipping/shipping.go
-      lines: [13, 15]
+      lines: [40, 40]
   - id: D12
     repo: users
     kind: defect
