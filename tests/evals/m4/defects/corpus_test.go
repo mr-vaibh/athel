@@ -90,6 +90,8 @@ func checkDefect(t *testing.T, c Case, rules []string) {
 	case c.Files[c.Planted.File] == "":
 		t.Errorf("%s: planted file %s is not one of its files", c.ID, c.Planted.File)
 		return
+	case !testsAllowed(c):
+		t.Errorf("%s: tests %s is one of its test files, for a defect with a tests rule", c.ID, c.Planted.Tests)
 	}
 	n := len(strings.Split(strings.TrimRight(c.Files[c.Planted.File], "\n"), "\n"))
 	if a, b := c.Planted.Lines[0], c.Planted.Lines[1]; a < 1 || b < a || b > n || b-a > 12 {
@@ -100,6 +102,13 @@ func checkDefect(t *testing.T, c Case, rules []string) {
 			t.Errorf("%s: %s is not a rule ID", c.ID, r)
 		}
 	}
+}
+
+// testsAllowed: a finding on the test file counts only for a missing test, in one of the case's
+// own test files.
+func testsAllowed(c Case) bool {
+	return c.Planted.Tests == "" || c.Files[c.Planted.Tests] != "" && strings.HasSuffix(c.Planted.Tests, "_test.go") &&
+		slices.ContainsFunc(c.Rules, func(r string) bool { return strings.HasPrefix(r, "tests.") })
 }
 
 // TestCorpusBuilds applies each case to a copy of its fixture repo: it formats, builds, vets and
@@ -150,6 +159,16 @@ func TestOverlaps(t *testing.T) {
 	for loc, want := range cases {
 		if got := p.Overlaps(loc); got != want {
 			t.Errorf("%s: %v", loc, got)
+		}
+	}
+	// A missing test may be cited where it belongs: anywhere in the case's test file.
+	p.Tests = "addresses/store_test.go"
+	for loc, want := range map[string]bool{
+		"addresses/store_test.go:3": true, "addresses/store_test.go:40-52": true, "addresses/store_test.go": false,
+		"addresses/store.go:12": true, "addresses/other_test.go:3": false,
+	} {
+		if got := p.Overlaps(loc); got != want {
+			t.Errorf("with tests %s: %v", loc, got)
 		}
 	}
 }
