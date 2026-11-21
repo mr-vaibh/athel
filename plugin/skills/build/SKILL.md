@@ -13,10 +13,12 @@ gates and the git steps around them.
 ## Start
 1. If `$ARGUMENTS` is not one change ID, say "Usage: /athel:build CHG-NNN" and stop.
 2. Run `athel --json state show $ARGUMENTS`.
-   - **`plan_approved`:** run preflight once per repo of the plan (`athel --json plan summary
-     $ARGUMENTS` lists them): `athel --json --session ${CLAUDE_SESSION_ID} git preflight $ARGUMENTS <repo>`. If a
-     preflight raises a card (an overlap with someone else's work), show it with the
-     `/athel:decide` line and stop. Otherwise run
+   - **`plan_approved`:** run preflight once per repo the plan changes code in (`athel --json
+     plan summary $ARGUMENTS` lists them with `writes: true`; a repo whose tasks change no code
+     needs none): `athel --json --session ${CLAUDE_SESSION_ID} git preflight $ARGUMENTS <repo>`. If a
+     preflight names a card (an overlap with someone else's work) that `athel --json decide list
+     $ARGUMENTS --open` still shows, show it with the `/athel:decide` line and stop. An answered
+     card does not stop the build. Otherwise run
      `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to building --by athel --reason "preflight clear"`.
    - **`building`:** continue.
    - **`blocked` from `building`:** if `athel --json decide list $ARGUMENTS --open` still shows a

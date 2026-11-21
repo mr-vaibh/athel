@@ -83,12 +83,23 @@ func TestSummaryOrderAndDiff(t *testing.T) {
 		t.Errorf("order: %v", ids)
 	}
 	s := Summarise(p, "HIGH", nil)
-	if len(s.Repos) != 2 || s.Repos[0].Repo != "users" || len(s.Repos[0].Tasks) != 3 || s.Repos[1].Repo != "notifications" ||
+	if len(s.Repos) != 2 || s.Repos[0].Repo != "users" || !s.Repos[0].Writes || len(s.Repos[0].Tasks) != 3 || s.Repos[1].Repo != "notifications" ||
 		strings.Join(s.Gates, ",") != "build,unit,contract" || s.EnvActions[0] != "T-02: comment on SHOP-12" ||
 		s.Hours != 4 || s.USD != 16 || s.Risk != "HIGH" || s.Assumptions == nil {
 		t.Errorf("summary: %+v", s)
 	}
 	checkDiff(t, p)
+}
+
+func TestSummaryRepoWithoutCode(t *testing.T) {
+	p, err := Decode(schema.NewRegistry(), []byte(planV2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.Tasks = append(p.Tasks, Task{ID: "T-05", Title: "Ask the gateway team", Repo: "gateway", Verbs: []string{"comment"}})
+	if s := Summarise(p, "HIGH", nil); len(s.Repos) != 3 || s.Repos[2].Repo != "gateway" || s.Repos[2].Writes {
+		t.Errorf("a repo with only no-code tasks writes nothing: %+v", s.Repos)
+	}
 }
 
 func checkDiff(t *testing.T, p *Plan) {

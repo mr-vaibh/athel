@@ -188,6 +188,22 @@ func TestGitPreflightClean(t *testing.T) {
 	}
 }
 
+// A repo whose tasks change no code (ADR 027) has no worktree, so building needs no preflight
+// there; preflight refuses it, naming why.
+func TestBuildingNeedsNoPreflightWithoutCode(t *testing.T) {
+	h, _, _ := approvedOnUsersRemote(t, "gates: []}\n", "gates: []}\n  - {id: T-02, title: ask the consumers, repo: notifications, kind: internal, paths: [], verbs: [comment], covers: [AC-1], depends_on: [], size: S, gates: [], env_actions: [ask the consumers]}\n")
+	if code, env := h.runJSON("git", "preflight", "CHG-001", "notifications"); code == 0 || !strings.Contains(asJSON(t, env), "no task of the approved plan") {
+		t.Errorf("preflight of a no-code repo: %d %v", code, env)
+	}
+	repos := h.mustOK("plan", "summary", "CHG-001")["repos"].([]any)
+	if len(repos) != 2 || repos[1].(map[string]any)["writes"] != false {
+		t.Errorf("summary repos = %v", repos)
+	}
+	fakeGH(t, h, "[]")
+	h.mustOK("git", "preflight", "CHG-001", "users")
+	h.mustOK("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "clear")
+}
+
 func TestGitPreflightErrors(t *testing.T) {
 	h := approvedOnUsers(t)
 	fakeGH(t, h, "not json")

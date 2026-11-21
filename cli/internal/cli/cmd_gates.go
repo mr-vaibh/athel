@@ -98,6 +98,16 @@ func (r *runCtx) gateTask(args []string, name string) (gateTask, error) {
 // taskFor finds a task of a building change and its worktree; a reading command needs no
 // session.
 func (r *runCtx) taskFor(args []string, name string, write bool) (gateTask, error) {
+	g, err := r.planTask(args, name, write)
+	if err != nil {
+		return gateTask{}, err
+	}
+	return r.withWorktree(g)
+}
+
+// planTask finds a task of a building change, without its worktree: a task that changes no code
+// has none (ADR 027).
+func (r *runCtx) planTask(args []string, name string, write bool) (gateTask, error) {
 	pos, err := parse(r.newFlags(name), args, 2)
 	if err != nil {
 		return gateTask{}, err
@@ -127,6 +137,12 @@ func (r *runCtx) taskFor(args []string, name string, write bool) (gateTask, erro
 	if !found {
 		return gateTask{}, aerr.New(aerr.StateNotFound, c.ID+"'s plan has no task "+pos[1])
 	}
+	return g, nil
+}
+
+// withWorktree adds the task's worktree, its base commit and the repo's language.
+func (r *runCtx) withWorktree(g gateTask) (gateTask, error) {
+	c, s := g.c, g.s
 	w, ok := repoWork(c, g.task.Repo)
 	if !ok {
 		return gateTask{}, aerr.New(aerr.StateNotFound, c.ID+" has no worktree in "+g.task.Repo).WithNextAction("athel git preflight " + c.ID + " " + g.task.Repo)
