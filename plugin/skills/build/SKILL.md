@@ -98,6 +98,10 @@ gates and the git steps around them.
 - Never run raw `git push` or `gh pr`; Athel denies them in a change. Use `athel git push` and
   `athel pr open`, `athel pr update` and `athel pr ready`.
 - The Stop hook keeps you going while a task is neither done nor blocked. Finish the round, or
-  end the step blocked with its reason.
+  end the step blocked on its card (step 13).
+- Never end the step blocked without an open card: Athel refuses it, because the developer would
+  have nothing to answer. A finding that cannot be fixed within the task, or that goes against
+  the approved spec, is disputed by the developer with its reason; a second dispute raises a
+  card, and so does the round limit.
 - After a break, `/athel:resume` names the task to continue. Re-run this skill: step 4 picks the
   task in progress.

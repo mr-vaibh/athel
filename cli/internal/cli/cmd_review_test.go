@@ -176,3 +176,20 @@ func TestIdenticalGateFailuresRaiseCard(t *testing.T) {
 		t.Errorf("a card after three identical failures: %s", open)
 	}
 }
+
+// TestBuildBlocksOnlyOnACard: the build step ends blocked only on an open card the developer can
+// answer; a finding the developer thinks is wrong goes to a dispute, never to a silent block.
+func TestBuildBlocksOnlyOnACard(t *testing.T) {
+	h, _ := goGates(t)
+	h.mustOK("state", "enter", "CHG-001", "build", "--task", "T-01")
+	again := "verdict: changes_requested\nprevious: [{id: R1-01, status: open}]\n"
+	h.reviewRound(t, majorFinding)
+	_, env := h.runJSON("state", "exit", "CHG-001", "build", "--result", "blocked", "--reason", "R1-01 needs a waiver")
+	if errCode(env) != string(aerr.StateInvalid) || !strings.Contains(asJSON(t, env), "review dispute") {
+		t.Errorf("a block with no card to answer: %v", env)
+	}
+	for range 4 {
+		h.reviewRound(t, again)
+	}
+	h.mustOK("state", "exit", "CHG-001", "build", "--result", "blocked", "--reason", "the round-limit card")
+}
