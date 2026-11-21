@@ -27,3 +27,7 @@ Never read or edit `.athel/` files except the ones named here; use the `athel` C
 6. End the step with `athel --json --session ${CLAUDE_SESSION_ID} state exit $ARGUMENTS investigate --result ok`,
    or `--result blocked` if a question could not be answered and the change depends on it.
 7. Report the answers with their confidence, drift, gaps and active work, in at most 2,000 words.
+
+Run every subagent in the foreground and wait for its result in the same turn: never start one
+in the background and end your turn to wait, or the step stops half done. Several independent
+questions run in parallel when you delegate them in one message, in the foreground.

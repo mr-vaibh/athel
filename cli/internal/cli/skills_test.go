@@ -58,6 +58,16 @@ func inOrder(text string, want []string) string {
 // TestBuildSkillFollowsTheLoop keeps /athel:build in doc 06's per-task order (M4-plan §4.1):
 // the developer from its manifest, cheap gates, the three checkers from theirs, QA's tests
 // committed by the skill, full gates, done, then push and PR.
+// TestDelegatingSkillsWaitInTheForeground: a headless step whose agents run in the background
+// ends its turn before they report, and the step stops half done (M4 full eval).
+func TestDelegatingSkillsWaitInTheForeground(t *testing.T) {
+	for _, name := range []string{"spec", "plan", "investigate", "blast-radius", "ask"} {
+		if text := skill(t, name); !strings.Contains(text, foregroundRule) {
+			t.Errorf("/athel:%s delegates to agents but does not keep them in the foreground", name)
+		}
+	}
+}
+
 func TestBuildSkillFollowsTheLoop(t *testing.T) {
 	text := skill(t, "build")
 	loop := []string{"git preflight", "--to building", "build next", "state enter $ARGUMENTS build --task", "gate baseline",
@@ -93,3 +103,5 @@ func TestShipSkillHandsOverWithoutMerging(t *testing.T) {
 		t.Error("/athel:ship merges, or triages for the developer")
 	}
 }
+
+const foregroundRule = "Run every subagent in the foreground and wait for its result in the same turn"

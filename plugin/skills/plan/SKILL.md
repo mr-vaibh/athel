@@ -11,7 +11,9 @@ Never read or edit `.athel/` files; use the `athel` CLI.
 1. If `$ARGUMENTS` is not one change ID, say "Usage: /athel:plan CHG-NNN" and stop.
 2. Run `athel --json state show $ARGUMENTS`. The change must be in `awaiting_decisions` or
    `planned`; from `investigating` or `specified`, say the next step is `/athel:spec $ARGUMENTS`
-   and stop.
+   and stop. If it is `blocked` from `awaiting_decisions` or `planned` (an earlier plan step
+   ended on a card) and `athel --json decide list $ARGUMENTS --open` shows no card, resume:
+   `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to <blocked_from> --by athel --reason "card answered"`.
 3. Run `athel --json --session ${CLAUDE_SESSION_ID} decide tick $ARGUMENTS`. It applies due safe
    defaults and lists reminders; show the reminders. If a card that blocks the plan step is
    still open (`athel --json decide list $ARGUMENTS --open`), show it with the `/athel:decide`
@@ -34,3 +36,7 @@ Never read or edit `.athel/` files; use the `athel` CLI.
    - the estimate.
 8. End with what the developer types next: `/athel:approve $ARGUMENTS`. At CRITICAL risk, first
    `/athel:signoff $ARGUMENTS`, after reading `.athel/changes/$ARGUMENTS/blast-radius.md`.
+
+Run every subagent in the foreground and wait for its result in the same turn: never start one
+in the background and end your turn to wait, or the step stops half done. Several independent
+questions run in parallel when you delegate them in one message, in the foreground.
