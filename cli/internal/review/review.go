@@ -20,6 +20,9 @@ const SchemaID = "athel/review@1"
 // MaxRounds is doc 06's round limit (FR-BUILD-010); the next round is a decision card.
 const MaxRounds = 5
 
+// RoundCeiling bounds the rounds a developer can allow, 5 at a time, past MaxRounds.
+const RoundCeiling = 50
+
 // Severities (doc 06 table).
 const (
 	Blocker = "blocker"
@@ -111,13 +114,14 @@ func invalid(msg string) error {
 }
 
 // Next makes round N+1 from round N (nil for the first round) and the reviewer's submission.
-func Next(prev *Round, s Submission, head string) (*Round, error) {
+// limit is the task's round limit: MaxRounds, or more once the developer allowed more rounds.
+func Next(prev *Round, s Submission, head string, limit int) (*Round, error) {
 	n := 1
 	if prev != nil {
 		n = prev.Round + 1
 	}
-	if n > MaxRounds {
-		return nil, aerr.New(aerr.BudgetRounds, fmt.Sprintf("the task has had %d review rounds, doc 06's limit", MaxRounds)).
+	if n > limit {
+		return nil, aerr.New(aerr.BudgetRounds, fmt.Sprintf("the task has had %d review rounds, its limit", limit)).
 			WithNextAction("raise a decision card: continue with a human, or stop the task (FR-BUILD-010)")
 	}
 	if s.Verdict != Approved && s.Verdict != ChangesRequested {

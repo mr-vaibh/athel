@@ -74,18 +74,66 @@ func TestReviewDisputeTwiceRaisesCard(t *testing.T) {
 	}
 }
 
+// TestReviewRoundLimit (FR-BUILD-010): a fifth round that is not done raises the card at once;
+// a sixth is refused until the developer allows more rounds, and then it is saved.
+// A dispute card is built from free text; long arguments are clipped to the card's limit, so
+// the dispute is still recorded and the card raised.
+func TestReviewDisputeCardFitsItsSchema(t *testing.T) {
+	h, _ := goGates(t)
+	long := strings.Repeat("the spec says so ", 200)
+	h.reviewRound(t, majorFinding)
+	h.mustOK("review", "dispute", "CHG-001", "T-01", "R1-01", "--reason", long)
+	h.reviewRound(t, "verdict: changes_requested\nprevious: [{id: R1-01, status: open, note: "+strings.Repeat("still wrong ", 200)+"}]\n")
+	h.mustOK("review", "dispute", "CHG-001", "T-01", "R1-01", "--reason", long)
+	open := asJSON(t, h.mustOK("decide", "list", "CHG-001", "--open"))
+	if !strings.Contains(open, "disagree about R1-01") || !strings.Contains(open, "Developer: the spec says so") {
+		t.Errorf("the dispute card: %s", open)
+	}
+}
+
+func TestClip(t *testing.T) {
+	for _, tt := range []struct {
+		in   string
+		n    int
+		want string
+	}{{"short", 10, "short"}, {"exactly", 7, "exactly"}, {"héllo wörld", 5, "héll…"}} {
+		if got := clip(tt.in, tt.n); got != tt.want {
+			t.Errorf("clip(%q, %d) = %q, want %q", tt.in, tt.n, got, tt.want)
+		}
+	}
+}
+
 func TestReviewRoundLimit(t *testing.T) {
 	h, _ := goGates(t)
+	again := "verdict: changes_requested\nprevious: [{id: R1-01, status: open}]\n"
 	h.reviewRound(t, majorFinding)
-	for range 4 {
-		h.reviewRound(t, "verdict: changes_requested\nprevious: [{id: R1-01, status: open}]\n")
+	for range 3 {
+		h.reviewRound(t, again)
 	}
-	h.stdin = "verdict: changes_requested\nprevious: [{id: R1-01, status: open}]\n"
+	if open := asJSON(t, h.mustOK("decide", "list", "CHG-001", "--open")); strings.Contains(open, "review rounds") {
+		t.Errorf("no card before the limit: %s", open)
+	}
+	h.reviewRound(t, again)
+	open := h.mustOK("decide", "list", "CHG-001", "--open")
+	text := asJSON(t, open)
+	for _, want := range []string{"reached 5 review rounds", "R1-01", "/athel:waive"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the card at round 5 lacks %q: %s", want, text)
+		}
+	}
+	h.stdin = again
 	if _, env := h.runJSON("review", "save", "CHG-001", "T-01", "-"); errCode(env) != string(aerr.BudgetRounds) {
 		t.Errorf("a sixth round: %v", env)
 	}
-	if open := asJSON(t, h.mustOK("decide", "list", "CHG-001", "--open")); !strings.Contains(open, "reached 5 review rounds") {
-		t.Errorf("a card asks the developer: %s", open)
+	if n := strings.Count(asJSON(t, h.mustOK("decide", "list", "CHG-001", "--open")), "review rounds"); n != 1 {
+		t.Errorf("one card, not %d", n)
+	}
+	card := open["decisions"].([]any)[0].(map[string]any)["id"].(string)
+	h.humanPrompt("/athel:decide CHG-001 " + card + "=b")
+	h.mustOK("decide", "answer", "CHG-001", card+"=b")
+	h.reviewRound(t, again)
+	if v := h.mustOK("review", "show", "CHG-001", "T-01"); v["round"] != float64(6) {
+		t.Errorf("round 6 once more rounds are allowed: %v", v)
 	}
 }
 
