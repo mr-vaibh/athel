@@ -140,3 +140,9 @@ The `cli` package's tests take about 7 minutes.
 - Reviewer round 2 finished: **91.7% caught (66/72; bar 90%)**, false alarms on 5 of 18 clean
   runs, $31.93 (`m4-defects-2026-11-21T103945Z.json`). Late runs that hit the usage limit
   saved no round and count as misses, so the rate is a lower bound. EC-2 met on this run.
+
+## Round 4 (2026-11-22)
+Build full 4: 4 of 9 valid, $66.80 (see EVALS.md). No Athel bug found in the failed runs; the
+3 `event-name-field` runs hit the usage limit. Both pre-approved rounds are used: ask the owner
+before any more paid runs. Next: report to the owner, ask for the merge OK for #77–#110 in
+order, then task 17 (M4 report, draft in the session scratchpad).

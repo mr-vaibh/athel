@@ -27,3 +27,7 @@
 - **Several ordered PRs per repo (FR-GIT-009 "a big PRD becomes several ordered PRs").** Athel
   opens one branch and PR per repo per change; ADR 032 recommends raising the limit meanwhile.
   Later milestone, owner's choice 2026-11-21.
+
+- Checker scope creep: in build full 4 (`saved-addresses` 2) the security checker raised one new
+  minor Unicode edge case per round after all real findings were fixed, until the 5-round card
+  stopped the task. Consider limiting later rounds to verifying earlier findings plus new major ones.
