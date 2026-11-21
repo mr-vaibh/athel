@@ -81,6 +81,20 @@ func TestSpecSaveListShow(t *testing.T) {
 	if v := h.mustOK("spec", "validate", "CHG-001", "-"); v["valid"] != false || !strings.Contains(asJSON(t, v["problems"]), "REQ-1 is already used by the users spec") {
 		t.Errorf("collision across services: %v", v)
 	}
+	// A card's answer takes notifications out of the change: its spec goes, with a reason.
+	h.mustOK("state", "transition", "CHG-001", "--to", "investigating", "--by", "athel", "--reason", "r")
+	if code, _ := h.runJSON("spec", "remove", "CHG-001", "notifications"); code != aerr.ExitUsage {
+		t.Errorf("a removal needs a reason: %d", code)
+	}
+	if code, env := h.runJSON("spec", "remove", "CHG-001", "payments", "--reason", "x"); code != aerr.ExitState {
+		t.Errorf("no such spec: %d %v", code, env)
+	}
+	if v := h.mustOK("spec", "remove", "CHG-001", "notifications", "--reason", "D-1 keeps the change in users"); v["removed"] != "notifications" || v["reason"] != "D-1 keeps the change in users" {
+		t.Errorf("remove: %v", v)
+	}
+	if l := asJSON(t, h.mustOK("spec", "list", "CHG-001")); strings.Contains(l, "notifications") {
+		t.Errorf("list after the removal: %s", l)
+	}
 }
 
 func TestSpecErrors(t *testing.T) {

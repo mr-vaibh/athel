@@ -182,3 +182,30 @@ func cmdSpecShow(r *runCtx, args []string) (any, error) {
 	}
 	return nil, aerr.New(aerr.StateNotFound, pos[0]+" has no spec for "+pos[1])
 }
+
+type specRemoved struct {
+	Removed string `json:"removed"`
+	Reason  string `json:"reason"`
+}
+
+// cmdSpecRemove deletes a service's spec before the plan is approved, when a decision has taken
+// that service out of the change (the plan must cover every spec's criteria with code).
+func cmdSpecRemove(r *runCtx, args []string) (any, error) {
+	fs := r.newFlags("spec remove")
+	reason := fs.String("reason", "", "the decision that takes the service out of the change (required)")
+	pos, err := parse(fs, args, 2)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(*reason) == "" {
+		return nil, usagef("usage: athel spec remove CHG-NNN <service> --reason \"<the decision>\"")
+	}
+	s, session, err := r.mutating()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := s.RemoveSpec(pos[0], session, pos[1]); err != nil {
+		return nil, err
+	}
+	return specRemoved{Removed: pos[1], Reason: *reason}, nil
+}

@@ -131,6 +131,7 @@ func commands() map[string]command {
 		"spec validate":          cmdSpecValidate,
 		"spec save":              cmdSpecSave,
 		"spec list":              cmdSpecList,
+		"spec remove":            cmdSpecRemove,
 		"spec show":              cmdSpecShow,
 		"repos survey":           cmdReposSurvey,
 		"conventions save":       cmdConventionsSave,
