@@ -91,14 +91,19 @@ func TestBuildDone(t *testing.T) {
 // gates, review or reports; it is done at once, and its shared actions go to the developer in
 // the PR body.
 func TestTaskWithoutCodeIsDoneAtOnce(t *testing.T) {
-	h, _ := goGates(t, "gates: []}\n", "gates: []}\n  - {id: T-02, title: confirm the window, repo: users, kind: internal, paths: [], verbs: [comment], covers: [AC-1], depends_on: [], size: S, gates: [], env_actions: [comment on the ticket with the agreed date]}\n")
-	h.mustOK("state", "enter", "CHG-001", "build", "--task", "T-02")
-	done := h.mustOK("build", "done", "CHG-001", "T-02")
-	if done["status"] != "done" || len(done["commits"].([]any)) != 0 {
-		t.Errorf("done with no commits: %v", done)
+	h, _ := goGates(t, "gates: []}\n", "gates: []}\n  - {id: T-02, title: confirm the window, repo: users, kind: internal, paths: [], verbs: [comment], covers: [AC-1], depends_on: [], size: S, gates: [], env_actions: [comment on the ticket with the agreed date]}\n"+
+		"  - {id: T-03, title: ask the consumers, repo: notifications, kind: internal, paths: [], verbs: [comment], covers: [AC-1], depends_on: [], size: S, gates: [], env_actions: [ask who consumes the event]}\n")
+	for _, task := range []string{"T-02", "T-03"} {
+		h.mustOK("state", "enter", "CHG-001", "build", "--task", task)
+		done := h.mustOK("build", "done", "CHG-001", task)
+		if done["status"] != "done" || len(done["commits"].([]any)) != 0 {
+			t.Errorf("%s done with no commits: %v", task, done)
+		}
 	}
+	// notifications has no worktree and no PR, so its task's action goes to the PRs there are.
 	body := asJSON(t, h.mustOK("pr", "body", "CHG-001", "users"))
-	if !strings.Contains(body, "Shared actions for the developer") || !strings.Contains(body, "T-02: comment on the ticket with the agreed date") {
-		t.Errorf("the PR body lists the shared action: %s", body)
+	if !strings.Contains(body, "Shared actions for the developer") || !strings.Contains(body, "T-02: comment on the ticket with the agreed date") ||
+		!strings.Contains(body, "T-03 (notifications): ask who consumes the event") {
+		t.Errorf("the PR body lists the shared actions: %s", body)
 	}
 }

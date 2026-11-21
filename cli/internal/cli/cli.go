@@ -10,6 +10,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"time"
 
 	"go.yaml.in/yaml/v3"
 
@@ -32,6 +33,8 @@ type Env struct {
 	ClaudeVersion func() (string, error)
 	// Executable is this athel binary, which the git hooks Athel installs call (M4).
 	Executable func() (string, error)
+	// MutantTimeout bounds one mutant's test run; zero means defaultMutantTimeout.
+	MutantTimeout time.Duration
 }
 
 // usageError is a wrong invocation: exit 2, never an Athel error code.
@@ -131,6 +134,7 @@ func commands() map[string]command {
 		"spec validate":          cmdSpecValidate,
 		"spec save":              cmdSpecSave,
 		"spec list":              cmdSpecList,
+		"spec remove":            cmdSpecRemove,
 		"spec show":              cmdSpecShow,
 		"repos survey":           cmdReposSurvey,
 		"conventions save":       cmdConventionsSave,

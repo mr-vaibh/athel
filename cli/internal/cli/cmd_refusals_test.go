@@ -157,7 +157,7 @@ var needsFlags = map[string]bool{
 	"ask new": true, "blast check": true, "blast diff": true, "blast save": true, "change new": true,
 	"decide answer": true, "decide present": true, "git hook": true, "hook": true, "integrity accept": true,
 	"investigation save": true, "finding triage": true, "investigation validate": true, "plan diff": true, "policy decide": true,
-	"prd add-version": true, "prd diff": true, "state transition": true,
+	"prd add-version": true, "prd diff": true, "spec remove": true, "state transition": true,
 }
 
 // TestPreToolUseWithoutCwd: a tool call with no folder is judged in the session's own folder.

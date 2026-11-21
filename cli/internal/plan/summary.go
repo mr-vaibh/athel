@@ -16,6 +16,9 @@ var estimates = map[string]struct{ Hours, USD float64 }{
 type RepoTasks struct {
 	Repo  string   `json:"repo"`
 	Tasks []string `json:"tasks"`
+	// Writes is false when every task there changes no code (ADR 027): no worktree, preflight
+	// or PR in that repo.
+	Writes bool `json:"writes"`
 }
 
 // Summary is doc 05's one-screen plan summary (§Approval).
@@ -47,6 +50,7 @@ func Summarise(p *Plan, risk string, assumptions []string) Summary {
 			repos = append(repos, t.Repo)
 		}
 		rt.Tasks = append(rt.Tasks, t.ID+" "+t.Title)
+		rt.Writes = rt.Writes || len(t.Paths) > 0
 		for _, g := range t.Gates {
 			if !slices.Contains(s.Gates, g) {
 				s.Gates = append(s.Gates, g)

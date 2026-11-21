@@ -79,7 +79,10 @@ or `env_actions` in the plan, not reasons to stop planning.
 1. Run `athel decide list CHG-NNN` and read the answers. A free-text answer (`checked: false`)
    must be re-checked for conflicts with the specs before you use it. Apply every answer: when
    one adds a requirement (a flag, a check, a limit), update that spec with
-   `athel spec save CHG-NNN -` first, so the plan and the trace cover it. An answer that asks
+   `athel spec save CHG-NNN -` first, so the plan and the trace cover it. When one takes a
+   service out of the change, remove its spec with
+   `athel spec remove CHG-NNN <service> --reason "D-n: <the answer>"` (a spec stays only for a
+   service the plan changes code in), and save the planned blast radius again. An answer that asks
    to verify something becomes a task that verifies it before the tasks that rely on it; one
    that sets a rollout condition becomes a gate or an `env_actions` entry. Return without a
    plan only when an answer rules out the change itself, and say which.

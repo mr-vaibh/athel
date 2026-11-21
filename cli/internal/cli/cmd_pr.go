@@ -254,6 +254,7 @@ func (r *runCtx) prDraft(s *state.Store, c *state.Change, w state.RepoWork) (prD
 }
 
 // planNotes are the rollback steps, the waivers and the shared actions of the plan's tasks in repo.
+// A repo the plan writes nothing in gets no PR, so its tasks' shared actions go to every PR.
 func planNotes(s *state.Store, c *state.Change, repo string) ([]string, []string, []string) {
 	var rollback, waivers, actions []string
 	p, ok := s.ApprovedPlan(c)
@@ -262,6 +263,11 @@ func planNotes(s *state.Store, c *state.Change, repo string) ([]string, []string
 	}
 	for _, t := range p.Tasks {
 		if t.Repo != repo {
+			if !p.WritesIn(t.Repo) {
+				for _, a := range t.EnvActions {
+					actions = append(actions, t.ID+" ("+t.Repo+"): "+a)
+				}
+			}
 			continue
 		}
 		if t.Rollback != "" {

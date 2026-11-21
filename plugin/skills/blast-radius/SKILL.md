@@ -34,3 +34,7 @@ of your own. Never read or edit `.athel/` files except the ones named here.
 7. Show the risk and the rules that fired (from the save output), the impact table and the "Not
    affected (checked)" list from `.athel/asks/ASK-NNN/blast-radius.md`, and the gaps. HIGH means
    the plan needs a rollback task; CRITICAL needs the developer's explicit sign-off (doc 05).
+
+Run every subagent in the foreground and wait for its result in the same turn: never start one
+in the background and end your turn to wait, or the step stops half done. Several independent
+questions run in parallel when you delegate them in one message, in the foreground.

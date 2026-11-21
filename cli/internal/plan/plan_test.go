@@ -108,6 +108,11 @@ func TestTaskMatch(t *testing.T) {
 			t.Errorf("WritesIn(%q) = %v", repo, !want)
 		}
 	}
+	// A task with no paths changes no code (ADR 027): its repo needs no worktree or preflight.
+	p.Tasks = append(p.Tasks, Task{ID: "T-09", Repo: "notifications", Verbs: []string{"comment"}})
+	if p.WritesIn("notifications") {
+		t.Error("a repo with only no-code tasks is not written in")
+	}
 	for _, tt := range tests {
 		got := ""
 		if task := p.Match(tt.w); task != nil {

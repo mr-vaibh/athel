@@ -154,3 +154,48 @@ func TestSaveChangeFileCreatesFolder(t *testing.T) {
 		t.Errorf("update with a file where the folder belongs: %v", err)
 	}
 }
+
+func TestRemoveSpec(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "x")
+	for _, svc := range []string{"orders", "users"} {
+		if _, err := s.SaveChangeFile(c.ID, "sess-1", "spec/"+svc+".md", []byte("# "+svc+"\n")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.RemoveSpec(c.ID, "sess-1", "users"); !aerr.HasCode(err, aerr.StateInvalid) {
+		t.Errorf("a draft change has no spec step yet: %v", err)
+	}
+	if _, err := s.Update(c.ID, func(c *Change) error { c.State = AwaitingDecisions; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		session, svc string
+		code         aerr.Code
+	}{
+		{"sess-2", "users", aerr.StateLockHeld}, {"", "users", aerr.StateNoSession},
+		{"sess-1", "../change", aerr.StateInvalid}, {"sess-1", "payments", aerr.StateNotFound},
+	} {
+		if _, err := s.RemoveSpec(c.ID, tt.session, tt.svc); !aerr.HasCode(err, tt.code) {
+			t.Errorf("RemoveSpec(%q, %q) = %v, want %s", tt.session, tt.svc, err, tt.code)
+		}
+	}
+	if _, err := s.RemoveSpec(c.ID, "sess-1", "users"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(s.WS.ChangeDir(c.ID), "spec", "users.md")); !os.IsNotExist(err) {
+		t.Errorf("users.md is still there: %v", err)
+	}
+	if _, err := s.RemoveSpec(c.ID, "sess-1", "orders"); !aerr.HasCode(err, aerr.StateInvalid) {
+		t.Errorf("the last spec stays: %v", err)
+	}
+	if _, err := s.Update(c.ID, func(c *Change) error { c.State = PlanApproved; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.SaveChangeFile(c.ID, "sess-1", "spec/users.md", []byte("# users\n")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.RemoveSpec(c.ID, "sess-1", "users"); !aerr.HasCode(err, aerr.StateInvalid) {
+		t.Errorf("an approved plan's specs stay: %v", err)
+	}
+}

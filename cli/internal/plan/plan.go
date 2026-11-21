@@ -155,9 +155,10 @@ type Write struct {
 	Verb string // edit | create | delete | test | commit | push | pr | comment
 }
 
-// WritesIn reports whether any task of the plan writes in repo.
+// WritesIn reports whether any task of the plan changes files in repo. A task with no paths
+// changes no code (ADR 027), so it needs no worktree there.
 func (p *Plan) WritesIn(repo string) bool {
-	return slices.ContainsFunc(p.Tasks, func(t Task) bool { return t.Repo == repo })
+	return slices.ContainsFunc(p.Tasks, func(t Task) bool { return t.Repo == repo && len(t.Paths) > 0 })
 }
 
 // Match returns the first task that allows w, or nil.
