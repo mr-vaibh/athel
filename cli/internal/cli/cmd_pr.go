@@ -160,22 +160,21 @@ func (r *runCtx) sizedDraft(s *state.Store, c *state.Change, w state.RepoWork) (
 // sizeOption is the label of the size card's "raise" option; sizeAllowed reads the number back.
 const sizeOption = "Allow up to %d changed lines in this PR"
 
-// sizeCard asks the developer about a PR over git.yaml's limit (FR-GIT-009; ADR 028). When the
-// plan's tasks cannot be split under the limit (one task alone is over it), raising the limit is
-// recommended; otherwise changing the plan into the proposed PRs is.
+// sizeCard asks the developer about a PR over git.yaml's limit (FR-GIT-009; ADR 028). Athel opens
+// one PR per repo per change, so raising the limit is recommended (ADR 032); re-planning, the safe
+// default, moves part of the work to a follow-up change.
 func sizeCard(repo string, lines, limit int, split []pr.Group) decisions.Draft {
 	allow := (lines*5/4 + 49) / 50 * 50 // room for fix rounds, in steps of 50
-	splittable := len(split) > 1 && !slices.ContainsFunc(split, func(g pr.Group) bool { return g.Lines > limit })
-	rec := decisions.Recommendation{Option: "a", Reason: "one task alone is over the limit, so no split of the plan brings the PR under it"}
-	if splittable {
-		rec = decisions.Recommendation{Option: "b", Reason: "the plan's tasks fit into PRs under the limit"}
+	rec := decisions.Recommendation{Option: "a", Reason: "Athel opens one PR per repo per change, so a split means moving tasks to a follow-up change"}
+	if slices.ContainsFunc(split, func(g pr.Group) bool { return g.Lines > limit }) {
+		rec.Reason = "one task alone is over the limit, so no split of the plan brings the PR under it"
 	}
 	return decisions.Draft{
 		Rule: "A6", Step: "build", Question: "The " + repo + " PR is over git.yaml's limit of " + strconv.Itoa(limit) + " changed lines. How should Athel go on?",
 		Context: fmt.Sprintf("FR-GIT-009: a PR is at most %d changed lines, without generated files and lockfiles. This one is %d.", limit, lines),
 		Options: []decisions.Option{
 			{Key: "a", Label: fmt.Sprintf(sizeOption, allow), Consequence: "Athel opens the PR as it is; reviewers get a larger diff"},
-			{Key: "b", Label: "Change the plan into smaller PRs", Consequence: "the plan changes and needs your approval again before the PR opens"},
+			{Key: "b", Label: "Re-plan this change with a smaller scope", Consequence: "the change goes back to planning; the plan moves part of the work to a follow-up change and needs your approval again before the PR opens"},
 		},
 		Recommendation: rec, Default: "b", DefaultSafe: true, Blocks: []string{"build"},
 	}
