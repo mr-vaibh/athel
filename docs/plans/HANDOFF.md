@@ -89,18 +89,19 @@ missed. Reviewer 87.5% caught (bar 90%); build 2 of 9 runs valid. Details and ca
 `EVALS.md` and journal entry 17. Five Athel gaps found in the failed build sessions were fixed
 with tests on `feat/m4-full-run-fixes` (ADR 029).
 
+Owner, 2026-11-21: "Keep 87.5%, fix cases"; "Yes, re-run both"; merges "Wait for the re-run".
+The fixes are PR #108 (on #107). D11 and D04 are changed for the next run on
+`feat/m4-defect-cases` (PR on #108), with an offline check that every case commits through
+Athel's hooks.
+
 Next:
-1. **Ask the owner** (none of these are mine to decide):
-   - D11 (its planted secret is stopped by Athel's own pre-commit check, so the reviewer never
-     sees it) and D04 (the reviewer found the untested error path but cited the test file, not
-     the planted lines). Counting either differently passes the 90% bar, so it changes a result
-     after it was seen. Recommendation: leave this run's 87.5% as the record; replace D11 with
-     a defect Athel's hooks do not stop, and let D04 also accept the test file, only for the
-     next run, recorded in `EVALS.md`.
-   - A paid re-run of both evals on the fixes (about $110, like the first).
-   - Merge OK for #77 → the fixes PR, in order.
-2. Then task 17: the M4 report from the draft (it states both runs plainly), ROADMAP.
-3. Not fixed and reported: in `saved-addresses` the reviewer and security keep a major on
+1. When CI is green on #108 and the cases PR, run full evals 2 (both, on the cases branch):
+   with the commands in `EVALS.md` (M4 section). Keep the workspaces (`ATHEL_EVALS_KEEP`) of
+   the build runs only: full 1 kept all 99 and filled the disk. Record the rows in `EVALS.md`
+   and the history files.
+2. Then ask the owner for the merge OK for #77 → the cases PR, in order.
+3. Task 17: the M4 report from the draft (it states every run plainly), ROADMAP.
+4. Not fixed and reported: in `saved-addresses` the reviewer and security keep a major on
    ownership checks the approved spec allowed, until the round limit. With the scripted
    developer taking the recommended "stop", those runs stay invalid.
 
