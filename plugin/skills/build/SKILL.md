@@ -24,7 +24,10 @@ gates and the git steps around them.
    - **`blocked` from `building`:** if `athel --json decide list $ARGUMENTS --open` still shows a
      card, show it with the `/athel:decide` line and stop. Otherwise the developer has answered:
      run `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to building --by athel --reason "card answered"`
-     and continue.
+     and continue. If the answered card is a PR size card answered "Re-plan this change with a
+     smaller scope" (b), after that transition run
+     `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to planned --by athel --reason "<card ID>: re-plan with a smaller scope"`,
+     say the next step is `/athel:plan $ARGUMENTS`, and stop (ADR 032).
    - **`ready_for_pr`:** say the next step is `/athel:ship $ARGUMENTS` and stop.
    - **Anything else:** say the plan must be approved first and stop.
 3. Run `athel --json config show` and note `values.models.developer`, `qa`, `security` and

@@ -23,3 +23,7 @@
 | 2026-11-15 | Per-repo test-file patterns for QA's write scope (for example from a structured field in conventions) | ADR 024 uses the language defaults of the gates package, since `conventions.md` is free text | M5, with multi-service repos |
 | 2026-11-15 | Per-command limits for the scout and the architect, like ADR 024's table for the build roles | They may run any writing `athel` command today; human-only commands are still denied by rule H | M5 |
 | 2026-11-15 | Perform a plan's approved `env_actions` (ticket comments, chat messages) from the build loop, under the tools policy | ADR 027: in M4 they go to the developer in the PR body | M5 or M6 |
+
+- **Several ordered PRs per repo (FR-GIT-009 "a big PRD becomes several ordered PRs").** Athel
+  opens one branch and PR per repo per change; ADR 032 recommends raising the limit meanwhile.
+  Later milestone, owner's choice 2026-11-21.
