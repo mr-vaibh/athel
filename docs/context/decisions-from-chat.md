@@ -72,3 +72,5 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-21 | Pay for a re-run of both full evals on the fixes (#108), about $110? | "Yes, re-run both" | Full runs 2; EVALS.md; M4 report |
 | 2026-11-21 | Merge #77–#108 now, after the re-run, or by the owner? | "Wait for the re-run": ask for the merge after the re-run shows the fixes work | HANDOFF |
 | 2026-11-21 | (owner, unprompted, during full evals 2) Paid eval runs after this one | "the next 2 runs, do it - don't wait for my command, but only till next 2 runs": up to two more eval rounds without asking, then report and ask again | Full evals 3 and 4; HANDOFF |
+| 2026-11-21 | The PR size card recommends "change the plan into smaller PRs", which Athel (one PR per repo) cannot do. How should M4 handle it? | "Recommend (a) for now": recommend raising the limit; (b) re-plans with a smaller scope; several PRs per repo go to the backlog | ADR 032; `cmd_pr.go`; build skill; backlog |
+| 2026-11-21 | Round 4 (the last pre-approved): all 9 build runs, only the 6 cut off by the usage limit, or wait? | "Yes, all 9" | Build full 4; EVALS.md |
