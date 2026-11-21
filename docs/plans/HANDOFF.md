@@ -126,3 +126,14 @@ The `cli` package's tests take about 7 minutes.
   recommendation to log in as mr-vaibh); vs-snabbit added as a collaborator; keep the merged
   M0/M1 branches. The owner asked for the work to be done "properly … production enterprise
   level … accurate and precise".
+
+## Update 2026-11-21 (late): full evals round 2
+- Build round 2: 2 of 9 valid, $45.44 (`tests/evals/history/m4-build-2026-11-21T103945Z.json`).
+  - saved-addresses 1: create without edit, fixed in #110 (ADR 030). Run 3: build blocked with
+    no card, fixed in #110 (ADR 031). Run 2: model missed the side finding.
+  - typed-client-errors 3 and event-name-field 1–3: the account's usage limit (HTTP 429,
+    "usage_limit_reached") stopped the sessions at start; not Athel. They must be re-run.
+- Reviewer round 2 was still running at 70/90 (1 miss) when the session hit its limit; check
+  `tests/evals/history/` for its file, or re-run it.
+- Owner: up to 2 more eval rounds without asking (decisions-from-chat). Round 2 counts as the
+  approved re-run; rounds 3 and 4 remain. Next: run both evals on #110 once the usage limit resets.
