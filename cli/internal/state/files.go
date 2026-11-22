@@ -153,3 +153,22 @@ func (s *Store) AddRepo(id, session, name string, make func(c *Change) (RepoWork
 	})
 	return got, created, err
 }
+
+// UpdateRepo changes the recorded worktree of one repo, for the session that holds the lock.
+func (s *Store) UpdateRepo(id, session, name string, fn func(r *RepoWork)) (*Change, error) {
+	if err := CheckSession(session); err != nil {
+		return nil, err
+	}
+	return s.Update(id, func(c *Change) error {
+		if err := s.claim(c, session, s.Clock.Now()); err != nil {
+			return err
+		}
+		for i := range c.Repos {
+			if c.Repos[i].Name == name {
+				fn(&c.Repos[i])
+				return nil
+			}
+		}
+		return aerr.New(aerr.StateNotFound, c.ID+" has no worktree in "+name)
+	})
+}

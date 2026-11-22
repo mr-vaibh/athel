@@ -71,3 +71,24 @@ func TestAddRepoRefusals(t *testing.T) {
 		t.Errorf("before approval: %v", err)
 	}
 }
+
+func TestUpdateRepo(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := approved(t, s)
+	if _, _, err := s.AddRepo(c.ID, testSession, "users", func(c *Change) (RepoWork, error) { return work(c), nil }); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.UpdateRepo(c.ID, testSession, "users", func(r *RepoWork) { r.Pushed = true })
+	if err != nil || !got.Repos[0].Pushed {
+		t.Fatalf("%+v %v", got, err)
+	}
+	if _, err := s.UpdateRepo(c.ID, testSession, "orders", func(*RepoWork) {}); !aerr.HasCode(err, aerr.StateNotFound) {
+		t.Errorf("unknown repo: %v", err)
+	}
+	if _, err := s.UpdateRepo(c.ID, "", "users", func(*RepoWork) {}); !aerr.HasCode(err, aerr.StateNoSession) {
+		t.Errorf("no session: %v", err)
+	}
+	if _, err := s.UpdateRepo(c.ID, "other", "users", func(*RepoWork) {}); !aerr.HasCode(err, aerr.StateLockHeld) {
+		t.Errorf("another session: %v", err)
+	}
+}

@@ -139,6 +139,7 @@ func commands() map[string]command {
 		"git preflight":          cmdGitPreflight,
 		"git hook":               cmdGitHook,
 		"git lint":               cmdGitLint,
+		"git push":               cmdGitPush,
 	}
 }
 
