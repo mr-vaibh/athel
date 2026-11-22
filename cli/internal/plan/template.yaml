@@ -8,7 +8,8 @@ tasks:
   #   consume (a consumer moves to the new contract; depends on an expand) | contract (removes
   #   the old one; deferred: true, after every consume and migrate) | internal (none of these)
   # verbs: edit | create | delete | test | commit | push | pr | comment; a task that edits or
-  #   creates code carries test. size: S < 100 lines, M < 250, L < 400 (L needs size_reason).
+  #   creates code carries test, and one that creates carries edit too (review fixes edit what
+  #   it created). size: S < 100 lines, M < 250, L < 400 (L needs size_reason).
   # rollback: required for migrate, expand and contract at HIGH or CRITICAL risk.
   # env_actions: shared actions approved with the plan (a ticket comment); never a deploy.
   - id: T-01
@@ -19,6 +20,7 @@ tasks:
       - migrations/**
     verbs:
       - create
+      - edit
       - test
       - commit
     covers:

@@ -24,7 +24,10 @@ gates and the git steps around them.
    - **`blocked` from `building`:** if `athel --json decide list $ARGUMENTS --open` still shows a
      card, show it with the `/athel:decide` line and stop. Otherwise the developer has answered:
      run `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to building --by athel --reason "card answered"`
-     and continue.
+     and continue. If the answered card is a PR size card answered "Re-plan this change with a
+     smaller scope" (b), after that transition run
+     `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to planned --by athel --reason "<card ID>: re-plan with a smaller scope"`,
+     say the next step is `/athel:plan $ARGUMENTS`, and stop (ADR 032).
    - **`ready_for_pr`:** say the next step is `/athel:ship $ARGUMENTS` and stop.
    - **Anything else:** say the plan must be approved first and stop.
 3. Run `athel --json config show` and note `values.models.developer`, `qa`, `security` and
@@ -98,6 +101,10 @@ gates and the git steps around them.
 - Never run raw `git push` or `gh pr`; Athel denies them in a change. Use `athel git push` and
   `athel pr open`, `athel pr update` and `athel pr ready`.
 - The Stop hook keeps you going while a task is neither done nor blocked. Finish the round, or
-  end the step blocked with its reason.
+  end the step blocked on its card (step 13).
+- Never end the step blocked without an open card: Athel refuses it, because the developer would
+  have nothing to answer. A finding that cannot be fixed within the task, or that goes against
+  the approved spec, is disputed by the developer with its reason; a second dispute raises a
+  card, and so does the round limit.
 - After a break, `/athel:resume` names the task to continue. Re-run this skill: step 4 picks the
   task in progress.

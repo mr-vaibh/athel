@@ -125,16 +125,28 @@ func (p *Plan) ancestors(id string) map[string]bool {
 	return seen
 }
 
+// verbRules: a task that changes code carries test (planning rule 2), and one that creates files
+// carries edit, because the review loop fixes its findings inside the task by editing what it
+// created (ADR 030).
+func verbRules(t Task) []string {
+	var problems []string
+	changes := slices.ContainsFunc(t.Verbs, func(v string) bool { return v == "edit" || v == "create" })
+	if changes && t.Kind != KindContract && !slices.Contains(t.Verbs, "test") {
+		problems = append(problems, t.ID+" changes behaviour without the test verb; tests belong to the task that changes behaviour (planning rule 2)")
+	}
+	if slices.Contains(t.Verbs, "create") && !slices.Contains(t.Verbs, "edit") {
+		problems = append(problems, t.ID+" creates files without the edit verb; its review fixes and QA tests edit them, so add edit (ADR 030)")
+	}
+	return problems
+}
+
 // taskRules are doc 05's planning rules 1, 2, 4 and 5 for one task.
 func taskRules(t Task, risk string) []string {
 	var problems []string
 	if t.Size == "L" && t.SizeReason == "" {
 		problems = append(problems, t.ID+" is size L without a size_reason; split it or say why it cannot be (planning rule 1)")
 	}
-	changes := slices.ContainsFunc(t.Verbs, func(v string) bool { return v == "edit" || v == "create" })
-	if changes && t.Kind != KindContract && !slices.Contains(t.Verbs, "test") {
-		problems = append(problems, t.ID+" changes behaviour without the test verb; tests belong to the task that changes behaviour (planning rule 2)")
-	}
+	problems = append(problems, verbRules(t)...)
 	for _, a := range t.EnvActions {
 		if deployRe.MatchString(a) {
 			problems = append(problems, fmt.Sprintf("%s env action %q deploys; Athel never deploys, the developer does (planning rule 4)", t.ID, a))

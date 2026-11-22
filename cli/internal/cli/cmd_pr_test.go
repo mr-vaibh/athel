@@ -138,10 +138,16 @@ func TestPROversizedProposesSplit(t *testing.T) {
 	}
 }
 
-func TestSizeCardRecommendsASplitWhenOneFits(t *testing.T) {
+// TestSizeCardRecommendsRaisingTheLimit (ADR 032): Athel opens one PR per repo, so even when the
+// plan's tasks would split under the limit, raising it is recommended; re-planning stays the safe
+// default and names the split.
+func TestSizeCardRecommendsRaisingTheLimit(t *testing.T) {
 	d := sizeCard("users", 500, 400, []pr.Group{{Tasks: []string{"T-01"}, Lines: 300}, {Tasks: []string{"T-02"}, Lines: 200}})
-	if d.Recommendation.Option != "b" || d.Options[0].Label != "Allow up to 650 changed lines in this PR" {
+	if d.Recommendation.Option != "a" || d.Options[0].Label != "Allow up to 650 changed lines in this PR" || d.Default != "b" {
 		t.Errorf("%+v", d)
+	}
+	if !strings.Contains(d.Options[1].Consequence, "follow-up change") || !strings.Contains(d.Recommendation.Reason, "one PR per repo") {
+		t.Errorf("option b and the reason say what re-planning means: %+v", d)
 	}
 }
 
@@ -189,5 +195,30 @@ func TestPRToolFailures(t *testing.T) {
 	failing("echo 'HTTP 404' >&2\nexit 1\n")
 	if _, env := h.runJSON("pr", "update", "CHG-001", "users"); errCode(env) != string(aerr.ToolUnreachable) {
 		t.Errorf("gh failing on edit: %v", env)
+	}
+}
+
+// TestSizeCardReplanGoesBackToPlanning (ADR 032): answering "re-plan" takes the change back to
+// planned, where the architect moves part of the work to a follow-up change.
+func TestSizeCardReplanGoesBackToPlanning(t *testing.T) {
+	h, tree, _, _ := building(t)
+	recordingGH(t, h)
+	if out, err := commit(t, h, tree, "src/more.go", "package src\n\nconst (\n\ta = 1\n\tb = 2\n)\n", goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	h.mustOK("git", "push", "CHG-001", "users")
+	if err := os.WriteFile(filepath.Join(h.root, ".athel", "config", "git.yaml"), []byte("schema: athel/git@1\npr:\n  max_changed_lines: 2\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	h.runJSON("pr", "open", "CHG-001", "users")
+	open := asJSON(t, h.mustOK("decide", "list", "CHG-001", "--open"))
+	if !strings.Contains(open, "Re-plan this change with a smaller scope") {
+		t.Fatalf("option b: %s", open)
+	}
+	id := regexp.MustCompile(`"id":"(D-[0-9]+)"`).FindStringSubmatch(open)[1]
+	h.humanPrompt("/athel:decide CHG-001 " + id + "=b")
+	h.mustOK("decide", "answer", "CHG-001", id+"=b")
+	if v := h.mustOK("state", "transition", "CHG-001", "--to", "planned", "--by", "athel", "--reason", id+": re-plan with a smaller scope"); v["state"] != "planned" {
+		t.Errorf("back to planning: %v", v)
 	}
 }

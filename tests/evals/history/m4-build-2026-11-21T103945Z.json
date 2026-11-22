@@ -1,0 +1,717 @@
+{
+  "cases": {
+    "event-name-field": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the plan has no expand task",
+            "no ready, open PR in acme/users",
+            "the PR was not opened as a draft and then marked ready",
+            "the branch was never pushed",
+            "the branch or a commit fails Athel's git lint: athel [--json git lint CHG-001 users]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run1/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run1/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}",
+            "no side finding names the planted bug in events/retry.go",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run1/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run1/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "4cf1f0ec-c5c4-4155-90da-7a655d7adb1f",
+            "cost_usd": 0,
+            "duration_s": 0.683,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 7:10pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "1c78fa27-f8dd-4b97-a231-01719db6d1f5",
+            "cost_usd": 0,
+            "duration_s": 0.678,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 7:10pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "findings": null,
+          "prs": null,
+          "gate_problems": null,
+          "lines": 0,
+          "lint_ok": false,
+          "lint_problem": "athel [--json git lint CHG-001 users]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run1/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run1/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}",
+          "clones_unchanged": true,
+          "planted_kept": false,
+          "pushed": false
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run1/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run1/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      },
+      {
+        "run": 2,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the plan has no expand task",
+            "no ready, open PR in acme/users",
+            "the PR was not opened as a draft and then marked ready",
+            "the branch was never pushed",
+            "the branch or a commit fails Athel's git lint: athel [--json git lint CHG-001 users]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run2/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run2/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}",
+            "no side finding names the planted bug in events/retry.go",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run2/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run2/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "3dfc1fc5-fdf8-47b6-a985-40a9ed182dc0",
+            "cost_usd": 0,
+            "duration_s": 0.731,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 7:10pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "e0b6b31f-cbb2-4897-914b-423dd4007b59",
+            "cost_usd": 0,
+            "duration_s": 0.665,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 7:10pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "findings": null,
+          "prs": null,
+          "gate_problems": null,
+          "lines": 0,
+          "lint_ok": false,
+          "lint_problem": "athel [--json git lint CHG-001 users]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run2/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run2/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}",
+          "clones_unchanged": true,
+          "planted_kept": false,
+          "pushed": false
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run2/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run2/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      },
+      {
+        "run": 3,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the plan has no expand task",
+            "no ready, open PR in acme/users",
+            "the PR was not opened as a draft and then marked ready",
+            "the branch was never pushed",
+            "the branch or a commit fails Athel's git lint: athel [--json git lint CHG-001 users]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}",
+            "no side finding names the planted bug in events/retry.go",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "fdbec3a3-baa1-4907-872c-ec3a10a41c9d",
+            "cost_usd": 0,
+            "duration_s": 0.691,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 7:10pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "2770d396-cd0b-4631-ae6a-fcfad2333e3e",
+            "cost_usd": 0,
+            "duration_s": 0.623,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 7:10pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "findings": null,
+          "prs": null,
+          "gate_problems": null,
+          "lines": 0,
+          "lint_ok": false,
+          "lint_problem": "athel [--json git lint CHG-001 users]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}",
+          "clones_unchanged": true,
+          "planted_kept": false,
+          "pushed": false
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/event-name-field-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      }
+    ],
+    "saved-addresses": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is blocked, not in_review",
+            "no ready, open PR in acme/users",
+            "the PR was not opened as a draft and then marked ready",
+            "the branch was never pushed",
+            "run failed: the build is blocked with no card to answer"
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "805bc4bc-b649-49d3-a327-08cf95102b31",
+            "cost_usd": 0.1496142,
+            "duration_s": 17.826,
+            "turns": 7,
+            "result": "I created **CHG-001**, \"Saved delivery addresses\". It is in `draft`, and its PRD is indexed into 12 numbered items (PRD-1 to PRD-4.2) that the specs can cite.\nNext step: run `/athel:spec CHG-001` to investigate, review the PRD and write the specs."
+          },
+          {
+            "session_id": "2394f3be-b04c-435c-8ac0-c2d4b81de2bf",
+            "cost_usd": 2.2126857,
+            "duration_s": 395.468,
+            "turns": 19,
+            "result": "The spec step for CHG-001 is finished, and the change is now waiting on your decisions. The planned blast radius is **MEDIUM**. Only the users service changes: it gets `POST` and `GET /v1/users/{id}/addresses`, a new `ADDRESSES_ENABLED` flag, and holds saved addresses, which are personal data. The investigation found that gateway, orders, payments and the `users.updated.v1` event need no change, but that rests on reading the code, not on observed traffic. A security review task is included.\n\nAn admin note first: I started the three investigation agents in the background by mistake, stopped them, and ran them again in the foreground.\n\n## Decision cards\n\n**D-1: users runs 3 replicas, so how should addresses kept in memory behave across pods?**\nEach pod would hold its own lists. An address saved on one pod isn't listed by the others, the 10-address limit is counted per pod, and every deploy or restart wipes everything.\n- **a. Ship behind `ADDRESSES_ENABLED`, off in prod and on in dev and staging.** In prod the new routes return 404, so no customer sees inconsistent lists, and checkout integration waits until addresses are stored properly. Staging also runs 3 replicas, so its lists will still differ between pods; that is fine for testing.\n- **b. Turn it on everywhere and accept the per-pod behaviour.** Lowest effort, but customers will see inconsistent lists, the limit can be exceeded across pods, and everything is lost on each deploy.\n- **c. Turn it on everywhere and scale user-svc to 1 replica.** Lists and the limit become consistent, but `/v1/users`, which orders calls, loses redundancy, addresses are still lost on deploy, and the identity team's infrastructure changes.\n- Recommended and default: **a**.\n\n**D-2: The runtime facts are unverified. Go ahead with a check task first, or limit the change to code only?**\nThere was no traffic or error data for user-svc, the gateway config in the cluster wasn't checked, and prod wasn't queried.\n- **a. Go ahead, with a first task that checks these facts.** That task confirms the cluster gateway routes the `/users/` prefix to user-svc and finds out which users version staging runs. The staging rollout waits on it; the code work runs alongside.\n- **b. Code only, with no staging rollout in this change.** Less risk now, but nothing is proven end to end.\n- Recommended and default: **a**.\n\n**D-4: Open PR acme/users#812 also edits `api/user.go`. How should this change coexist with it?**\n- **a. Put the new handlers in a new `api/address.go` and add only two route lines to `Register`.** The overlap shrinks to two lines, there is no wait, and whichever PR merges second fixes a trivial conflict.\n- **b. Build on top of #812 after it merges.** No conflict at all, but the build can't start until #812 merges.\n- Recommended and default: **a**.\n\n**D-3: the same question as D-4, but its text was saved cut off.** The `#` in \"#812\" was read as a comment marker. There is no command to remove a card, so give it the same answer as D-4.\n\n## Decided without a card\n- Saving an address publishes no `users.updated.v1` event, because nobody knows what consumes that event.\n- `POST` returns 201 with the saved address and `created_at`.\n- A request with missing fields gets a 400 listing every missing field, even when the user is at the limit.\n- An 11th valid address gets a 422 and nothing is stored.\n- Addresses are listed newest first.\n- Any user id is accepted, and there is no check on who may call the new routes, matching today's `/v1/users` routes. Saved addresses are personal data, so this matters more here.\n\n## Caveats\n- **The investigation file may be missing findings.** All three investigation agents saved to the same `investigation.md`. The spec agent found no active work listed there, so the findings about staging running 1.9.0-rc1 and PR #812 reached the spec only through my summary of the agents' reports.\n- **The agents disagree about staging.** One reported staging running users 1.9.0-rc1; another found no deployments in the staging namespace it checked. D-2 option a resolves this.\n- **orders still calls a removed endpoint.** It calls `/v1/users/{id}/legacy-profile`, which users removed in 2026-09. It's outside this change, but you may want to raise it with the orders owners.\n\nTo accept every recommendation, type:\n\n```\n/athel:decide CHG-001 D-1=a D-2=a D-3=a D-4=a\n```"
+          },
+          {
+            "session_id": "ba51462c-3e73-4619-a085-92ff3cf89db4",
+            "cost_usd": 0.09741939999999999,
+            "duration_s": 10.273,
+            "turns": 4,
+            "result": "I recorded your answers for CHG-001 (D-1=a, D-2=a, D-3=a, D-4=a) under grant GR-6929869d6086.\n\n- **Defaults and reminders:** no default answers were applied and there are no reminders.\n- **Open cards:** none remain.\n\nCHG-001 is still in `awaiting_decisions`. The next step is `/athel:plan CHG-001`."
+          },
+          {
+            "session_id": "381244cc-6c51-4089-855e-c5f5d4413aa5",
+            "cost_usd": 0.5780397999999999,
+            "duration_s": 99.366,
+            "turns": 7,
+            "result": "The plan for CHG-001 (Saved delivery addresses) is written and the change is now `planned`. Every acceptance criterion maps to at least one task.\n\n**Tasks: `users` repo, in order**\n| # | Task | Depends on |\n|---|---|---|\n| T-01 | Check that the cluster gateway sends the `/users/` prefix to user-svc and strips it, and find which users version staging runs (D-2) | none |\n| T-02 | In-memory address store: at most 10 per user, safe under concurrent requests, behind an add/list interface | none |\n| T-03 | `POST` and `GET /v1/users/{id}/addresses` in `api/address.go`, off unless `ADDRESSES_ENABLED` is set, plus two route lines in `Register` | T-02 |\n| T-04 | Ask for `ADDRESSES_ENABLED` to be turned on in dev and staging only | T-01, T-03 |\n\n- **Gates:** build, unit, lint.\n- **Things you do by hand:**\n  - **T-01:** confirm the gateway route in the cluster config, and record on the change ticket which users version staging runs (the repo's manifest says 1.8.2).\n  - **T-04:** the PR body asks identity, who own user-svc, to turn the flag on in dev and staging after merge and leave it off in prod until addresses are stored permanently.\n- **Rollback:** leave `ADDRESSES_ENABLED` unset so both routes return 404, or revert the commit. There is no data to undo.\n\n**Risk:** MEDIUM. No sign-off is needed.\n\n**Open assumptions**\n- **A-1:** any user id is accepted, as on the existing routes, because there is no user store to check against.\n- **A-2:** who may call these routes is the same as for the existing `/v1/users` routes.\n- **A-7 is out of date:** it covers the case where D-1 is answered differently, but D-1 was answered with the recommended option, so it no longer applies.\n- No defaults were applied without an answer; you answered all four cards with the recommended option.\n\n**Gaps you should know about**\n- AC-10 asks for `go test -race`, but the race detector is not one of the gates. It only runs if T-02 and T-03 run their unit tests with `-race`.\n- Nothing technical stops someone turning the flag on in staging before T-01 is done.\n- user-svc runs 3 copies, so once the flag is on, each one keeps its own address lists and its own 10-address limit, and a restart clears them. You accepted this when you answered D-1.\n\n**Estimate:** about 3 hours and $12.\n\nNext, type: `/athel:approve CHG-001`"
+          },
+          {
+            "session_id": "65b1e114-0fb0-42c7-8730-e12421d9c576",
+            "cost_usd": 0.0956064,
+            "duration_s": 10.508,
+            "turns": 3,
+            "result": "**CHG-001 plan:**\n- **T-01** (users): comment only, no paths. Checks that the gateway routes `/users/` to user-svc and which version staging runs.\n- **T-02** (users): create, test, commit. Files: `api/address_store.go`, `api/address_store_test.go`. In-memory store with a limit of 10 per user.\n- **T-03** (users, depends on T-02): create, edit, test, commit, push, pr. Files: `api/address.go`, `api/address_test.go`, `api/user.go`. Adds POST and GET `/v1/users/{id}/addresses`, off unless `ADDRESSES_ENABLED` is set.\n- **T-04** (users, depends on T-01 and T-03): comment only. Asks the identity team to turn on `ADDRESSES_ENABLED` in dev and staging only.\n- Hash: `sha256:12dfefeebd2ffc5a28186d8b17fe48d2748a5736485350ffe1c559c63e55c77a`\n\nPlan of CHG-001 approved (hash `sha256:12dfefeebd2ffc5a28186d8b17fe48d2748a5736485350ffe1c559c63e55c77a`).\n\nThe change is now in `plan_approved` and this session holds its lock. Run `/athel:build CHG-001` to start building."
+          },
+          {
+            "session_id": "c4676094-ebc8-4220-a1b7-b961ea790be1",
+            "cost_usd": 0.1274424,
+            "duration_s": 11.496,
+            "turns": 4,
+            "result": "I didn't start the build for CHG-001: it's blocked on decision card **D-10**, which you need to answer first.\n\nThe overlap check on the `users` repo found that open PR #812 by teammate edits `api/user.go`, a file this change plans to edit too. The change is still in `plan_approved`.\n\n**D-10: Someone else is working on files this change plans to edit in users. How should Athel go on?**\n\n- **a. Wait for that work to merge or close.** Athel writes nothing in `users` until a fresh check finds no overlap. This is what happens if you don't answer.\n- **b. Coordinate with its author (recommended).** Athel drafts a message for you to send to the PR's author. Building starts once you confirm the plan still holds. The card recommends this because both pieces of work can go ahead without conflicting edits.\n- **c. Narrow the plan.** The plan changes to leave those files alone, and you have to approve it again.\n\nTo answer, type `/athel:decide CHG-001 D-10`. Then run `/athel:build CHG-001` again to start building."
+          },
+          {
+            "session_id": "a78c206f-9f53-408c-bf92-8e83a8bd9f72",
+            "cost_usd": 0.10703860000000001,
+            "duration_s": 13.525,
+            "turns": 5,
+            "result": "I recorded your answer for CHG-001: card **D-10 = b**.\n\n- The tick applied no defaults and raised no reminders.\n- There are no open cards left on CHG-001.\n\nThe change isn't in `awaiting_decisions`. It's still in `plan_approved`, so recording D-10 didn't move it back to planning and you don't need to run `/athel:plan`. The next step is `/athel:build CHG-001`."
+          },
+          {
+            "session_id": "8146d9de-e044-4b77-b3bf-5f2373ebfdf9",
+            "cost_usd": 1.9070205000000007,
+            "duration_s": 320.566,
+            "turns": 20,
+            "result": "CHG-001 is blocked on task T-02 because the approved plan doesn't let anyone change T-02's files once they exist. One of the four tasks is done, and nothing has been pushed and no PR opened yet.\n\n**Done**\n- **D-10** (overlap with PR #812 on `api/user.go`): you'd already answered it with option b (coordinate with the author), so the build went ahead. The PR #812 author still needs to hear from you before the two changes merge.\n- **T-01**: it changes no code. Its two checks go into the PR body for you to do: confirm the gateway's `/users/` route, and record which users version staging runs.\n\n**T-02 (in-memory address store): stuck after 2 rounds**\n- Round 1 is in commit `160c8da`. It covers AC-8, AC-9 and AC-10, and the cheap gates passed.\n- The reviewer approved it, with one minor finding (R1-01): the AC-10 concurrency test has no shared start signal, so its 20 adds may not really overlap.\n- Security left one major finding open (S1-01): each user is capped at 10 addresses, but nothing caps the store as a whole. Anyone posting for made-up user IDs could fill the pod's memory.\n- QA added no tests and saved no report. Athel refused its writes to both the existing test file and a new one.\n- In round 2 the developer couldn't fix either finding. Athel refused every edit, because T-02 only allows the actions `create`, `test` and `commit`, and both files already exist after round 1.\n\n`build done` will keep refusing T-02 until the security finding is fixed and QA has reported. More rounds would fail the same way until the 5-round limit raised a card, so I ended the step as blocked with that reason. There's no card for you to answer.\n\n**Decision for you:** T-02 needs `edit` added to its allowed actions for `api/address_store.go` and `api/address_store_test.go`. That's a plan change, and you approve it. QA's second attempt was a new file outside T-02's two listed paths, so the change may also need to give QA somewhere it can write tests. I'm not sure how to amend an approved plan from `blocked`, since the CLI only allows moving to `building` or `cancelled` from here. `/athel:plan CHG-001` is the likely way in. Once the plan is updated, re-run `/athel:build CHG-001` and the developer will apply the fixes it has planned:\n- a `MaxAddressUsers` limit (10000) that returns a typed \"store full\" error and stores nothing;\n- a shared start signal in the AC-10 test.\n\n**Notes for later**\n- **T-03 needs more than the plan says:** capping the request body and field lengths, and checking that the caller may act for `{id}`, belong in T-03 (from S1-01).\n- **Side findings:**\n  - SF-1: `Initials` in `api/display.go` returns \"A. L. e\" for \"Ada Lovelace\" and crashes on an empty name.\n  - SF-2: `main.go:14` starts the server with no timeouts. This was there before the change.\n  - SF-3: the unit gate runs `go test` without `-race`, so nothing automatically checks AC-10's \"race detector reports nothing\"."
+          }
+        ],
+        "artifacts": {
+          "state": "blocked",
+          "kinds": [
+            "internal",
+            "internal",
+            "expand",
+            "internal"
+          ],
+          "findings": [
+            "api/display.go:12",
+            "main.go:14-14",
+            ".athel/repos/github.com-acme-users/conventions.md:28-28"
+          ],
+          "prs": null,
+          "gate_problems": null,
+          "lines": 0,
+          "lint_ok": true,
+          "clones_unchanged": true,
+          "planted_kept": false,
+          "pushed": false
+        },
+        "error": "the build is blocked with no card to answer"
+      },
+      {
+        "run": 2,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "no side finding names the planted bug in api/display.go"
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "cd3e5066-f0ba-4ba1-bf58-5a7bc296fdde",
+            "cost_usd": 0.1503354,
+            "duration_s": 14.978,
+            "turns": 7,
+            "result": "I've created change **CHG-001**, titled \"Saved delivery addresses\". It's in `draft`, and its PRD has been indexed into 9 numbered statements for the specs to cite.\nNext step: `/athel:spec CHG-001`, which investigates, reviews the PRD and writes the specs."
+          },
+          {
+            "session_id": "bfbce383-ac7d-4b14-ae0b-1586017490ec",
+            "cost_usd": 2.3389142000000014,
+            "duration_s": 415.556,
+            "turns": 21,
+            "result": "The specs for CHG-001 are saved, and two decisions need your answer before planning. The change is now in `awaiting_decisions` and the risk level is **MEDIUM**.\n\n**Risk: MEDIUM.** Only `users` gets code: two new endpoints that add to the API without changing anything existing. The gateway already forwards `/users/` to the service, so it needs no change. `orders`, `notifications`, `payments` and the `users` table are unaffected. The rating is MEDIUM for one reason: there are no traffic numbers, because the Prometheus query returned nothing. The change also touches personal data, so the plan will include a security review task.\n\n**What the investigation found:**\n- **Owner:** the profile service is `users` in the repo (`user-svc` in the cluster), owned by `@acme/identity`. It has no address storage today.\n- **Prod:** runs version 1.8.2 on 3 replicas, with no open alerts or incidents.\n- **Gaps:** error rates, latency and traffic for the address work are unknown, so the investigation is marked incomplete.\n- **Open PR:** PR #812 / SHOP-12 is changing `users/api/user.go`. The new code goes in separate files to avoid conflicts with it.\n- **Not part of this change:**\n  - `orders` still calls the `legacy-profile` endpoint, which was removed in 2026-09.\n  - `Initials` in `users/api/display.go` crashes on an empty name.\n\nI first started the three investigation agents in the background by mistake. I stopped them and ran them again in the foreground, so the findings above come from the complete runs.\n\nThe spec agent settled six smaller choices itself (D-3 to D-8): response shapes, the 400 body format, newest-first ordering with a safe 10-address limit, no new event, and new files to stay clear of PR #812.\n\n## D-1: The PRD keeps addresses in memory, but `user-svc` runs 3 replicas in prod\nEach pod would hold its own addresses. Customers would see a different list depending on which pod answers, the 10-address limit would count per pod, and every deploy would erase all addresses.\n\n| Option | Consequence |\n|---|---|\n| **a) In memory, behind a flag that is off in prod** | Ships as the PRD says and can be tested in staging. Prod returns 404 on the address routes until storage lands and the flag is turned on. |\n| b) In memory, on in prod | Customers can use it now, but addresses appear and disappear depending on the pod, and all are lost on each deploy. |\n| c) Store them in a new database table now | Works correctly across pods and restarts, but adds a migration and goes beyond what the PRD asks, which raises the risk. |\n\n**Recommended: a.** It delivers the PRD as written without showing customers missing or vanishing addresses. **Default if you don't answer: a**, which is safe to apply automatically.\n\n## D-2: Nothing checks that the caller owns the profile\nThe existing user routes don't check who is calling either, and addresses are personal data.\n\n| Option | Consequence |\n|---|---|\n| **a) Same as the existing user routes, with no caller check** | No dependency on another team. The address routes are as open as the current user routes, and the security review task records the gap until auth work lands. |\n| b) Require an `X-User-ID` header that matches the profile id, otherwise 403 | Only the owner can read or add addresses. It needs `@acme/platform` to change the gateway, so this change waits on another team. |\n\n**Recommended: a.** With D-1 a, the routes are off in prod, so the gap isn't exposed, and the service has no trusted caller identity to check yet. **Default if you don't answer: a**, but it is **not** safe to apply automatically, so please answer this one explicitly.\n\n---\n\nTo go on, type (`skip=D-n` means \"this shouldn't have been asked\"):\n\n```\n/athel:decide CHG-001 D-1=a D-2=a\n```"
+          },
+          {
+            "session_id": "ea4e50f3-2a61-4d8e-8bdb-ae9139e3fbad",
+            "cost_usd": 0.08045820000000001,
+            "duration_s": 8.259,
+            "turns": 3,
+            "result": "I recorded your answers for CHG-001 under grant GR-ce17db21aee9:\n- **D-1** = a\n- **D-2** = a\n\nNo defaults were applied, there were no reminders, and no decision cards are left open. CHG-001 was in `awaiting_decisions` when this session started. The next step is `/athel:plan CHG-001`, which has the architect write the task plan for you to approve."
+          },
+          {
+            "session_id": "d3b4c4c9-75f1-47a3-a8f1-82cacdb1ae82",
+            "cost_usd": 0.7001577999999999,
+            "duration_s": 136.4,
+            "turns": 7,
+            "result": "The plan for CHG-001 is saved and the change is now **planned**. Every requirement traces to a task (`athel trace` reports complete, nothing missing).\n\n**Tasks, all in the users repo, in order**\n1. **T-01:** Adds an in-memory address store and the POST and GET `/v1/users/{id}/addresses` handlers, in new files `api/addresses.go` and `api/addresses_test.go`. It covers AC-1 to AC-11 and AC-13. The routes aren't reachable until T-02 wires them in.\n2. **T-02:** The routes only switch on when `ADDRESSES_ENABLED=true` is set, and are off by default. It touches `main.go` and covers AC-12.\n3. **T-03:** No code. It's something you need to do: the PR body must say three things:\n   - the routes have no check that the caller owns the profile (decision D-2);\n   - they stay off in prod until addresses are saved somewhere permanent, not just in memory (decision D-1);\n   - `ADDRESSES_ENABLED` must not be set in prod until that ownership check exists.\n\n- **Gates:** build, unit and lint.\n- **Files left alone:** `api/user.go` isn't touched, so the plan stays clear of PR 812. The prod deploy file `deploy/k8s.yaml` isn't edited either, so prod stays off.\n\n**Risk:** MEDIUM, so no sign-off is needed.\n\n**Open assumptions** (no defaults were applied without an answer; both cards were answered):\n- **A-1:** Profile ids that don't exist are accepted, as on the existing user routes.\n- **A-2:** No other service has its own idea of a delivery address. The notifications service was never checked.\n- **A-3:** Through the gateway, the routes are reached at `/users/v1/users/{id}/addresses`.\n- **A-4:** Whoever owns the staging config turns `ADDRESSES_ENABLED` on in staging, outside this change. Nobody checked whether a staging manifest exists.\n\n**Estimate:** about 2.5 hours and $10.\n\nThe architect also rewrote the spec to add your two answers, as REQ-10/AC-12 and REQ-11/AC-13. It did not update the planned blast radius, so that still doesn't list the new `ADDRESSES_ENABLED` setting or the `main.go` edit. Both of those lower the risk rather than raise it.\n\nNext, type: **`/athel:approve CHG-001`**"
+          },
+          {
+            "session_id": "075e2042-6997-4d0e-9c4e-1a7e8e99fd58",
+            "cost_usd": 0.09137320000000002,
+            "duration_s": 9.086,
+            "turns": 3,
+            "result": "Plan of CHG-001 approved (hash `sha256:48ea6a80864dcae067053f53a23eaf0d7fea568d166738cd1b1f311c587855ac`).\n\nThe plan has three tasks, all in the `users` repo:\n\n| Task | What it does | Steps | Files | Depends on |\n|---|---|---|---|---|\n| T-01 | Adds an in-memory address store and the POST and GET address handlers (covers AC-1 to AC-11 and AC-13) | create, test, commit | `api/addresses.go`, `api/addresses_test.go` | none |\n| T-02 | Puts the address routes behind `ADDRESSES_ENABLED`, which is off by default (AC-12) | edit, test, commit | `main.go`, `api/addresses.go`, `api/addresses_test.go` | T-01 |\n| T-03 | Notes in the PR description that the address routes don't yet check who the caller is | comment | none | T-02 |\n\nThe next step is `/athel:build CHG-001`."
+          },
+          {
+            "session_id": "d9904191-1ec2-4d22-ab4f-127a4a12ab8c",
+            "cost_usd": 7.025134700000003,
+            "duration_s": 972.087,
+            "turns": 42,
+            "result": "T-01 is built, but the build is now stopped on a decision only you can make: the draft PR is over the size limit.\n\n**T-01 (in-memory address store, POST and GET handlers):** finished after 4 rounds. All gates are green, QA, security and the reviewer passed it, and the branch is pushed to `users` at `2d0e51c`. Along the way the developer fixed these review findings:\n- An unbounded store that clients could fill until a replica ran out of memory. It now holds at most 10,000 addresses and caps the length of every field and of the user id.\n- Extra data after the JSON body was accepted and the address saved. It now gets a 400.\n- Control characters, invisible characters and line or paragraph separators in address fields are now rejected.\n- Malformed JSON now gets a fixed error instead of Go's raw parser message.\n- Dead code was removed, and a test helper with a vague name was renamed.\n\n**Why it stopped:** the draft PR wasn't opened. Its diff is 596 changed lines and `git.yaml` allows 400 per PR (`E-GATE-PR-SIZE`), so Athel raised card D-9:\n\n\u003e **D-9:** The users PR is over git.yaml's limit of 400 changed lines. How should Athel go on?\n\u003e - **a** — Allow up to 750 changed lines in this PR (recommended: T-01 alone is over the limit, so no split of the plan brings it under)\n\u003e - **b** — Change the plan into smaller PRs (the plan then needs your approval again). This is the default if unanswered.\n\nAnswer it with `/athel:decide CHG-001 D-9`, then re-run `/athel:build CHG-001`. That run continues with T-02 (the `ADDRESSES_ENABLED` flag) and retries the PR.\n\n**State to be aware of:** the change still shows `building`, not `blocked`. My command chain ended the T-01 build step as `ok` before I saw the PR refusal. Recording it as blocked afterwards failed because the step was no longer running, and the CLI says not to fix state by hand, so I left it. D-9 is still listed as open.\n\n**Things outside T-01's files that the later steps need to cover:**\n- The PR body should record two accepted risks, beyond the T-03 note about the missing ownership check:\n  - one client can fill the store with made-up user ids, so every real save gets 503 until the replica restarts;\n  - nothing checks who the caller is.\n- Whatever eventually registers these routes needs a per-client rate limit or should keep them internal.\n- The server starts with no read, write or idle timeouts (`main.go:14`). This was already in the scan before this change."
+          },
+          {
+            "session_id": "290ff625-a5f4-4254-aae7-5ce6ad4b4bd3",
+            "cost_usd": 0.081457,
+            "duration_s": 7.76,
+            "turns": 3,
+            "result": "I recorded your answer for CHG-001: **D-9 = a** (grant `GR-4544a23e6db8`).\n\n- **Defaults and reminders:** no defaults came due and there are no reminders.\n- **Open cards:** none left on CHG-001.\n\nCHG-001 is still in the `building` state, not `awaiting_decisions`, so the next step is `/athel:build CHG-001`, not `/athel:plan`."
+          },
+          {
+            "session_id": "7bcb7912-2e57-44de-b3f8-9b51ad98f9df",
+            "cost_usd": 1.3523517999999997,
+            "duration_s": 234.366,
+            "turns": 22,
+            "result": "All three tasks are built and CHG-001 is now `ready_for_pr`. Everything is pushed to the draft PR https://github.com/acme/users/pull/901.\n\n- **T-01 (address store and the POST and GET address routes):** this was finished in an earlier session. Its draft PR had never been opened, so I opened it this session.\n- **T-02 (`ADDRESSES_ENABLED` switch, off by default):** done in one round, with every gate green.\n  - The address routes are only added when the variable is set to a true value.\n  - With it unset, empty, false or unreadable, POST and GET `/v1/users/{id}/addresses` return 404, while GET and PUT `/v1/users/{id}` keep working.\n  - QA added 6 test cases, none failing. Security found nothing.\n  - The reviewer approved with one minor finding (R1-01). The switch also accepts `1`, `t`, `True` and `TRUE`, but REQ-10 only says `true`. Anything it can't read leaves the routes off, so it fails safe. You may want to confirm that wider set or narrow it before shipping.\n- **T-03:** changes no code. Its note goes into the PR body for you: the address routes have no check that the caller owns the profile, and `ADDRESSES_ENABLED` must not be set in prod until one exists.\n\nBefore shipping, note:\n- **Three security side findings are still undecided:**\n  - **SF-2 (high):** no `/v1/users/{id}` route checks who the caller is.\n  - **SF-1 (medium):** the server runs with no timeouts.\n  - **SF-3 (medium):** one client can fill the shared address store and lock out every customer until the server restarts.\n- **PR size:** the PR is 693 changed lines against the 400 limit. You already allowed this in card D-9.\n\nNext step: `/athel:ship CHG-001`."
+          },
+          {
+            "session_id": "419dbc52-5014-478b-8ad7-619e08377097",
+            "cost_usd": 0.18998520000000002,
+            "duration_s": 24.487,
+            "turns": 6,
+            "result": "CHG-001 \"Saved delivery addresses\" is now **in review**. The PR is marked ready, but its body has two gaps you should know about before review starts.\n\n**PR:** https://github.com/acme/users/pull/901 (users, `athel/CHG-001-saved-delivery-addresses` → `main`)\n\n**What actually changed (users)**\n- **Routes added:** `POST` and `GET /v1/users/{id}/addresses`, in `api/addresses.go`.\n- **Code added:** `Address`, `AddressesEnabledEnv`, `RegisterAddresses` and `RegisterAddressesIfEnabled`, plus 20 tests in `api/addresses_test.go`.\n- **`main.go`:** changed by 2 lines. The blast check couldn't classify it, but it did not count it as drift from the plan.\n- **Nothing else:** no events, migrations, config or dependency changes.\n- **Size:** 693 changed lines, over the 400-line limit. You allowed that in decision D-9.\n- **Risk level:** MEDIUM.\n\n**Gates and waivers**\n- **Gates:** the PR body says \"No gate results yet\" and \"No security report yet\". Every task reached done, but no per-task gate or security results were passed into the PR body. Reviewers will see empty sections there.\n- **Waivers:** none.\n\n**Your action from T-03:** the PR body should state three things:\n- the address routes have no check that the caller owns the profile, the same as `GET`/`PUT /v1/users/{id}` today (D-2);\n- the routes stay off in prod until persistence lands (D-1);\n- `ADDRESSES_ENABLED` must not be set in prod before an ownership check exists.\n\n**Issues found outside this change** (all \"not decided yet\" in the PR body). Found 3 issues outside this change. 1 quick win: SF-1.\n\n| ID | Category | Severity | Location | Effort | Fix risk | |\n|---|---|---|---|---|---|---|\n| SF-2 | security | high | `api/user.go:19-22` | L | medium | No `/v1/users/{id}` route checks who the caller is (CWE-862/639). The address routes extend this existing gap to home addresses. |\n| SF-1 | security | medium | `main.go:14` | S | low | ⚡ **Quick win.** `http.ListenAndServe` has no timeouts, so slow clients can hold connections open (CWE-400). |\n| SF-3 | security | medium | `api/addresses.go:124-127` | M | low | The store holds at most 10,000 addresses overall and is never emptied. One client can fill it, and everyone then gets 503 until the service restarts. |\n\nChoose what to do with each one by typing, for example:\n`/athel:triage CHG-001 SF-1=fix_pr SF-2=ticket SF-3=ticket` (or `all=\u003cchoice\u003e`)\n\nA `fix_pr` choice gets its own change ID and starts at `/athel:spec`. For a `ticket` choice I'll write a draft for you to file.\n\nThe PR now waits for human review and merge. Athel will not merge or deploy."
+          },
+          {
+            "session_id": "b6b7fccc-c413-4aa4-8bce-111c8e16dad1",
+            "cost_usd": 0.0854142,
+            "duration_s": 8.639,
+            "turns": 2,
+            "result": "I recorded your choices for CHG-001. All 3 side findings are set to **ticket**:\n\n| Finding | Where | Severity | Effort | Choice |\n|---|---|---|---|---|\n| **SF-2**: no check on who is calling any `/v1/users/{id}` route, so anyone can read another user's saved addresses (CWE-862/639). This was already true before this change. | `api/user.go:19-22` | high | L | ticket |\n| **SF-1**: `http.ListenAndServe` has no timeouts, so slow clients can hold connections open (gosec G114, CWE-400). This is a quick win. | `main.go:14` | medium | S | ticket |\n| **SF-3**: the in-memory address store has one shared cap and no per-client limit, so one client can fill it and every other customer gets 503 | `api/addresses.go:124-127` | medium | M | ticket |\n\nAthel will draft each of the three tickets for you to approve. None of them is created until you approve it.\n\nNo findings are left undecided, so none will show as \"not decided yet\" in the PR body. None were sent to `fix_pr`, so no linked follow-up changes were opened.\n\nBefore the address routes are opened to the public, I'd look at SF-2 first. It is rated high, and the new routes make it worse because they expose home addresses."
+          }
+        ],
+        "artifacts": {
+          "state": "in_review",
+          "kinds": [
+            "expand",
+            "internal",
+            "internal"
+          ],
+          "findings": [
+            "main.go:14-14",
+            "api/user.go:19-22",
+            "api/addresses.go:124-127"
+          ],
+          "prs": [
+            {
+              "repo": "acme/users",
+              "headRefName": "athel/CHG-001-saved-delivery-addresses",
+              "baseRefName": "main",
+              "isDraft": false,
+              "state": "open"
+            }
+          ],
+          "gate_problems": null,
+          "lines": 693,
+          "allowed_lines": 750,
+          "lint_ok": true,
+          "clones_unchanged": true,
+          "planted_kept": true,
+          "pushed": true
+        }
+      },
+      {
+        "run": 3,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is blocked, not in_review",
+            "no ready, open PR in acme/users",
+            "the PR was not opened as a draft and then marked ready",
+            "the branch was never pushed",
+            "run failed: the build is blocked with no card to answer"
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "732b72da-bce8-4f64-8c00-6b035a469eed",
+            "cost_usd": 0.1496066,
+            "duration_s": 15.559,
+            "turns": 7,
+            "result": "I created change **CHG-001**, \"Saved delivery addresses\", and it is in `draft`.\nThe PRD is saved and its 13 items are numbered (PRD-1 to PRD-4.2) for the specs to cite.\nNext, run `/athel:spec CHG-001` to investigate, review the PRD and write the specs."
+          },
+          {
+            "session_id": "ca8a3aea-48c9-4669-8d29-dba8264706a9",
+            "cost_usd": 2.2736871999999995,
+            "duration_s": 407.699,
+            "turns": 13,
+            "result": "CHG-001 is specified and now waiting on your answers to two decision cards, both of which block the plan step. The risk is **MEDIUM**.\n\n**What was done**\n- **Investigation:** the `users` repo (`github.com/acme/users`, owner `@acme/identity`) owns `/v1/users/{id}`. In prod it runs as `user-svc` with 3 replicas. No address model exists yet. The gateway already forwards `/users/…` to the service, so it needs no change.\n- **Spec:** one spec, for `users`, with 8 requirements and 12 acceptance criteria. The new routes go in a new file, `api/address.go`. The existing `api/user.go` changes by one line, which keeps the overlap with open PR #812 (phone normalisation) small.\n- **PRD contradiction:** the PRD wants addresses kept in memory, but with 3 replicas each pod has its own memory. A saved address can be missing on the next request, and the 10-address limit is counted per pod. Card D-1 asks how to handle this.\n\n**Card D-1: how should saved addresses behave across the 3 prod pods?**\n- **a) In memory, behind a setting (`ADDRESSES_ENABLED`) that is off by default.** Prod stays off until addresses are stored in a database, so checkout can't use them in prod yet, but no customer sees addresses vanish.\n- **b) In memory and switched on in prod.** Checkout can use it now, but addresses appear and disappear between requests, a customer can end up with up to 30, and every deploy wipes them.\n- **c) Run `user-svc` as 1 replica.** Reads are consistent until a restart, but the whole users API, which `orders` also calls, loses redundancy. Addresses still vanish on each deploy.\n- **d) Add a database table now.** Addresses are consistent and kept, but this goes beyond the PRD and adds a migration that is hard to undo.\n- **Recommendation and default: a.** It ships what the PRD asks without exposing customers to vanishing addresses or weakening the users API.\n\n**Card D-2: what JSON should the endpoints return?**\n- **a) Each address gets an `id` and a creation time; the list is wrapped in an object (`{\"addresses\": [...]}`).** Editing or deleting addresses later can use the id, and the list can gain fields such as paging without breaking callers.\n- **b) The same address, but the list is a bare array.** Simplest for checkout to read, but adding paging later breaks callers.\n- **c) Only the PRD fields, no id.** Editing or deleting later has no stable handle, so an id would have to be added anyway.\n- **Recommendation and default: a.** Both defaults are marked safe to apply if you leave a card unanswered.\n\n**Why MEDIUM:** two things raised it: the new `ADDRESSES_ENABLED` setting, and no traffic data showing what goes through the gateway. Addresses are personal data, so the change is flagged for a security review.\n\n**Decisions the architect made without asking** (overrule any of them when you answer):\n- **D-3:** saving an address publishes no event.\n- **D-5:** an 11th address that is also invalid gets 400, not 422, because validation runs first.\n- **D-6:** request bodies are capped at 4 KiB and each field at 200 characters, with 400 for anything larger.\n- **D-7:** a field that is empty or only spaces counts as missing.\n- **D-8:** the code goes in `api/address.go`. D-4 is a damaged record and D-8 replaces it.\n\n**What couldn't be checked:**\n- No health or traffic metrics for `user-svc`.\n- Staging runs `1.9.0-rc1` while the repo pins `1.8.2`.\n- Who subscribes to the users event (`users.updated.v1`) is unknown.\n- Only the four local clones were searched, so other callers may exist.\n- PR #812 may still conflict on the one line added to `api/user.go`.\n\nTo accept both recommendations, type:\n\n```\n/athel:decide CHG-001 D-1=a D-2=a\n```"
+          },
+          {
+            "session_id": "1b733feb-e956-4fe9-ab7b-ed211ba2ab43",
+            "cost_usd": 0.08070159999999998,
+            "duration_s": 7.637,
+            "turns": 3,
+            "result": "I recorded both of your answers on CHG-001: **D-1 = a** and **D-2 = a**.\n\n- **Defaults and reminders:** no defaults were applied and there are no reminders.\n- **Open cards:** none are left on CHG-001.\n\nThe change was in `awaiting_decisions` when this session started, so the next step is `/athel:plan CHG-001`."
+          },
+          {
+            "session_id": "1c444830-f126-4a52-ac55-99b4cd42b6dc",
+            "cost_usd": 0.44839360000000006,
+            "duration_s": 74.506,
+            "turns": 7,
+            "result": "The plan for CHG-001 (Saved delivery addresses) is written and the change is now `planned`. Every acceptance criterion maps to a task, and nothing is missing from the trace.\n\n**Tasks: `users` repo, in this order**\n\n| # | Task | Gates |\n|---|---|---|\n| T-01 | Add POST and GET `/v1/users/{id}/addresses`, kept in memory and only active when the `ADDRESSES_ENABLED` flag is on (off by default) | build, unit, lint |\n| T-02 | Check address input, limit request and field size, and cap each user at 10 addresses. Address values never go into logs. Runs after T-01. | build, unit, lint |\n\n- **Manual step for you:** on T-01, comment on PR 812 (SHOP-12) that CHG-001 adds one line to `Register` in `api/user.go`, so the two branches merge cleanly.\n- **Rollback:** leave `ADDRESSES_ENABLED` unset, or revert the commit. No data model or existing API changes.\n\n**Risk:** MEDIUM\n\n**Open assumptions** (no defaults were applied without an answer):\n- **A-1:** the address routes use the same access control as the existing user routes, with no extra check.\n- **A-2:** the service doesn't check that the user exists, so an unknown user id gets an empty list.\n- **A-6:** the 10-address limit counts per user within whichever server copy gets the request. Production runs 3 copies, but the flag is off there.\n- **A-8:** this one is settled. Your answers to D-1 and D-2 match what the spec assumed, but the spec text still reads as if they were open.\n\n**Worth knowing before you approve:** the architect couldn't open the `users` repo source because access outside the workspace was refused. The file paths (`api/address.go`, `api/user.go`) come from the spec's design notes, not from reading the code.\n\n**Estimate:** about 3 hours, about $12\n\nNext, type `/athel:approve CHG-001`"
+          },
+          {
+            "session_id": "691d55f8-64e8-4809-9622-8bd5bc7b07a8",
+            "cost_usd": 0.091765,
+            "duration_s": 10.493,
+            "turns": 3,
+            "result": "**CHG-001 plan:**\n- **T-01** (users, M): adds flag-gated POST and GET `/v1/users/{id}/addresses` with an in-memory store. Verbs: create, edit, test, commit, push, pr. Files: `api/address.go`, `api/address_test.go`, `api/user.go`. Covers AC-1, 2, 3, 10. It also comments on PR 812 (SHOP-12) about the one-line change to `Register`.\n- **T-02** (users, M, depends on T-01): validates input, caps body and field sizes, and enforces the 10-address limit. Verbs: edit, test, commit, push. Files: `api/address.go`, `api/address_test.go`. Covers AC-4 to 9, 11, 12.\n- Hash: `sha256:0480c42e40164e30e252a72814d15f062ef9362cc52f3fe23322ab1b600756d8`\n\nPlan of CHG-001 approved (hash `sha256:0480c42e40164e30e252a72814d15f062ef9362cc52f3fe23322ab1b600756d8`).\n\nNext step: `/athel:build CHG-001`."
+          },
+          {
+            "session_id": "2facf4b0-3bdd-43d2-9904-dc0dc9402c90",
+            "cost_usd": 0.1292548,
+            "duration_s": 12.77,
+            "turns": 4,
+            "result": "I didn't start the build. Git preflight on the `users` repo found that someone else's open work touches a file this change plans to edit, and that raised decision card D-9. CHG-001 stays in `plan_approved` until you answer it.\n\n**D-9: Someone else is working on files this change plans to edit in `users`. How should Athel go on?**\n\nPull request #812 by `teammate` changes `api/user.go`. Task T-01 also needs to change that file: it adds one line to `Register` that calls `registerAddresses(mux)`.\n\n| Option | What happens |\n|---|---|\n| **a** Wait for that work to merge or close | Athel writes nothing in `users` until preflight runs again and finds no overlap. *(This is the default if you don't answer.)* |\n| **b** Coordinate with its author | Athel drafts a message to the author for you to send. Building starts once you confirm the plan still holds. |\n| **c** Narrow the plan | The plan is changed to leave `api/user.go` alone, and it needs your approval again. |\n\nAthel recommends **b**: both pieces of work can go ahead without conflicting edits. The plan already expects this. Its notes for T-01 include commenting on PR 812 (SHOP-12) that CHG-001 adds that one line, so the two branches merge with a one-line touch.\n\nTo answer, run `/athel:decide CHG-001 D-9`, then run `/athel:build CHG-001` again."
+          },
+          {
+            "session_id": "4a70a176-45b8-4410-89e3-a8c0a6bccd05",
+            "cost_usd": 0.1082368,
+            "duration_s": 14.095,
+            "turns": 5,
+            "result": "I recorded D-9 = **b** on CHG-001 under your one-time grant (GR-7407b285a9ad).\n\n- **Defaults and reminders:** no defaults came due and there are no reminders.\n- **Open cards:** none are left on CHG-001.\n- **State:** CHG-001 is in `plan_approved`, not `awaiting_decisions`, so `/athel:plan` isn't the next step. The plan was approved before you answered D-9. If option b changes anything the plan relies on, re-plan before building. Otherwise the next step is `/athel:build CHG-001`."
+          },
+          {
+            "session_id": "b64d3e93-ce37-4176-89c8-9e0aaf035d8f",
+            "cost_usd": 6.775945699999999,
+            "duration_s": 1014.107,
+            "turns": 41,
+            "result": "I've marked CHG-001 as **blocked** at T-01, so the Stop hook won't keep the loop going. The reason recorded is that R1-09 needs your waiver.\n\nTo move on, waive R1-09:\n\n```\n/athel:waive CHG-001 R1-09\n```\n\nMake the condition that SF-4 is settled before `ADDRESSES_ENABLED` is turned on in production. Settling it means either confirming the gateway ties `{id}` to the logged-in customer, or adding a task for that check.\n\nThen run `/athel:build CHG-001`. Be aware that the build starts again even if you haven't waived R1-09, because only open decision cards stop it and R1-09 is a finding, not a card. So waive first. The build will rerun T-01's full gates, finish the task, push it and open the draft PR, then move on to T-02.\n\nIf you'd rather add the authorization check in this change, go back to `/athel:plan CHG-001` instead."
+          }
+        ],
+        "artifacts": {
+          "state": "blocked",
+          "kinds": [
+            "expand",
+            "internal"
+          ],
+          "findings": [
+            "api/display.go:6-13",
+            "main.go:14-14",
+            "api/address.go:38-50",
+            "api/address.go:59-60"
+          ],
+          "prs": null,
+          "gate_problems": null,
+          "lines": 0,
+          "lint_ok": true,
+          "clones_unchanged": true,
+          "planted_kept": false,
+          "pushed": false
+        },
+        "error": "the build is blocked with no card to answer"
+      }
+    ],
+    "typed-client-errors": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": true,
+          "problems": null
+        },
+        "sessions": [
+          {
+            "session_id": "29071109-ce3c-4b22-a02d-5ac2817772d8",
+            "cost_usd": 0.14969259999999998,
+            "duration_s": 19.169,
+            "turns": 7,
+            "result": "I created change **CHG-001**, \"Clear errors from the users client in orders\". It is in `draft`, and the PRD is saved and indexed.\nNext step: run `/athel:spec CHG-001` to investigate, review the PRD and write the specs."
+          },
+          {
+            "session_id": "cbaa6d2b-1204-49b7-9434-b6a8ea4a2122",
+            "cost_usd": 2.2419770999999993,
+            "duration_s": 425.536,
+            "turns": 15,
+            "result": "The specs for CHG-001 are written and the change is waiting on your decisions (`awaiting_decisions`). The planned blast radius is **CRITICAL**.\n\n## Why the risk is CRITICAL\n- **Unexplained prod traffic:** prod shows orders calling user-svc `GET /v1/users/{id}` about 120 times a minute (7-day average). But the code on orders `main` never calls `Users.Get`; its only caller is `clients_test.go:25`. So the deployed `orders:3.1.0` image may contain callers that are not on `main`, and changing the signature could break them.\n- **The new 2s timeout:** it will apply to those calls too, and there is no user-svc latency or error-rate data. Some calls that succeed today may start failing as \"users unavailable\".\n- **Personal data:** `Get` will now decode the phone number, so the plan includes a security review task.\n\n## What else the investigation found\n- The users service always answers 200 with `{id,name,phone}`, filling `name` and `phone` with empty strings for unknown ids. It never sends 404 or 5xx.\n- Open PR acme/users#812 changes how phone numbers are formatted.\n- `Users.LegacyProfile` still calls `/legacy-profile`, which users removed in 2026-09. It gets 0 prod traffic. The architect left it unchanged and logged it as a side finding.\n- Staging runs user-svc `1.9.0-rc1`, ahead of the repo's `1.8.2`.\n\nThe spec (`orders.md`) and the 10 acceptance criteria were written by the architect, because the PRD had none.\n\n## Decision cards (all four block `/athel:plan`)\n\n**D-1: How should `Get` change, given its callers are only known from code?**\n- **a)** Change `Get` in place to `Get(ctx, id) (*Customer, error)`, after a first task that checks for callers. That task compares the deployed 3.1.0 image with `main` and searches the org for other users of the client. Any hidden caller then fails to compile, not at runtime.\n- **b)** Add a new method that takes a context and keep the old `Get` as deprecated. Nothing existing breaks, but it departs from the PRD and leaves a later task to remove the old `Get`.\n- Recommended: **a**. Default: **a**.\n\n**D-2: The users service never answers 404, so what counts as \"not found\"?**\n- **a)** Map only 404 to `ErrCustomerNotFound`, as the PRD says. It is tested against a stub server and does nothing in prod until users starts sending 404. A 200 with empty fields comes back as a customer with an empty name and phone.\n- **b)** Also treat a 200 with an empty name as not found. That works against today's server, but orders would be inventing a meaning the users service never promised.\n- **c)** Do a, and also open an issue asking @acme/identity to return 404 for unknown ids. That needs their approval.\n- Recommended: **a**. Default: **a**.\n\n**D-3: How strictly should `Get` decode the customer, given PR #812?**\n- **a)** Lenient: ignore unknown fields and treat the phone as an opaque string. Only a body that isn't valid JSON, or a phone that isn't a string, fails. The plan adds a task to read #812's diff before the code task.\n- **b)** Strict: reject unknown fields and an empty phone. That catches contract changes early, but today's server sends an empty phone, so every call would fail. #812 could also break orders when it merges.\n- Recommended: **a**. Default: **a**.\n- The saved text of both options is cut off at \"#812\". The endings above are the architect's wording.\n\n**D-8: What safeguards should gate this CRITICAL change?**\n- **a)** The caller-check task from D-1, plus a watched rollout: you watch orders-to-user-svc errors and latency after deploy, and reverting the PR is the rollback.\n- **b)** Same as a, plus a sign-off on the blast radius from @acme/commerce before any code is built.\n- Recommended: **b**, because the prod traffic contradicts the code and the owning team should see that first. Default: **a**.\n\n## Gaps\n- There is no p99 latency or error rate for the orders-to-users path.\n- The 3.1.0 image has only been checked by tag, not compared with `main`.\n- The wire format in #812 hasn't been read.\n- No ticket systems were searched.\n- The change still lists no attached repos (`repos: []`).\n\n## Next\nTo accept the recommendations, type:\n\n```\n/athel:decide CHG-001 D-1=a D-2=a D-3=a D-8=b\n```\n\nUse `skip=D-n` for any card you think shouldn't have been asked."
+          },
+          {
+            "session_id": "a87819b7-6864-46ca-9252-c04e5a573f3b",
+            "cost_usd": 0.10522639999999997,
+            "duration_s": 11.806,
+            "turns": 5,
+            "result": "I recorded your four answers for CHG-001: D-1=a, D-2=a, D-3=a and D-8=b.\n\n- No default answers were due and there were no reminders.\n- No decision cards are left open.\n- CHG-001 is still in `awaiting_decisions`, with no open cards remaining.\n\nNext step: `/athel:plan CHG-001`"
+          },
+          {
+            "session_id": "2cb32b72-53b8-488e-90ef-109feebbd912",
+            "cost_usd": 0.4947422,
+            "duration_s": 84.766,
+            "turns": 7,
+            "result": "The plan for CHG-001 is set and checked. Every acceptance criterion traces back to a task, and the change has moved to `planned`. No decision cards are open and no defaults were applied without an answer.\n\n**Plan: `orders` (one repo, in order)**\n\n| Task | What | Depends on | Gates |\n|---|---|---|---|\n| T-01 | Confirm who calls `Users.Get` and get the owner's sign-off, before any code is written | — | signoff |\n| T-02 | Check that `phone` keeps the same wire shape after acme/users#812 | — | — |\n| T-03 | `Users.Get` takes a context and returns a decoded `Customer`, typed not-found/unavailable errors and a 2s timeout (`clients/users.go`, `clients/clients_test.go`) | T-01, T-02 | build, unit, lint |\n\n**Actions outside the code**\n- **T-01:** Compare the commit behind `ghcr.io/acme/orders:3.1.0` with orders `main`, and search the acme org for other callers of `Users.Get`.\n- **T-01:** Ask @acme/commerce to sign off the CRITICAL blast radius. Part of what they sign off is **about 120 req/min from orders to user-svc `GET /v1/users/{id}` that the code on `main` does not explain**. Something running in prod is calling this endpoint, and we haven't found it in the repo.\n- **T-02:** Read the diff of acme/users#812 and confirm `phone` is still a JSON string. If it isn't, stop before T-03.\n- **T-03:** For the first hour after release, watch error rate and latency from orders to user-svc. If calls start failing as unavailable or hitting the 2s timeout, revert the PR.\n\n**Risk: CRITICAL**\n\n**Open assumptions (each can still be reversed)**\n- **A-1:** The 2s limit applies per call. If the caller's own deadline is shorter, that one wins (D-4).\n- **A-4:** The only caller of `Users.Get` is `clients/clients_test.go:25`. T-01 checks this (D-1).\n- **A-5:** `phone` stays a JSON string after acme/users#812. T-02 checks this (D-3).\n- **A-6:** The users service doesn't return 404 for unknown IDs yet, so not-found is only tested against a stub server for now (D-2).\n\n**Estimate:** about 2.5 hours and $10.\n\nThe architect also hit a problem: `athel blast score CHG-001` failed with E-STATE-IO because it couldn't read the blast-radius report. The plan summary still shows the CRITICAL rating, so the stored blast radius looks intact, but the command failure wasn't looked into.\n\n**Next:** because the risk is CRITICAL, read `.athel/changes/CHG-001/blast-radius.md` first, then type:\n\n```\n/athel:signoff CHG-001\n/athel:approve CHG-001\n```"
+          },
+          {
+            "session_id": "01e6de6d-6f17-429c-a87c-1ede0aeeed18",
+            "cost_usd": 0.0703666,
+            "duration_s": 6.928,
+            "turns": 2,
+            "result": "You've signed off the blast radius report for CHG-001.\n\n- **Report hash:** `sha256:98bc983ab50dd0911cc390ee3cb91d942ea18f2575b423256e11985e05ff28b9`\n- **Risk:** CRITICAL\n- **Signed by:** human, 2026-11-21T12:01:25Z (grant `GR-94d7d8357733`)\n\nThe sign-off is tied to that exact report. If the report is edited, the sign-off no longer counts and you'll need to sign off again."
+          },
+          {
+            "session_id": "156fb04d-8a18-4c77-aea5-4da71985c2d3",
+            "cost_usd": 0.0954844,
+            "duration_s": 8.972,
+            "turns": 3,
+            "result": "The CHG-001 plan has three tasks:\n\n- **T-01** (orders, comment): find every caller of `Users.Get` across the acme org, including the code running as `ghcr.io/acme/orders:3.1.0`. Then get sign-off from @acme/commerce on the CRITICAL blast radius, including the 120 req/min to user-svc that main doesn't explain.\n- **T-02** (orders, comment): check that acme/users#812 keeps `phone` as a JSON string.\n- **T-03** (orders, edit/test/commit/push/pr), changing `clients/users.go` and `clients/clients_test.go`: `Users.Get` takes a context, returns a decoded Customer and typed errors, and times out after 2s. It covers AC-1 to AC-10 and depends on T-01 and T-02.\n\nPlan hash: `sha256:f2efe1b176922ff7374eb91e57d8a2ded1770c835384ad6a7393ee93d1ccda22`\n\nPlan of CHG-001 approved (hash sha256:f2efe1b176922ff7374eb91e57d8a2ded1770c835384ad6a7393ee93d1ccda22).\n\nRun `/athel:build CHG-001` to start building. T-03 can't start until the T-01 sign-off and the T-02 check are done."
+          },
+          {
+            "session_id": "50362200-17af-48ce-b875-6d5da113cb08",
+            "cost_usd": 5.876388600000004,
+            "duration_s": 1329.743,
+            "turns": 45,
+            "result": "All three tasks are built and the orders branch is pushed, but CHG-001 is now **blocked**: the draft PR wasn't opened because it is too big.\n\n**Card D-9:** the orders PR is 567 changed lines, and the limit in `git.yaml` is 400. How should Athel go on?\n- **a)** Allow up to 750 changed lines for this PR. Athel opens it as it is. *(Recommended: T-03 alone is over the limit, so splitting the plan can't bring it under.)*\n- **b)** Change the plan into smaller PRs. The plan then needs your approval again. This is the default if you don't answer.\n\nAnswer with `/athel:decide CHG-001 D-9`, then run `/athel:build CHG-001` again. It will open the draft PR and move the change to `ready_for_pr`.\n\n**What was built:**\n- **T-01 and T-02** change no code, so they were marked done without running any agents. Their steps are yours and Athel didn't do any of them:\n  - Search the acme org for other callers of `Users.Get`.\n  - Get sign-off from `@acme/commerce` on the CRITICAL blast radius.\n  - Confirm that `phone` is still a JSON string in acme/users#812.\n\n  The plan wanted all three done before T-03, so please do them before this ships.\n- **T-03** took three rounds. `Users.Get(ctx, id)` now returns a decoded `Customer`, or an error matching `ErrCustomerNotFound` or `ErrUsersUnavailable`. Each call is limited to 2 seconds or the caller's deadline, whichever is shorter. In review it also gained:\n  - rejection of an empty, `.` or `..` id before any request is sent;\n  - a 64 KiB cap on the response body;\n  - an error when the response has no customer id;\n  - draining the response body before closing it, so connections get reused.\n\n  All gates passed on the last run. The reviewer approved round 3, which also accepted the developer's case for keeping a 20 ms pause in one test.\n\n**Worth knowing before you answer:**\n- **Two minor security findings are still unfixed**, although the task was accepted as done:\n  - S4-01: `Get` doesn't check that the returned id matches the one it asked for.\n  - S4-02: `Get` uses `http.DefaultClient`, which follows redirects.\n\n  Security also saved round 3 (S3-01, S3-02) by mistake and says those are duplicates of S4-01 and S4-02.\n- **One side finding from security, SF-1:** `LegacyProfile` puts the id in the path without escaping and has no timeout, even though its doc comment says the receipt job still calls it.\n- **The developer read D-3 one way and asked you to confirm it:** a 2xx response with no customer id is treated as \"users unavailable\"."
+          },
+          {
+            "session_id": "3294a4a5-3096-4d11-82bf-ec2aec8d8cd0",
+            "cost_usd": 0.12023319999999998,
+            "duration_s": 16.936,
+            "turns": 6,
+            "result": "I recorded your answer **D-9 = a**: the orders PR may have up to 750 changed lines. It's currently 567, so Athel will open it as one PR instead of splitting the plan.\n\n- **Defaults and reminders:** none were due, so nothing overrode your answer.\n- **Open cards:** none left on CHG-001.\n- **State:** CHG-001 is still `blocked`. It stopped during build, at task T-03 (attempt 3), and the only reason was D-9. Since the change isn't in `awaiting_decisions`, `/athel:plan` isn't the next step. The CLI allows it to go back to `building`.\n\n**Next step:** run `/athel:build CHG-001` to pick T-03 back up. The orders branch is already pushed, and the PR gets opened as part of that build."
+          },
+          {
+            "session_id": "c2dfd3db-c97a-4b23-8808-342aad0f7622",
+            "cost_usd": 0.2101168,
+            "duration_s": 22.155,
+            "turns": 6,
+            "result": "CHG-001 is built: all three tasks are done and the change is now `ready_for_pr`.\n\n- **Resumed:** you had answered card D-9 (the PR size limit) with option a, so I moved the change from blocked back to building.\n- **Tasks:** T-01 and T-02 change no code. They are checks for you to do, and they're listed in the PR body under \"Shared actions for the developer\". T-03 was already finished in earlier rounds, with 8 commits.\n- **Branch and PR:** the orders branch is pushed and the draft PR is open: https://github.com/acme/orders/pull/901. It is 567 changed lines, which D-9a allows.\n\nBefore shipping, check these in the PR body:\n- **Gates and security:** the body says \"No gate results yet\" and \"No security report yet\", even though T-03 went through gate and review rounds. Check whether those results should be showing there.\n- **SF-1 is still open:** it's a low-severity security issue in `Users.LegacyProfile`. The customer id goes into the URL unescaped, the call has no timeout, and a `//nolint` comment hides both from the linters. You'll decide on it in the ship step.\n- **Your checks before merge:** the T-01 and T-02 checks, the @acme/commerce blast-radius sign-off (D-8b), and watching orders-to-user-svc errors and latency after deploy.\n\nNext step: `/athel:ship CHG-001`"
+          },
+          {
+            "session_id": "8cd1e067-2c14-49e3-bb19-096a6eab91f5",
+            "cost_usd": 0.18896540000000003,
+            "duration_s": 26.27,
+            "turns": 6,
+            "result": "## CHG-001 is in review\n\nThe PR is marked ready and CHG-001 has moved to `in_review`. It now needs a human to review and merge it. Athel will not merge or deploy.\n\n**PR**\n- orders: https://github.com/acme/orders/pull/901 (567 changed lines, over the 400-line limit; you accepted this in D-9)\n\n**Change surface (actual vs. planned):** no drift. Everything is in `clients/`:\n- `clients/users.go`: `Users.Get` gets a new signature, and `Customer`, `ErrCustomerNotFound` and `ErrUsersUnavailable` are added.\n- `clients/clients_test.go`: 14 new tests covering decoding, status errors, the 2s timeout, caller cancel and deadline, body cap, ID escaping and connection reuse.\n- No routes, events, migrations, config or dependency changes.\n\n**Gates and waivers**\n- The PR body says **\"No gate results yet\"** and **\"No security report yet\"** for each task, even though every task is done and the `ready_for_pr` guard passed. Gate results seem not to have been recorded where `pr update` reads them. Please check this before a reviewer depends on that section.\n- Waivers: none.\n\n**Before merge (from the plan)**\n- T-01: `@acme/commerce` needs to sign off the CRITICAL blast radius (D-8), and any callers of `Users.Get` outside the repo need to be checked.\n- T-02: confirm that acme/users#812 keeps `phone` as a JSON string.\n- T-03: after deploy, watch the error rate and latency of orders → user-svc for an hour, and revert if they go up.\n\n**Side findings**\n\nFound 1 issue outside this change. 1 quick win: SF-1.\n\n| ID | Category | Severity | Location | Effort | Fix risk |\n|---|---|---|---|---|---|\n| **SF-1** ⚡ quick win | security | low | `clients/users.go:83-86` | S | low |\n\nSF-1: `Users.LegacyProfile` puts the raw ID straight into the path with no escaping (CWE-22). It calls `http.Get` with no context or timeout, so a stalled users service hangs the caller (CWE-400). It also has a `//nolint` comment that switches off gosec and noctx. Suggested fix: delete it if the endpoint is gone, or give it the same treatment as `Get`.\n\nSF-1 shows as \"not decided yet\" in the PR body. To decide, type for example:\n\n```\n/athel:triage CHG-001 SF-1=fix_pr\n```\n\nThe choices are `fix_pr`, `ticket` or `ignore`."
+          },
+          {
+            "session_id": "a805bfc5-b91c-4672-bb75-eea7689393f8",
+            "cost_usd": 0.079103,
+            "duration_s": 7.712,
+            "turns": 2,
+            "result": "I recorded your choice for CHG-001. There was one side finding, and it's now set to **ticket**:\n\n| Finding | Where | Severity | Choice |\n|---|---|---|---|\n| **SF-1** | `clients/users.go:83-86` | low (security), quick win | **ticket** |\n\n**SF-1:** `Users.LegacyProfile` puts the raw `id` straight into the request path without escaping it. An `id` containing `/`, `?`, `#` or `..` could reach other users-service endpoints (CWE-22). It also calls `http.Get` with no context or timeout, so a stalled users service can hang the caller indefinitely (CWE-400). A `//nolint` comment hides both problems from the linters by calling this fixture code that never runs, but the function's own doc comment says the receipt job still calls it. The suggested fix is either to delete `LegacyProfile` if the users endpoint is gone, or to make it match `Get`: add a context, a timeout and `url.PathEscape` on the id, and remove the `//nolint`.\n\nAthel will draft the ticket for you to approve. It won't be created until you approve it. Every finding has a decision now, so none will show as \"not decided yet\" in the PR body."
+          }
+        ],
+        "artifacts": {
+          "state": "in_review",
+          "kinds": [
+            "internal",
+            "internal",
+            "internal"
+          ],
+          "findings": [
+            "clients/users.go:83-86"
+          ],
+          "prs": [
+            {
+              "repo": "acme/orders",
+              "headRefName": "athel/CHG-001-clear-errors-from-the-users-client-in",
+              "baseRefName": "main",
+              "isDraft": false,
+              "state": "open"
+            }
+          ],
+          "gate_problems": null,
+          "lines": 567,
+          "allowed_lines": 750,
+          "lint_ok": true,
+          "clones_unchanged": true,
+          "planted_kept": true,
+          "pushed": true
+        }
+      },
+      {
+        "run": 2,
+        "grade": {
+          "valid": true,
+          "problems": null
+        },
+        "sessions": [
+          {
+            "session_id": "919bc0be-c467-4a3c-b11b-9c53b4440db4",
+            "cost_usd": 0.151597,
+            "duration_s": 16.592,
+            "turns": 7,
+            "result": "I've created **CHG-001**, \"Clear errors from the users client in orders\". It's in `draft`.\nThe intake step is recorded and the PRD's statements are numbered from PRD-1 to PRD-4.2.\nNext step: `/athel:spec CHG-001`, which investigates, reviews the PRD and writes the specs."
+          },
+          {
+            "session_id": "3c515734-6cf0-47d8-b9fe-edbaca8786a7",
+            "cost_usd": 2.4494550000000004,
+            "duration_s": 429.713,
+            "turns": 20,
+            "result": "CHG-001 now has a spec for the orders service and is waiting on two decisions from you before planning can start. The planned risk is **HIGH**.\n\n**Why it's HIGH:** `Users.Get` changes its signature in place, and the CLI rates any breaking signature change HIGH, even though the only caller is a test in the same package. Two other things add to it:\n- Orders→users traffic in production couldn't be confirmed (the 7-day metrics query returned nothing).\n- `Get` will now decode the customer's phone number, which is personal data. The score assumes the plan includes a security review task. Without that task it would be CRITICAL.\n\n**One problem with the investigation:** four scout runs each saved to the same `investigation.md`, and only the last one survived (owners, deploys, incidents, active work). The architect checked the other findings directly against the code instead. Two points from the lost runs are now unsupported: whether users has a latency histogram, and the \"about 120 requests/min from orders to users\" figure. The spec doesn't use either.\n\n## D-1: Users never answers 404, so how should orders handle \"customer not found\"?\nUsers' `GET /v1/users/{id}` answers 200 for any id, with empty `name` and `phone` (`users/api/user.go:24-26`). So a 404 → not-found mapping in orders would almost never fire. Users is owned by @acme/identity, and their PR #812 (SHOP-12) is open on that same file.\n- **a) Orders only, as written.** The mapping is tested against a fake server. Against today's users it never fires, and unknown ids still come back as empty customers. No other team is involved.\n- **b) Orders only, plus a ticket to @acme/identity** asking users to answer 404 for unknown ids, listed in the PR body. The mapping starts working when identity ships it, and nothing in orders waits on them.\n- **c) Also change users.** Not-found works end to end, but it adds a second repo, needs identity's approval and has to be rebased against PR #812.\n- **Recommended: b; default: b** (safe). It delivers the PRD without touching another team's code and tells the users owners about the gap.\n\n## D-9: Change `Users.Get` in place, or add a new method beside it?\n`Get(id) (*http.Response, error)` becomes `Get(ctx, id) (*User, error)`. The only known caller is `clients/clients_test.go:25`.\n- **a) Change it in place.** One task, matching what the PRD says. Any caller outside this repo would fail at compile time rather than in production, and one revert undoes it.\n- **b) Add a new method, remove the old one later.** Add `GetCustomer(ctx, id)` and deprecate `Get` now, then delete `Get` once nothing calls it. Nothing breaks now, but `Users.Get` keeps its old raw behaviour until then, and there are two methods to maintain meanwhile.\n- **Recommended: a; default: a** (safe).\n\n**What the architect decided without a card:**\n- **Errors:** two that callers can match, `ErrCustomerNotFound` and `ErrUsersUnavailable`. The second names the status or the cause.\n- **Timeout:** 2 seconds, taken from the caller's context, so an earlier caller deadline still wins.\n- **Unreadable body:** a 2xx response that doesn't decode counts as \"users unavailable\".\n- **Safe paths:** the id is escaped before it goes into the URL.\n- **Out of scope:** `LegacyProfile` and the payments client are left alone. `LegacyProfile` calls an endpoint that users has removed.\n\n**For the plan:**\n- Add the security review task.\n- Before merge, check users' p99 latency, since nobody knows yet whether 2 seconds is safe.\n- If you pick D-1 b, add the identity ticket.\n\nAnswer both cards:\n\n```\n/athel:decide CHG-001 D-1=b D-9=a\n```"
+          },
+          {
+            "session_id": "0649a241-da0d-4b53-9b34-522c03a8c7e8",
+            "cost_usd": 0.1035896,
+            "duration_s": 12.286,
+            "turns": 5,
+            "result": "I recorded your answers for CHG-001: **D-1 = b** and **D-9 = a**.\n\nNo default answers came due and there were no reminders. CHG-001 has no open decision cards left and is still in `awaiting_decisions`.\n\nThe next step is `/athel:plan CHG-001`."
+          },
+          {
+            "session_id": "a5d00931-16b9-4e89-b6e5-9a64228d0c8a",
+            "cost_usd": 0.40691,
+            "duration_s": 68.561,
+            "turns": 7,
+            "result": "CHG-001 now has a plan and is in **planned**. The traceability check passed: every acceptance criterion (AC-1 to AC-8) is covered by at least one task.\n\n**Tasks, all in repo `orders`, in this order**\n1. **T-01:** check the users service's slowest-1% response time (p99) in prod against the 2-second timeout. No code changes.\n2. **T-02:** `Users.Get(ctx, id)` takes a context and returns `(*User, error)` with typed errors: `ErrCustomerNotFound`, `ErrUsersUnavailable` and `UnavailableError`. It uses a 2-second timeout and escapes the id. Its tests are in the same task. It depends on T-01 and covers AC-1 to AC-8.\n3. **T-03:** open a ticket asking @acme/identity to make users return 404 for an unknown customer id. It depends on T-02.\n\n- **Gates (checks T-02 must pass):** build, unit, lint, security.\n- **Action outside the code:** T-03's ticket cites `users/api/user.go:24-26`, PR 812 and SHOP-12, links the orders PR, and is listed in the PR body. Orders does not wait for identity to ship the 404.\n- **Rollback for T-02:** revert the commit. No production code in orders calls `Users.Get` yet.\n\n**Risk: HIGH**, because `Users.Get` changes its signature in place.\n\n**Open assumptions, which you can still reverse**\n- **A-1:** `Users.Get` changes in place, and its only caller is `clients_test.go`. You answered D-9 with option a; the spec text still says \"pending card D-9\" but the content matches your answer.\n- **A-2:** the 2-second timeout is used as the PRD states, but the users p99 in prod hasn't been checked yet. T-01 checks it before T-02 starts.\n- **A-3:** transport errors, timeouts, cancellation and a success response that can't be decoded all count as \"users unavailable\".\n- **No safe defaults were applied.** You answered D-1 and D-9. D-2 to D-8 are the architect's own decisions, already written into the orders spec, and you can revisit them.\n\n**Out of scope:** retries (PRD-4.1) and the other clients in orders (PRD-4.2).\n\n**Estimate:** about 2.5 hours and $10.\n\nNext, type: `/athel:approve CHG-001`"
+          },
+          {
+            "session_id": "4b05c82a-5594-49ae-bc57-c5919b79c668",
+            "cost_usd": 0.0910048,
+            "duration_s": 9.707,
+            "turns": 3,
+            "result": "The plan for CHG-001, \"Clear errors from the users client in orders\", has three tasks, all in the `orders` repo:\n\n- **T-01:** Check the users service's p99 latency in prod against the 2 second timeout. This is a comment only, with no code paths.\n- **T-02:** Change `Users.Get` to take a context, decode the customer and return typed errors. It touches `clients/**` and covers AC-1 to AC-8. It can edit, create, test, commit, push and open a PR. It depends on T-01. Before it's done it must pass the build, unit, lint and security gates.\n- **T-03:** Open a ticket asking `@acme/identity` to have `GET /v1/users/ID` answer 404 for unknown customer IDs. This is a comment only, and it depends on T-02.\n\nPlan of CHG-001 approved (hash `sha256:a96da7df2e02bdb9ec78c089f06e0fc06ea5e211b3616cf6ba30a0b96714561e`).\n\nNext, run `/athel:build CHG-001` to start building."
+          },
+          {
+            "session_id": "fbfcdb98-6308-4b3d-a7fe-ca1ebd563ade",
+            "cost_usd": 4.5022647,
+            "duration_s": 697.59,
+            "turns": 26,
+            "result": "The build is blocked: the `orders` PR is too big to open, and you need to answer card D-10. T-01 and T-02 are done, and the branch is pushed.\n\n- **T-01** (check users p99 latency against the 2s timeout) changes no code. You run that check yourself before merge.\n- **T-02** (`Users.Get` takes a context, decodes the customer and returns typed errors) passed every gate and was approved after 3 review rounds:\n  - **Round 1:** the reviewer flagged that a 2xx reply with `{}` or `null` was treated as a valid customer. It also flagged ids like `\"\"`, `.` and `..`, which could hit a different users endpoint. Coverage was also below the gate's bar.\n  - **Round 2:** those were fixed. The reply's customer id must now match the requested id, and bad ids are refused before any request.\n  - **Round 3:** the client no longer follows redirects, and a test comment was corrected.\n\n  QA added 12 tests over the three rounds and found no bugs. Security left no open findings, but it noted that its last scan ran before the final two fix commits.\n- **Opening the PR** failed: it has 485 changed lines and `git.yaml` allows 400.\n\n**Card D-10:** the `orders` PR is over the 400-line limit. How should Athel go on?\n- **a.** Allow up to 650 changed lines in this PR. Athel opens it as it is, and reviewers get a larger diff. Athel recommends this, because T-02 alone is over the limit, so no split of the plan gets under it.\n- **b.** Change the plan into smaller PRs. The plan then needs your approval again. This is the default if you don't answer.\n\nAnswer with `/athel:decide CHG-001 D-10`, then re-run `/athel:build CHG-001`. It will open the PR and then handle T-03, which changes no code: it's the ticket asking `@acme/identity` to return 404 for unknown customer ids, listed in the PR body.\n\nEarlier I started the first developer agent in the background by mistake, and that used up one of the three stops the Stop hook allows.\n\nSecurity also noted a problem outside this task: `LegacyProfile` in `clients/users.go` puts the id into the URL without escaping and has no timeout. It's recorded as SF-1 and comes up at `/athel:ship`."
+          },
+          {
+            "session_id": "ce973bdd-bb0d-4313-9ecb-929fb4972cb5",
+            "cost_usd": 0.120434,
+            "duration_s": 17.632,
+            "turns": 6,
+            "result": "I recorded your answer **D-10 = a** for CHG-001: this orders PR may go up to 650 changed lines, and Athel will open it as it is at 485. Reviewers will get a larger diff than `git.yaml`'s 400-line limit normally allows.\n\n- **Defaults and reminders:** no defaults were applied and there are no reminders.\n- **Open cards:** none.\n\nCHG-001 isn't waiting on decisions, so the next step is not `/athel:plan`. It's blocked partway through the build step (task T-02, attempt 2), and D-10 was what blocked it. To carry on with T-02 and open the orders PR, run `/athel:build CHG-001`."
+          },
+          {
+            "session_id": "93488db7-5012-4d31-ab7d-9eb587a0f63a",
+            "cost_usd": 0.28245859999999995,
+            "duration_s": 36.835,
+            "turns": 11,
+            "result": "All three tasks are done, and CHG-001 has moved to `ready_for_pr`. The draft PR for orders is open at https://github.com/acme/orders/pull/901 (485 lines, under the 650-line limit you set when you answered D-10 with option (a)).\n\n- **T-02** (`Users.Get` takes a context, decodes the customer and returns typed errors): this task was finished in an earlier session and was only waiting on D-10. I pushed the branch and opened the draft PR.\n- **T-03** (ask @acme/identity to make users answer 404 for unknown ids): this task changes no code, so it closed without a developer or gates. Athel doesn't open the ticket. It's listed in the PR under \"Shared actions for the developer\", for you to raise.\n\nBefore you ship, check these:\n- **PR body:** the \"Tests and gates\" section says \"No gate results yet\" and \"Security notes\" says \"No security report yet\", even though T-02 went through gates and checker rounds. Confirm the gate and security results show up in the body before the PR goes to review.\n- **SF-1 is still open:** `LegacyProfile` builds its URL without `url.PathEscape` and makes its request with no timeout or context. It's a low-severity side finding, out of scope here; you'll decide on it during ship.\n- **The users p99 latency check before merge is still open.** Assumption A-2 keeps the 2-second timeout because users' prod latency is unverified, and the plan checks that latency before merge.\n\nNext step: `/athel:ship CHG-001`"
+          },
+          {
+            "session_id": "57301d7c-d9a5-471e-8fb7-3fdd858c6929",
+            "cost_usd": 0.19664779999999998,
+            "duration_s": 26.694,
+            "turns": 7,
+            "result": "CHG-001 is now `in_review`. The orders PR is marked ready for human review, and the ship step finished ok.\n\n**PR**\n- orders: https://github.com/acme/orders/pull/901 (485 changed lines; `git.yaml` allows 400, and you accepted that in D-10)\n\n**Change surface (actual blast radius)**\n- **Drift:** none. The real diff matches the planned blast radius.\n- **Changed:** only the `clients/` folder. No routes, events, migrations, config or dependencies were touched.\n- **`clients/users.go`:**\n  - `Users.Get` changed signature in place (you approved this in D-9).\n  - New typed errors: `ErrCustomerNotFound`, `ErrUsersUnavailable` and `UnavailableError` (with `Error`, `Unwrap` and `Is`), plus a `User` type.\n- **`clients/clients_test.go`:** 15 new tests covering decoding, typed errors, the 2s timeout, the caller's deadline and cancellation, escaping the ID, oversized bodies and redirects.\n- **Planned risk level:** HIGH.\n\n**Gates per task**\n- T-01, T-02 and T-03 are all done. T-02 has 7 commits; T-01 and T-03 have none.\n- The gate results and the security report are missing from the PR body: it says \"No gate results yet\" and \"No security report yet\", even though build finished with every task done. A reviewer will see those empty sections, so check them before relying on the PR body.\n- **Waivers:** none.\n\n**Before merge**\n- **D-7 (gate):** check the users service's p99 latency in prod (label `user-svc`) to confirm the 2s timeout is safe.\n- **T-03 (your action):** file the ticket asking @acme/identity to make `GET /v1/users/ID` answer 404 for an unknown customer.\n\n**Side findings: 1 issue outside this change, 1 quick win (SF-1)**\n\n| ID | Category | Severity | Location | Effort | Fix risk |\n|---|---|---|---|---|---|\n| SF-1 ⚡ quick win | security | low | `clients/users.go:104-106` | S | low |\n\n`LegacyProfile` puts the ID into the URL without escaping it, so an ID containing `/`, `?` or `#` changes which resource is requested. It also calls `http.Get` with no timeout or context, behind a `//nolint` marker. The users service no longer serves that endpoint. The suggested fix is either to escape the ID and add a context and timeout as `Users.Get` now does, or to remove `LegacyProfile` and its receipt-job caller.\n\n**Your choice: not decided yet.** That's what the PR body shows for now. To decide, type:\n\n```\n/athel:triage CHG-001 SF-1=fix_pr     # or SF-1=ticket / SF-1=ignore\n```\n\nThe PR now waits for human review and merge. Athel will not merge or deploy."
+          },
+          {
+            "session_id": "e1397bdf-3795-42e6-b4c9-06f84afd327c",
+            "cost_usd": 0.0783026,
+            "duration_s": 7.065,
+            "turns": 2,
+            "result": "I recorded your choice for CHG-001: every side finding is set to **ticket**.\n\n| Finding | Where | Severity / effort | Choice |\n|---|---|---|---|\n| **SF-1** (security, found while building T-02) | `clients/users.go:104-106` | low / S, quick win | **ticket** |\n\n**What SF-1 is:** `LegacyProfile` puts `id` straight into the URL without `url.PathEscape`. An id containing `/`, `?` or `#` therefore asks for a different resource (CWE-22/CWE-88). It also calls `http.Get` with the default client, so there is no timeout and no context (CWE-400). A `//nolint` marker currently suppresses both warnings. The code's own comment says users has removed this endpoint.\n\n**Suggested fix:** escape the id and add a context and a timeout, the way `Users.Get` now does. Or remove `LegacyProfile` and the receipt-job code that calls it, since users no longer serves the endpoint.\n\n**Next:** Athel will draft a ticket for SF-1 for you to approve. It won't be created without your approval. No findings are left undecided, so the PR body won't show any as \"not decided yet\"."
+          }
+        ],
+        "artifacts": {
+          "state": "in_review",
+          "kinds": [
+            "internal",
+            "internal",
+            "internal"
+          ],
+          "findings": [
+            "clients/users.go:104-106"
+          ],
+          "prs": [
+            {
+              "repo": "acme/orders",
+              "headRefName": "athel/CHG-001-clear-errors-from-the-users-client-in",
+              "baseRefName": "main",
+              "isDraft": false,
+              "state": "open"
+            }
+          ],
+          "gate_problems": null,
+          "lines": 485,
+          "allowed_lines": 650,
+          "lint_ok": true,
+          "clones_unchanged": true,
+          "planted_kept": true,
+          "pushed": true
+        }
+      },
+      {
+        "run": 3,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the plan has no internal task",
+            "no ready, open PR in acme/orders",
+            "the PR was not opened as a draft and then marked ready",
+            "the branch was never pushed",
+            "the branch or a commit fails Athel's git lint: athel [--json git lint CHG-001 orders]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/typed-client-errors-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/typed-client-errors-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}",
+            "no side finding names the planted bug in clients/users.go",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/typed-client-errors-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/typed-client-errors-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "fdbb4f2d-0e19-4317-afcc-3c97e91a124b",
+            "cost_usd": 0,
+            "duration_s": 0.684,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 7:10pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "0e84a4e0-7544-4092-9b88-d20b27a851ce",
+            "cost_usd": 0,
+            "duration_s": 0.657,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 7:10pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "findings": null,
+          "prs": null,
+          "gate_problems": null,
+          "lines": 0,
+          "lint_ok": false,
+          "lint_problem": "athel [--json git lint CHG-001 orders]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/typed-client-errors-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/typed-client-errors-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}",
+          "clones_unchanged": true,
+          "planted_kept": false,
+          "pushed": false
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/typed-client-errors-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/build2/typed-client-errors-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      }
+    ]
+  },
+  "claude": "2.1.311 (Claude Code)",
+  "commit": "0f5b9e77455754391280448b04789fb7b5ba96d9",
+  "cost_usd": 45.443000400000024,
+  "model": "",
+  "runs": 9,
+  "runs_per_case": 3,
+  "schema": "athel-evals/m4-build@1",
+  "started": "2026-11-21T10:39:45Z",
+  "valid": 2
+}

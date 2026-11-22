@@ -16,7 +16,7 @@ tasks:
     title: Add column
     repo: user-service
     paths: ["db/migrations/**"]
-    verbs: [create, test, commit]
+    verbs: [create, edit, test, commit]
     covers: [AC-3]
     depends_on: []
     size: S
@@ -47,7 +47,7 @@ func TestPlanSchema(t *testing.T) {
 		name, from, to string
 		code           aerr.Code
 	}{
-		{"unknown verb", "verbs: [create, test, commit]", "verbs: [deploy]", aerr.StateSchema},
+		{"unknown verb", "verbs: [create, edit, test, commit]", "verbs: [deploy]", aerr.StateSchema},
 		{"bad task id", "id: T-02", "id: T2", aerr.StateSchema},
 		{"unknown field", "size: S", "size: S\n    owner: x", aerr.StateSchema},
 		{"duplicate id", "id: T-03", "id: T-02", aerr.StateInvalid},
@@ -96,7 +96,7 @@ func TestTaskMatch(t *testing.T) {
 		{Write{Repo: "user-service", Path: "src/profile/deep/x/y.ts", Verb: "create"}, "T-03"},
 		{Write{Repo: "user-service", Path: "src/validation/phone.ts", Verb: "edit"}, "T-03"},
 		{Write{Repo: "user-service", Path: "db/migrations/001.sql", Verb: "create"}, "T-02"},
-		{Write{Repo: "user-service", Path: "db/migrations/001.sql", Verb: "edit"}, ""},
+		{Write{Repo: "user-service", Path: "db/migrations/001.sql", Verb: "delete"}, ""},
 		{Write{Repo: "user-service", Path: "src/billing/x.ts", Verb: "edit"}, ""},
 		{Write{Repo: "user-service", Path: "src/validation/email.ts", Verb: "edit"}, ""},
 		{Write{Repo: "order-service", Path: "src/profile/x.ts", Verb: "edit"}, ""},

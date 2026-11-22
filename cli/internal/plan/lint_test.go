@@ -12,7 +12,7 @@ const planV2 = `schema: athel/plan@2
 change: CHG-042
 hash: null
 tasks:
-  - {id: T-01, title: Add phone_number column, repo: users, kind: migrate, paths: ["migrations/**"], verbs: [create, test, commit], covers: [AC-1], depends_on: [], size: S, gates: [build, unit], rollback: drop the new column}
+  - {id: T-01, title: Add phone_number column, repo: users, kind: migrate, paths: ["migrations/**"], verbs: [create, edit, test, commit], covers: [AC-1], depends_on: [], size: S, gates: [build, unit], rollback: drop the new column}
   - {id: T-02, title: Publish UserUpdated v2, repo: users, kind: expand, paths: ["events/**", "test/**"], verbs: [edit, test, commit, push], covers: [AC-2], depends_on: [T-01], size: M, gates: [build, unit, contract], rollback: flag users_v2_events off, env_actions: [comment on SHOP-12]}
   - {id: T-03, title: Read UserUpdated v2, repo: notifications, kind: consume, paths: ["src/**"], verbs: [edit, test, commit], covers: [AC-3], depends_on: [T-02], size: M, gates: [build, unit]}
   - {id: T-04, title: Remove the old phone field, repo: users, kind: contract, deferred: true, paths: ["api/**"], verbs: [delete, commit], covers: [AC-4], depends_on: [T-03, T-01], size: S, gates: [build], rollback: revert}
@@ -52,6 +52,7 @@ func TestLintProblems(t *testing.T) {
 		"contract before consumer":              {"depends_on: [T-03, T-01]", "depends_on: [T-01]", "T-04 must come after T-03"},
 		"large without reason":                  {"size: S, gates: [build, unit], rollback: drop", "size: L, gates: [build, unit], rollback: drop", "T-01 is size L without a size_reason"},
 		"behaviour without test":                {"verbs: [edit, test, commit], covers: [AC-3]", "verbs: [edit, commit], covers: [AC-3]", "T-03 changes behaviour without the test verb"},
+		"creates without edit":                  {"verbs: [create, edit, test, commit]", "verbs: [create, test, commit]", "T-01 creates files without the edit verb"},
 		"deploy in env actions":                 {"env_actions: [comment on SHOP-12]", "env_actions: [deploy users to staging]", `env action "deploy users to staging" deploys`},
 		"risky without rollback":                {", rollback: flag users_v2_events off", "", "T-02 (expand) needs a rollback at HIGH risk"},
 		"criterion only in a task without code": {`paths: ["api/**"]`, "paths: []", "AC-4 is covered only by tasks that change no code"},

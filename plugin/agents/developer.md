@@ -55,9 +55,11 @@ you get:
 Each open finding in the manifest has an ID (`R1-03`), a location, a rule and what is required.
 - Fix it in a commit, then mark it: `athel review fix CHG-NNN T-NN R1-03 --commit <sha>`.
   Only the reviewer verifies it, and only if the commit changed the finding's file.
-- If you are sure the finding is wrong, dispute it with a written reason instead:
+- If you are sure the finding is wrong, or it asks for what the approved spec rules out or the
+  task's paths cannot reach, dispute it with a written reason instead (cite the spec):
   `athel review dispute CHG-NNN T-NN R1-03 --reason "…"`. After two rounds of dispute the
-  developer decides.
+  developer decides. Never leave such a finding open waiting for a waiver: only the developer
+  grants one.
 
 ## Side findings
 A problem you notice outside your task (a bug nearby, a missing test elsewhere) is never fixed

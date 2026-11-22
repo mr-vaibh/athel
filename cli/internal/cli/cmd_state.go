@@ -2,6 +2,7 @@ package cli
 
 import (
 	"flag"
+	"slices"
 	"strings"
 
 	"github.com/mr-vaibh/athel/cli/internal/clock"
@@ -102,11 +103,34 @@ func cmdStateExit(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	if pos[1] == "build" && *result == "blocked" {
+		if err := r.buildCardOpen(pos[0]); err != nil {
+			return nil, err
+		}
+	}
 	c, err := s.ExitStep(pos[0], session, pos[1], *result, *reason)
 	if err != nil {
 		return nil, err
 	}
 	return viewOf(c, r.env.Clock.Now()), nil
+}
+
+// buildCardOpen: the build step ends blocked only on an open card for the build, which the
+// developer answers with /athel:decide. A block with nothing to answer leaves the change stuck
+// (ADR 031); a finding the developer thinks is wrong goes to a dispute, whose second round raises
+// a card.
+func (r *runCtx) buildCardOpen(id string) error {
+	dec, err := r.readDecisions(id)
+	if err != nil {
+		return err
+	}
+	for _, card := range dec.Open("") {
+		if card.Step == "build" || slices.Contains(card.Blocks, "build") {
+			return nil
+		}
+	}
+	return aerr.New(aerr.StateInvalid, id+"'s build step can end blocked only on an open card for the developer to answer").
+		WithNextAction("fix the findings in the next round; to contest one, run athel review dispute, or let the round limit raise its card")
 }
 
 func cmdCheckpointSet(r *runCtx, args []string) (any, error) {
