@@ -65,35 +65,23 @@ M4-plan §9:
 | 07d migration gate (static checks; up, down, up on a throwaway PostgreSQL) | `feat/m4-gates-migration` | #91 | open, gate green |
 | 08 review rounds: `review@1`, carry-forward, limits, disputes, `review` gate | `feat/m4-review` | #92 | open, gate green |
 | 09 waivers: `/athel:waive`, reason, expiry (security-scan refused, G18) | `feat/m4-waivers` | #93 | open, gate green |
-| 10a `cli` coverage push (90.2% → about 93%), so later tasks have room | `feat/m4-cli-coverage` | — | **next** |
-| 10b build engine: task records, scheduler, manifests | — | — | not started |
-| 10c done check, `ready_for_pr` guard, `pr ready`, Stop hook on gates | — | — | not started |
+| 10a `cli` coverage push: 90.2% → 92.0%; every command refuses cleanly | `feat/m4-cli-coverage` | #94 | open, gate green |
+| 10b build engine: task order, manifests, `build done` | `feat/m4-build-engine` | #95 | open, gate green |
+| 10c `ready_for_pr` guard, `pr ready`, Stop hook on gates | `feat/m4-ship-guard` | — | **next** |
 | 11–17 | see M4-plan §9 | — | not started |
 
 CI passed on #77–#91 (checked 2026-11-14).
 
 Next:
-1. **Task 10a** on `feat/m4-cli-coverage`, branched from `feat/m4-waivers`: test-only. List the
-   weakest `cli` functions with
-   `go test -coverprofile=c.out ./cli/internal/cli/ && go tool cover -func=c.out | sort -k3 -n`.
-   Add real tests for their error paths:
-   - `cmdCheckpointShow`, `writeRepoFiles`, `plain`, `cmdBlastSignoff`, `openAssumptions`;
-   - `cmdConventionsShow`, `hookDecide`, `cmdPlanSummary`, `cmdTrace`, `cmdPRDIndex`;
-   - `signedOff`, `cmdReposSurvey`, `cmdVersion`.
-
-   Aim for about 93%, and do not lower any bar.
-2. **Task 10b:** the build engine.
-   - **Task records** go in `change.yaml` (`build.tasks[]`: status, round, attempts, commits).
-     Add them to `change@4` in place, and keep `plan.yaml` untouched (G9).
-   - **`athel build next`** gives the tasks whose dependencies are done (FR-BUILD-001).
-   - **`athel build context CHG T`** writes the manifest of exactly the developer's inputs
-     (FR-BUILD-002). `athel review context` builds the reviewer's manifest, with no developer
-     transcript (FR-BUILD-006).
-   - **`athel build done`** needs green gates, done review, and no open card blocking the task.
-3. **Task 10c:** the `building → ready_for_pr` guard (every task done), `athel pr ready` (all
-   green), and the Stop hook blocking while the current task is neither done nor blocked
-   (G13: 3 blocks raise a card).
-4. Then 11 (side findings), 12 (agents and policy), 13 (skills), 14 (network-deny test),
+1. **Task 10c** on `feat/m4-ship-guard`, branched from `feat/m4-build-engine`:
+   - **guard `building → ready_for_pr`:** every plan task is done (`build.AllDone`), and every
+     repo is pushed with `git lint` clean;
+   - **`athel pr ready CHG REPO`:** the change is `ready_for_pr`, the PR is open and the branch
+     is pushed at HEAD; then `gh pr ready` (FR-GIT-007);
+   - **the Stop hook:** while the `build` step runs and its task is neither done nor blocked,
+     block the stop, with M0's `ShouldBlockStop` counter. The third block moves the step to
+     blocked and raises an A6 card (G13).
+2. Then 11 (side findings), 12 (agents and policy), 13 (skills), 14 (network-deny test),
    15–16 (evals: paid, so ask first), 17 (report).
 
 The `cli` package's tests take about 7 minutes.

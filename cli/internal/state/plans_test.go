@@ -173,5 +173,8 @@ var integrityBlock = regexp.MustCompile(`(?m)^integrity:\n(  .*\n)*`)
 
 // toLegacy turns a current change file into the change@1 file M0 would have written.
 func toLegacy(current string) string {
-	return integrityBlock.ReplaceAllString(strings.Replace(current, "schema: "+SchemaID, "schema: "+SchemaV1, 1), "")
+	return integrityBlock.ReplaceAllString(strings.Replace(withoutBuild(current), "schema: "+SchemaID, "schema: "+SchemaV1, 1), "")
 }
+
+// withoutBuild drops the build records version 4 added, which older versions never had.
+func withoutBuild(current string) string { return strings.Replace(current, "build: []\n", "", 1) }
