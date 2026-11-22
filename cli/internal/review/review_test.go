@@ -91,15 +91,11 @@ func TestDone(t *testing.T) {
 	if !r.Done() {
 		t.Error("approved with only a minor finding is done")
 	}
-	r2, _ := Next(nil, Submission{Verdict: ChangesRequested}, "h1", MaxRounds)
-	if r2.Done() {
-		t.Error("changes requested is not done")
-	}
-	r3, _ := Next(nil, Submission{Verdict: Approved, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1", MaxRounds)
+	r3, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1", MaxRounds)
 	if r3.Done() {
-		t.Error("an open major finding is never done, whatever the verdict")
+		t.Error("an open major finding is never done")
 	}
-	r3.Findings[0].Status = Waived
+	r3.Findings[0].Status, r3.Verdict = Waived, Approved // the next round, after the developer's waiver
 	if !r3.Done() {
 		t.Error("a waived major is done")
 	}
@@ -206,5 +202,62 @@ func TestCheckLocation(t *testing.T) {
 		if (want == "") != (err == nil) || (err != nil && !strings.Contains(err.Error(), want)) {
 			t.Errorf("%s: %v", loc, err)
 		}
+	}
+}
+
+// TestVerdictFollowsTheFindings: doc 06 round rule 4 and the severity table decide the verdict,
+// so a round can neither end with a blocker or major open nor go on over minors and nits alone.
+func TestVerdictFollowsTheFindings(t *testing.T) {
+	r1, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3"), newFinding(Minor, "src/b.go:9")}}, "h1", MaxRounds)
+	if err := r1.Fix("R1-01", "c1"); err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name    string
+		prev    *Round
+		sub     Submission
+		wantErr string
+	}{
+		{"approved with a new major", nil, Submission{Verdict: Approved, New: []Draft{newFinding(Major, "src/a.go:3")}}, "R1-01 block"},
+		{"approved with a new blocker", nil, Submission{Verdict: Approved, New: []Draft{newFinding(Blocker, "src/a.go:3")}}, "R1-01 block"},
+		{"changes requested with nothing", nil, Submission{Verdict: ChangesRequested}, "verdict is approved"},
+		{"changes requested over a nit", nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Nit, "src/a.go:3")}}, "verdict is approved"},
+		{"changes requested over an earlier open minor", r1, Submission{Verdict: ChangesRequested,
+			Previous: []Resolution{{ID: "R1-01", Status: Verified}, {ID: "R1-02", Status: Open, Note: "still"}}}, "verdict is approved"},
+		{"approved with an earlier major still open", r1, Submission{Verdict: Approved,
+			Previous: []Resolution{{ID: "R1-01", Status: Open, Note: "not yet"}, {ID: "R1-02", Status: Open}}}, "R1-01 block"},
+		{"approved with only minors open", r1, Submission{Verdict: Approved,
+			Previous: []Resolution{{ID: "R1-01", Status: Verified}, {ID: "R1-02", Status: Open}}, New: []Draft{newFinding(Minor, "src/c.go:2")}}, ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r, err := Next(c.prev, c.sub, "h", MaxRounds)
+			if c.wantErr == "" {
+				if err != nil || !r.Done() {
+					t.Fatalf("want done: %v", err)
+				}
+				return
+			}
+			if !aerr.HasCode(err, aerr.StateInvalid) || !strings.Contains(err.Error(), c.wantErr) {
+				t.Errorf("want %q, got %v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestUnresolved(t *testing.T) {
+	r1, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3"), newFinding(Minor, "src/b.go:9"), newFinding(Nit, "src/c.go:1")}}, "h1", MaxRounds)
+	_ = r1.Fix("R1-01", "c1")
+	_ = r1.Fix("R1-02", "c1")
+	r2, err := Next(r1, Submission{Verdict: Approved, Previous: []Resolution{{ID: "R1-01", Status: Verified}, {ID: "R1-02", Status: Verified}, {ID: "R1-03", Status: Open}}}, "h2", MaxRounds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, f := range r2.Unresolved() {
+		ids = append(ids, f.ID)
+	}
+	if strings.Join(ids, ",") != "R1-03" {
+		t.Errorf("unresolved = %v, want only the open nit", ids)
 	}
 }
