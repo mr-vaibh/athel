@@ -38,11 +38,15 @@ func Lint(p *Plan, ctx LintContext) []string {
 }
 
 // coverage is FR-PLAN-002: every criterion is covered by a task, every task covers a criterion,
-// and no task covers a criterion the specs do not have.
+// no task covers a criterion the specs do not have, and every criterion is covered by a task that
+// changes code (ADR 027).
 func coverage(p *Plan, criteria []string) []string {
 	var problems []string
-	covered := map[string]bool{}
+	covered, tested := map[string]bool{}, map[string]bool{}
 	for _, t := range p.Tasks {
+		for _, ac := range t.Covers {
+			tested[ac] = tested[ac] || len(t.Paths) > 0
+		}
 		if len(t.Covers) == 0 {
 			problems = append(problems, t.ID+" covers no acceptance criterion; every task serves at least one (FR-PLAN-002)")
 		}
@@ -54,8 +58,13 @@ func coverage(p *Plan, criteria []string) []string {
 		}
 	}
 	for _, ac := range criteria {
-		if !covered[ac] {
+		switch {
+		case !covered[ac]:
 			problems = append(problems, ac+" is covered by no task (FR-PLAN-002)")
+		case !tested[ac]:
+			// A task with no paths changes no code, so it cannot hold the test that proves the
+			// criterion (doc 06: every requirement has a test; ADR 027).
+			problems = append(problems, ac+" is covered only by tasks that change no code; a task with paths must cover it, with its test")
 		}
 	}
 	return problems

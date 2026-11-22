@@ -1,0 +1,125 @@
+{
+  "cases": {
+    "typed-client-errors": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is planned, not in_review",
+            "no ready, open PR in acme/orders",
+            "the PR was not opened as a draft and then marked ready",
+            "the branch was never pushed",
+            "the branch or a commit fails Athel's git lint: athel [--json git lint CHG-001 orders]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"CHG-001 has no worktree in orders\",\"next_action\":\"athel git preflight CHG-001 orders\"}}",
+            "no side finding names the planted bug in clients/users.go"
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "8fdb9156-3b5f-4fa1-af53-184afb9833fc",
+            "cost_usd": 0.145262,
+            "duration_s": 14.516,
+            "turns": 7,
+            "result": "I created **CHG-001**, \"Clear errors from the users client in orders\", and it is in `draft`.\nThe PRD has been captured and its statements numbered so the specs can cite them.\nNext step: run `/athel:spec CHG-001` to investigate, review the PRD and write the specs."
+          },
+          {
+            "session_id": "bfa4f4fa-fc74-4c1c-afba-6bc7831392ca",
+            "cost_usd": 2.1855742,
+            "duration_s": 384.417,
+            "turns": 6,
+            "result": "The spec step for CHG-001 is done. The change is now **awaiting decisions**: there is one spec, for orders, and four decision cards that you need to answer before planning. The planned risk is **CRITICAL**.\n\n**Risk is CRITICAL** because changing the `Users.Get` signature breaks a prod caller we can't see. The deployed orders 3.1.0 calls `GET /v1/users/{id}` about 120 times a minute, but the only call site in the orders code is a test (`clients/clients_test.go:22-41`).\n\n**Things to know before you answer:**\n- **The 404 never happens today.** Users always answers 200 and fills in only `id`, so the not-found error the PRD asks for wouldn't fire against current users.\n- **The investigation file is missing half its evidence.** Both scouts saved to the same `investigation.md`, and the second save overwrote the first. What was lost: the users contract, the deployed versions, the traffic numbers, PR #812 / SHOP-12 and the owners. The architect confirmed the 200-only handler in code (`users/api/user.go:24-26`), but D-2 and the CRITICAL score cite traffic figures that are now in no saved file. I can re-run that scout so the evidence is on file before you rely on it.\n\n**Things the architect decided without a card:**\n- The new signature is `Get(ctx, id) (Customer, error)`, returning `ErrCustomerNotFound` or `ErrUsersUnavailable`.\n- Each call times out after 2s, and there are no retries.\n- The customer id is escaped before it goes into the URL.\n- `LegacyProfile` is left alone. It calls an endpoint users removed in 2026-09; that's noted as a side finding.\n\n### D-1: Users never answers 404. How should `Users.Get` report an unknown customer?\n- **a (recommended, default):** Change orders only and map 404 to not-found. A 200 with an empty profile comes back as an empty customer. The error starts working on its own once users answers 404.\n- **b:** Change orders only, and also treat a 200 with an empty name and phone as not-found. This catches unknown ids now, but relies on a guess about how users answers and could wrongly report a real customer as not found.\n- **c:** Also change users to answer 404. This adds a users spec and PR, needs @acme/identity review, has to be sequenced with PR #812 in `api/user.go`, and changes what notifications sees.\n\n### D-2: There's a prod caller we can't find. How should the signature change go ahead?\n- **a (recommended, default):** Change `Get` in place. A first task finds the code behind the prod traffic, then every caller is updated in the same PR. This matches the PRD.\n- **b:** Add a new method (for example `GetCustomer`), mark `Get` deprecated and remove it later. Nothing breaks now, but this departs from the PRD and leaves two ways to read a customer for a while.\n\n### D-3: Users PR #812 / SHOP-12 may change the phone field. How should orders depend on it?\n- **a (recommended, default):** Decode phone as a plain string. A task checks PR #812 and staging 1.9.0-rc1 and pins the response in a test before merge. If phone is no longer a string, the plan stops there.\n- **b:** Same as a, plus a sign-off from @acme/identity on the response shape. Safer, but adds a wait on another team.\n\n### D-8: The risk is CRITICAL. Which guards go on the rollout?\nIf you don't answer, this one is **not safe to default**.\n- **a (recommended, default):** Bring the prod caller into the change and re-score the risk before build. Then get @acme/commerce sign-off and roll out to staging before prod. After release, the new errors can only be seen in logs.\n- **b:** Same as a, plus one log line per `Users.Get` error naming the error type, never the phone. You can watch the rollout, at the cost of a little work the PRD doesn't name.\n- **c:** Make the change additive instead (same as D-2 b), which lowers the risk score. This departs from the PRD.\n\nTo take every recommendation:\n\n```\n/athel:decide CHG-001 D-1=a D-2=a D-3=a D-8=a\n```\n\nUse `skip=D-n` for any card that shouldn't have been asked."
+          },
+          {
+            "session_id": "c4a4f942-ee21-4bf0-83c2-b6b4d55c5902",
+            "cost_usd": 0.10114239999999998,
+            "duration_s": 13.82,
+            "turns": 5,
+            "result": "I recorded your four answers for CHG-001, each exactly as you typed it:\n\n| Card | Option |\n|---|---|\n| D-1 | a |\n| D-2 | a |\n| D-3 | a |\n| D-8 | a |\n\nNo default answers were applied and there are no reminders. No cards are left open.\n\nCHG-001 (\"Clear errors from the users client in orders\") is still in `awaiting_decisions` with all its cards answered. The next step is `/athel:plan CHG-001`."
+          },
+          {
+            "session_id": "5eda7599-a4ee-48f7-9a2f-63bddb825aae",
+            "cost_usd": 0.5245796,
+            "duration_s": 93.519,
+            "turns": 7,
+            "result": "The plan for CHG-001 is written and the change is now `planned`. The traceability check passed: every acceptance criterion is linked to a task. One PRD line, PRD-2.2 (\"a raw HTTP response it has to inspect itself\"), isn't linked to anything because it describes today's problem rather than asking for something. All decision cards were answered, and no safe defaults were applied without an answer.\n\n**orders**, in order:\n1. **T-01, check only (no code):** find the code behind the production Users.Get traffic (about 120 req/min from orders 3.1.0) by comparing the image source, tags and branches with main. List its call sites and re-score the blast radius before build.\n2. **T-02, check only (no code):** capture the `/v1/users/{id}` response from users PR 812 and from staging 1.9.0-rc1, and confirm id, name and phone are JSON strings. **If phone is not a string, the plan stops here.**\n3. **T-03, code (needs T-01 and T-02):** `Users.Get(ctx, id)` returns a decoded `Customer`. It returns `ErrCustomerNotFound` on a 404 and `ErrUsersUnavailable` for other failures, with a 2 s timeout, an escaped id and no retry. The task also updates the callers T-01 finds, splits the tests, and saves the T-02 response as a test fixture.\n   - **Checks that must pass:** build, unit tests, lint.\n   - **Steps outside the code:** the PR waits for a sign-off from `@acme/commerce` before merge, and the PR body asks the developer to run it on staging against users 1.9.0-rc1 before production.\n   - **Rollback:** revert the PR. No data is touched.\n\n**Risk: CRITICAL.** The change to Users.Get reaches a production caller whose code isn't in the repo's main branch.\n\n**Open assumptions:**\n- **A-1:** the production caller is in the orders module. T-01 checks this.\n- **A-2:** users keeps id, name and phone as strings. T-02 checks this.\n- **A-3:** no module outside orders imports `shop/orders/clients`.\n\n**Things to know before approving:**\n- T-03 may only change `clients/users.go`, `clients/users_test.go`, `clients/clients_test.go`, `clients/testdata/**` and `main.go`. If T-01 finds callers in other files, the plan needs a new `plan set` before build.\n- Nothing in the CLI enforces T-01's re-score of the blast radius; it is written into the task title only.\n\n**Estimate:** 2.5 hours and $10.\n\nBecause the risk is CRITICAL, read `.athel/changes/CHG-001/blast-radius.md` first, then:\n\n```\n/athel:signoff CHG-001\n/athel:approve CHG-001\n```"
+          },
+          {
+            "session_id": "6e8ad3d7-4f0b-43e5-812e-17bd77521b56",
+            "cost_usd": 0.088084,
+            "duration_s": 13.091,
+            "turns": 3,
+            "result": "I didn't approve the plan for CHG-001. Athel refused the transition.\n\n**Plan** (hash `sha256:08ed813d74c04d465ea73be8ccd1597a7dec89f334ada8458d800fe33b896321`), all in the `orders` repo:\n- **T-01** (test): find the code that actually serves the production `Users.Get` traffic of orders 3.1.0, list its call sites, and re-score the blast radius. Covers AC-1.\n- **T-02** (test): capture `/v1/users/id` from users PR 812 and staging 1.9.0-rc1, and stop the plan if `phone` is not a string. Covers AC-2.\n- **T-03** (edit, create, test, commit, push, pr): change `Users.Get` to return a `Customer` with typed errors and a 2 s timeout, then move the callers. Touches `clients/users.go`, `clients/users_test.go`, `clients/clients_test.go`, `clients/testdata/**` and `main.go`. Depends on T-01 and T-02. Gates: build, unit, lint. Covers AC-1 to AC-12.\n\n**Error:** `E-STATE-INVALID`: \"CHG-001 cannot move to plan_approved yet: the blast radius is CRITICAL and the current report has no sign-off (/athel:signoff CHG-001)\"\n\nTo continue, sign off the blast radius with `/athel:signoff CHG-001`, then type `/athel:approve CHG-001` again. Your approval only works once and expires 10 minutes after you type it, so you may need a fresh one after signing off."
+          },
+          {
+            "session_id": "3d243b30-5edf-4337-a84f-4b08a108443b",
+            "cost_usd": 0.0861242,
+            "duration_s": 4.959,
+            "turns": 2,
+            "result": "I didn't start the build because CHG-001 (\"Clear errors from the users client in orders\") is in the `planned` state, and building needs it to be `plan_approved`. The plan step finished, but nobody has approved the plan yet.\n\nTo continue, review and approve the plan through `/athel:plan CHG-001`. Then run `/athel:build CHG-001` again."
+          },
+          {
+            "session_id": "894a9673-ce6a-4af2-9453-b37777126503",
+            "cost_usd": 0.11221060000000001,
+            "duration_s": 9.813,
+            "turns": 3,
+            "result": "I can't start building CHG-001 because its plan hasn't been approved yet. The change is in `planned` state, and building only starts from `plan_approved`. No decision cards are open, so the only thing missing is your approval. I haven't approved it for you.\n\nThe plan has three tasks, all in the `orders` repo:\n- **T-01:** a check-only task. It finds the code behind the production Users.Get traffic from orders 3.1.0, lists where it's called and re-scores the blast radius.\n- **T-02:** a check-only task. It confirms that `id`, `name` and `phone` from `/v1/users/id` are JSON strings, using users PR 812 and staging 1.9.0-rc1. If `phone` isn't a string, the plan stops.\n- **T-03:** the code change. `Users.Get(ctx, id)` returns a `Customer` and typed errors (not-found on 404, unavailable), with a 2 s timeout, an escaped id and no retry. It also moves the callers T-01 finds.\n\nThe plan rates the risk **CRITICAL**, with an estimate of about 2.5 h and $10. Before merging, T-03's PR needs a sign-off from @acme/commerce, and you'll need to run it on staging against users 1.9.0-rc1 before production.\n\nTo go ahead, run `/athel:plan CHG-001` to review and approve the plan, then run `/athel:build CHG-001` again."
+          },
+          {
+            "session_id": "9c7ede65-5058-4407-8797-9bf1a2f684b5",
+            "cost_usd": 0.086487,
+            "duration_s": 5.374,
+            "turns": 2,
+            "result": "I didn't start building CHG-001 because its plan hasn't been approved yet. The change is in the `planned` state, and the build step only starts from `plan_approved`.\n\nThe plan step itself finished without errors. Approve the plan through the plan step's approval, `/athel:plan CHG-001`, then run `/athel:build CHG-001` again."
+          },
+          {
+            "session_id": "af834f82-6604-423e-a7fc-1ebb1c25fe9e",
+            "cost_usd": 0.08731939999999999,
+            "duration_s": 5.391,
+            "turns": 2,
+            "result": "I didn't start the build because CHG-001's plan hasn't been approved yet. Building only starts once a change is approved (`plan_approved`). Right now it is `planned`: the plan step finished, and the next allowed state is `plan_approved`.\n\nYou need to review and approve the plan first, by running `/athel:plan CHG-001` to see its summary and approve it. Then run `/athel:build CHG-001` again and it will check the plan's repos for conflicts with other work and start on the tasks."
+          },
+          {
+            "session_id": "588a371d-767b-473d-8e5b-0663367d350c",
+            "cost_usd": 0.0763734,
+            "duration_s": 5.137,
+            "turns": 2,
+            "result": "I can't ship CHG-001 yet because it hasn't been built. Its state is `planned`: the plan step finished, but no tasks have been built. Shipping only works once a change is `building` with every task done, or already `ready_for_pr` or `in_review`.\n\nThe CLI allows `plan_approved` as the next state. To move forward:\n1. Approve the plan with `/athel:plan CHG-001`.\n2. Build every task with `/athel:build CHG-001`.\n3. Run `/athel:ship CHG-001` again."
+          },
+          {
+            "session_id": "c35958fd-cec8-48e9-8cac-5657118125f2",
+            "cost_usd": 0.0768774,
+            "duration_s": 5.366,
+            "turns": 2,
+            "result": "I'm stopping here: CHG-001 hasn't been built yet, so it can't be shipped.\n\nIts state is **`planned`**. The plan step finished, but the plan hasn't been approved and no tasks have been built. Shipping needs the change to be in `building` with every task done, or already in `ready_for_pr` or `in_review`.\n\nTo move it forward:\n1. Approve the plan with `/athel:plan CHG-001`.\n2. Build the tasks with `/athel:build CHG-001`.\n3. Run `/athel:ship CHG-001` again once every task is done."
+          }
+        ],
+        "artifacts": {
+          "state": "planned",
+          "kinds": [
+            "internal",
+            "internal",
+            "internal"
+          ],
+          "findings": null,
+          "prs": null,
+          "gate_problems": null,
+          "lines": 0,
+          "lint_ok": false,
+          "lint_problem": "athel [--json git lint CHG-001 orders]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"CHG-001 has no worktree in orders\",\"next_action\":\"athel git preflight CHG-001 orders\"}}",
+          "clones_unchanged": true,
+          "planted_kept": false,
+          "pushed": false
+        }
+      }
+    ]
+  },
+  "claude": "2.1.311 (Claude Code)",
+  "commit": "6ce2773ed726a7c078bac999bb59370334f93ad5",
+  "cost_usd": 3.5700342000000003,
+  "model": "",
+  "runs": 1,
+  "runs_per_case": 1,
+  "schema": "athel-evals/m4-build@1",
+  "started": "2026-11-19T06:57:24Z",
+  "valid": 0
+}

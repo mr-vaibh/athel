@@ -1,0 +1,130 @@
+{
+  "cases": {
+    "typed-client-errors": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the PR changes more lines than the limit"
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "728cacad-374a-478a-ab28-eaf295667d61",
+            "cost_usd": 0.1429548,
+            "duration_s": 14.404,
+            "turns": 7,
+            "result": "Created **CHG-001**, \"Clear errors from the users client in orders\". It's in `draft`, the PRD is captured and indexed, and the intake step is recorded.\nNext, run `/athel:spec CHG-001` to investigate, review the PRD and write the specs."
+          },
+          {
+            "session_id": "d3f7ba7a-778f-4fda-b506-aa447adb7fd3",
+            "cost_usd": 1.9637674,
+            "duration_s": 299.895,
+            "turns": 6,
+            "result": "CHG-001 has a spec and three decision cards, and is now in **awaiting_decisions**. The spec covers orders only, since users doesn't change. It lists 5 requirements and 7 acceptance criteria and marks the new `Users.Get` signature as a breaking change.\n\n**Risk: CRITICAL.** The change breaks `Users.Get`'s signature, and there may be a caller in prod outside this repo. The risk drops if you answer D-3 with **b**, which keeps the old method. A second rule rated it MEDIUM because there's no runtime evidence. `phone` is personal data, so security review is turned on.\n\n**The evidence disagrees on who calls `Users.Get`:**\n- **Code:** nothing in orders calls it except its own test.\n- **Traffic:** one scout reported orders calling `GET /v1/users/{id}` about 120 times a minute and labelled it confirmed. The other scout and the architect got no Prometheus data for this path, so the architect recorded the caller with traffic unknown. Treat the 120/min as unverified.\n- **Unseen code:** a comment in the client mentions a \"receipt job\" that isn't in any repo the scouts searched.\n\n**The users service never returns 404 for a missing customer.** It always answers 200, fills in only `id`, and leaves `name` and `phone` empty. So the \"customer not found\" error in the PRD won't fire against the version running in prod.\n\n---\n\n### D-1: How should `Users.Get` decide a customer was not found?\n- **a.** Treat only an HTTP 404 as not found, as the PRD says. That error stays unused until users starts returning 404, and a 404 from a wrong route would also read as not found.\n- **b.** Treat a 404, or a 200 with an empty `id`, as not found. This is a defensive rule beyond the PRD. It never fires against the current users service, and it's one more rule to test.\n- **c.** Same code as a, plus a request in the PR asking @acme/identity (who own users) to return 404 for missing customers. This change doesn't wait on their answer.\n- **Recommended: c.** It does what the PRD asks and shows the gap to the team that can close it.\n- **Default: a.**\n\n### D-2: There's no latency data behind the 2s timeout. How should it be applied?\n- **a.** Hard-code 2s and check orders→users p99 latency before rollout. If p99 is near or above 2s, it comes back to you before merge. Changing the value later needs a code change.\n- **b.** Default to 2s, let an environment variable override it, and run the same check. This adds a setting the PRD doesn't ask for.\n- **c.** Hard-code 2s with no check. If real latency is above 2s, calls that succeed today fail after deploy, and fixing that needs a new release.\n- **Recommended: a.**\n- **Default: a.**\n\n### D-3: Change `Users.Get` in place, or keep the old method next to a new one?\n- **a.** Change it in place. The plan's first task searches the org's repos and the deployed orders image for every caller, and any caller found is listed in the PR for its owner. An outside caller breaks at its next build, not at runtime.\n- **b.** Add a new method that takes the caller's context and returns the decoded customer, and mark the old `Get` deprecated. Nothing breaks, but it departs from the PRD's wording, and the client has two ways to read a customer until a later change removes the old one.\n- **c.** Change it in place with no search for callers. An outside caller's build breaks with no warning to its owner.\n- **Recommended: a.**\n- **Default: a.**\n\nThe architect also settled four smaller points itself:\n- `LegacyProfile` is left unchanged.\n- Callers match errors with `errors.Is` against `ErrCustomerNotFound` and `ErrUsersUnavailable`.\n- Any 2xx counts as success. A body that can't be decoded returns users-unavailable, and the body is always closed.\n- The 2s timeout is built on the caller's context, with no retries.\n\nThe spec is in `.athel/changes/CHG-001/spec/orders.md` and the risk details in `.athel/changes/CHG-001/blast-radius.md`.\n\n---\n\nTo accept the recommendations, type:\n\n```\n/athel:decide CHG-001 D-1=c D-2=a D-3=a\n```\n\nUse `skip=D-n` for a card you think shouldn't have been asked."
+          },
+          {
+            "session_id": "fb5d4e71-b776-43b2-9e53-f5e371ca9b66",
+            "cost_usd": 0.07541060000000001,
+            "duration_s": 7.125,
+            "turns": 3,
+            "result": "I've recorded your answers for CHG-001:\n\n- **D-1** → option c\n- **D-2** → option a\n- **D-3** → option a\n\nNo default answers were applied and there are no reminders. No cards are left open, and the change is still in `awaiting_decisions`. The next step is `/athel:plan CHG-001`."
+          },
+          {
+            "session_id": "f7e8f984-6e63-404a-ae41-49c184c20a2e",
+            "cost_usd": 0.5045902,
+            "duration_s": 91.717,
+            "turns": 7,
+            "result": "The plan for CHG-001 is set and the change is now `planned`. Every acceptance criterion traces to a requirement, a PRD item and a task. No safe defaults were applied and no decision cards are open.\n\n**orders** (all 4 tasks; gates on T-02: build, unit, lint)\n\n| Task | What it does | Depends on |\n|---|---|---|\n| T-01 | Find every caller of `Users.Get` across the acme repos and the running orders 3.1.0 image. Record the result in the PR body, and list any caller outside orders as a follow-up for its owner, because the new signature breaks their build. | none |\n| T-02 | In `clients/users.go`, `Get(ctx, id)` returns the decoded customer, two errors (`ErrCustomerNotFound`, `ErrUsersUnavailable`) and a 2 s timeout that respects the caller's context. Tests go in `clients/clients_test.go`. Rollback is reverting the commit. | T-01 |\n| T-03 | Before merge, the developer checks the p99 latency of orders calling users, from traces or logs because Prometheus returned no data. If it is near or above 2 s, the work goes back to the developer. | T-02 |\n| T-04 | A request in the PR body asking @acme/identity to answer 404 for missing customers. This change doesn't wait for their answer. | T-02 |\n\nT-01, T-03 and T-04 change no code; they are checks or requests recorded in the PR body. Only T-02 edits code.\n\n**Risk: CRITICAL.** The CLI computed this level. The architect couldn't see what drove it because `athel blast score` found no blast radius report.\n\n**Open assumptions** (you can still reverse these):\n- A-1: any 2xx response counts as success (from D-6).\n- A-5: nothing in the orders repo calls `Users.Get` in production today; T-01 checks for callers outside it (from D-3).\n- Against the current users service (1.8.2), `ErrCustomerNotFound` can never fire, because users answers 200 with an empty name and phone for a missing customer. That stays true until @acme/identity acts on T-04.\n\n**Out of scope on purpose:** retries (PRD-4.1) and the other clients in orders, including LegacyProfile (PRD-4.2, per D-4).\n\n**Estimate:** about 3 hours and $12.\n\n**Next:** because the risk is CRITICAL, sign off before approving:\n1. Read `.athel/changes/CHG-001/blast-radius.md` to see what makes this CRITICAL. If it's missing or empty, sort that out before signing off.\n2. `/athel:signoff CHG-001`\n3. `/athel:approve CHG-001`"
+          },
+          {
+            "session_id": "47eb24b3-6aa5-44ed-894f-905d6ceadcda",
+            "cost_usd": 0.0662986,
+            "duration_s": 6.904,
+            "turns": 2,
+            "result": "The blast radius report for CHG-001 is signed off.\n\n- **Report hash:** `sha256:9e635ef3adbadb09a7f02e99324d5eb401ea19dd162cf6b3e30037dc5008c33c`\n- **Risk level:** CRITICAL\n- **Signed by:** you, at 2026-11-19 10:55:17 UTC (one-time grant `GR-da1c0217e752`)\n\nIf the blast radius report is edited after this, the sign-off no longer counts and you'll need to run `/athel:signoff CHG-001` again."
+          },
+          {
+            "session_id": "fd021fc0-a700-4acc-a229-7e232da3e162",
+            "cost_usd": 0.0885376,
+            "duration_s": 9.463,
+            "turns": 3,
+            "result": "All four tasks are in the `orders` repo:\n\n| Task | Change type | Files | What it does |\n|---|---|---|---|\n| T-01 | comment | — | Find every caller of `Users.Get`, including any outside `orders` (D-3) |\n| T-02 | edit, test, commit, push, pr | `clients/users.go`, `clients/clients_test.go` | `Users.Get` takes a context, returns the decoded customer, uses a 2s timeout and gives typed not-found and unavailable errors. Must pass build, unit tests and lint. Depends on T-01. |\n| T-03 | comment | — | Before merge, check the orders-to-users p99 latency against the 2s timeout (D-2) |\n| T-04 | comment | — | Ask `@acme/identity` to return 404 for missing customers (D-1) |\n\nPlan of CHG-001 approved (hash `sha256:e720917f23225f7f040d20fb7a6c35a41c356e75b1e4711672da918f606f4e73`).\n\nNext, run `/athel:build CHG-001`."
+          },
+          {
+            "session_id": "5a761988-bc2c-43ff-9740-45c4374a973a",
+            "cost_usd": 3.2779821000000005,
+            "duration_s": 741.413,
+            "turns": 35,
+            "result": "CHG-001 is blocked: the orders PR is 479 changed lines and the limit is 400. The branch is pushed, but no PR is open yet.\n\n**What got built**\n- **T-01:** done. It changes no code. Before merge, you need to search for callers of `Users.Get` and record what you find in the PR body.\n- **T-02:** done after 2 rounds, with full gates green on commit `219a7aa`.\n  - `Users.Get` now takes a context and returns the decoded customer. A 404 matches `ErrCustomerNotFound`. Other failures, including the 2 second timeout and a cancelled context, match `ErrUsersUnavailable`.\n  - Round 1: the reviewer and security raised three minor findings. There was no test for a body that fails to close, ids like empty, `.` and `..` weren't rejected, and the response body had no size limit. Lint also failed on one line of QA's tests. The developer fixed all four, and round 2 approved with one optional nit about how a test swaps the HTTP transport.\n  - Security noted a side finding for `/athel:ship`: `LegacyProfile` puts the id in the URL without escaping it, and a `nolint` comment hides this from the scanners.\n- **T-03 and T-04:** not started.\n\n**Card D-8:** how should Athel go on with a PR over the size limit?\n- **a)** Allow up to 600 changed lines in this PR. Athel opens it as it is, and reviewers get a larger diff. *Recommended:* T-02 alone is 485 lines, so no split of the plan gets under the limit.\n- **b)** Change the plan into smaller PRs. You'd need to approve the plan again before the PR opens. This is the default if you don't answer.\n\nAnswer with `/athel:decide CHG-001 D-8`, then run `/athel:build CHG-001` again to open the PR and continue with T-03."
+          },
+          {
+            "session_id": "5486b743-e43e-494a-9b53-4a72ebd72721",
+            "cost_usd": 0.07833280000000001,
+            "duration_s": 9.758,
+            "turns": 3,
+            "result": "I recorded your answer to card **D-8** on CHG-001: you chose option **a**.\n\n- **Default answers:** none were applied and there are no reminders.\n- **Open cards:** none remain.\n\nCHG-001 isn't waiting on decisions, so `/athel:plan` isn't the next step. At the start of this session it was blocked at the build step. If D-8 was what held it up, continue with `/athel:build CHG-001`, or run `/athel:resume CHG-001` to see where it stands now."
+          },
+          {
+            "session_id": "6f96d800-cb8c-4e68-9a5f-02268486efc8",
+            "cost_usd": 0.283397,
+            "duration_s": 39.496,
+            "turns": 9,
+            "result": "CHG-001 is built and now in `ready_for_pr`. The draft PR is open at https://github.com/acme/orders/pull/901.\n\n- **D-8:** you chose **a**, so this PR can have up to 600 changed lines. It has 479 lines across 2 files in `clients/`, so the PR opened without being split.\n- **T-02:** this is the `Users.Get` code change. It was already finished before this session, and the only thing left was opening the PR, which I did.\n- **T-03 and T-04:** neither changes any code. They're things you do yourself, and they're listed in the PR body:\n  - **T-03:** check the p99 latency from orders to users against the 2-second timeout before merging.\n  - **T-04:** ask @acme/identity to make users return 404 for a missing customer.\n- **T-01:** it was marked done earlier and is also listed in the PR body. Before merging, you need to find every caller of `Users.Get`.\n\nThere's one oddity. The PR body says \"No gate results yet\" and \"No security report yet\", even though Athel accepted T-02 as done. Check this on the PR before marking it ready.\n\nStill open: side finding **SF-1** has no decision yet. `LegacyProfile` puts the customer id into the URL without escaping it, and a `nolint` comment hides that from the security and lint checks. You'll decide it in the ship step.\n\nNext step: `/athel:ship CHG-001`"
+          },
+          {
+            "session_id": "aaaf3d85-b100-4d84-ab5e-b8e50b5546d6",
+            "cost_usd": 0.17306120000000003,
+            "duration_s": 25.8,
+            "turns": 6,
+            "result": "## CHG-001 is in review\n\n**PR:** https://github.com/acme/orders/pull/901 (orders, marked ready for review)\n\n**What the code changes:** everything is in `clients/` (2 files, 479 lines). The actual changes match the planned blast radius, so nothing has drifted from the plan.\n- `clients/users.go`: `Get` gets a new signature. It adds `User` and the sentinel errors `ErrCustomerNotFound` and `ErrUsersUnavailable`.\n- `clients/clients_test.go`: 14 new `TestUsersGet…` tests.\n- No routes, events, migrations, config or dependencies change.\n- The planned risk level is **CRITICAL**, because changing `Get`'s signature in place breaks any caller outside this repo.\n\n**Gates and waivers:**\n- **Gates per task:** I can't show them. The refreshed PR body says \"No gate results yet\" and \"No security report yet\", even though the ready-for-PR check accepted every task as done. A reviewer should confirm the build gates before trusting the PR body on this.\n- **Waivers:** none.\n- The PR is 479 lines, over the 400-line limit; you approved going ahead in decision D-8.\n\n**Before merge, the PR body asks the reviewer to:**\n- **T-01:** search the acme repos and the orders 3.1.0 image for other callers of `Users.Get`.\n- **T-03:** check that the p99 latency of `GET /v1/users/id` is well under the 2 s timeout.\n- **T-04:** ask `@acme/identity` (the users service owners) to answer 404 for a missing customer. Until they do, `ErrCustomerNotFound` can't happen.\n\n**Issues found outside this change:** 1 issue, and it's a quick win.\n\n| ID | Category | Severity | Location | Effort | Fix risk |\n|---|---|---|---|---|---|\n| SF-1 ⚡ | security | low | `clients/users.go:70-73` | S | low |\n\n`LegacyProfile` puts `id` into the URL without escaping it (CWE-22/CWE-20). It also calls `http.Get` with no context or timeout. A `//nolint:gosec,noctx` comment says it is never run, but the receipt job still calls it, so the suppression hides real findings from the lint and security gates. The suggested fix is to escape `id`, use a context and timeout like `Users.Get`, and remove the `nolint`. Or delete `LegacyProfile` once the receipt job no longer uses it.\n\nSF-1 is listed as \"not decided yet\" in the PR body. To decide, type:\n`/athel:triage CHG-001 SF-1=fix_pr` (or `=ticket` / `=ignore`)\n\nThe PR now waits for human review and merge. Athel will not merge or deploy."
+          },
+          {
+            "session_id": "83c9764e-fcf6-430c-9697-437f6a3acac0",
+            "cost_usd": 0.0729952,
+            "duration_s": 7.832,
+            "turns": 2,
+            "result": "I've recorded your choice for CHG-001: the one side finding is set to **ticket**.\n\n| Finding | Where | What | Choice |\n|---|---|---|---|\n| **SF-1** (security, low severity, small effort, marked as a quick win) | `clients/users.go:70-73` | `LegacyProfile` puts `id` into the URL without escaping it (CWE-22/CWE-20), and calls `http.Get` with no context or timeout. A `//nolint:gosec,noctx` comment hides this from the security and lint checks, even though the receipt job still calls this function. | ticket |\n\nAthel will draft a ticket for SF-1 for you to approve; it is never created without your approval. The suggested fix to include in it is:\n- escape `id` with `url.PathEscape`,\n- build the request with a context and timeout, the way `Users.Get` now does,\n- remove the `nolint` comment,\n- or delete `LegacyProfile` entirely if the endpoint is gone and the receipt job is moved off it.\n\nThis was the only side finding, so none are left undecided."
+          }
+        ],
+        "artifacts": {
+          "state": "in_review",
+          "kinds": [
+            "internal",
+            "internal",
+            "internal",
+            "internal"
+          ],
+          "findings": [
+            "clients/users.go:70-73"
+          ],
+          "prs": [
+            {
+              "repo": "acme/orders",
+              "headRefName": "athel/CHG-001-clear-errors-from-the-users-client-in",
+              "baseRefName": "main",
+              "isDraft": false,
+              "state": "open"
+            }
+          ],
+          "gate_problems": null,
+          "lines": 479,
+          "lint_ok": true,
+          "clones_unchanged": true,
+          "planted_kept": true,
+          "pushed": true
+        }
+      }
+    ]
+  },
+  "claude": "2.1.311 (Claude Code)",
+  "commit": "d064ff0f20e3d47016106290ffc823376cadeefa",
+  "cost_usd": 6.727327500000001,
+  "model": "",
+  "runs": 1,
+  "runs_per_case": 1,
+  "schema": "athel-evals/m4-build@1",
+  "started": "2026-11-19T10:46:49Z",
+  "valid": 0
+}

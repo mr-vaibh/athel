@@ -1,0 +1,91 @@
+{
+  "cases": {
+    "typed-client-errors": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is blocked, not in_review",
+            "no ready, open PR in acme/orders",
+            "the PR was not opened as a draft and then marked ready",
+            "the branch was never pushed",
+            "run failed: the build is blocked with no card to answer"
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "5c279bfe-f252-4461-91f8-d8ac83465e0a",
+            "cost_usd": 0.14415920000000002,
+            "duration_s": 14.86,
+            "turns": 7,
+            "result": "I created change **CHG-001**, \"Clear errors from the users client in orders\". It is in `draft`; the PRD is captured and its statements are numbered.\nNext step: run `/athel:spec CHG-001` to investigate, review the PRD and write the specs."
+          },
+          {
+            "session_id": "5ffc6e7a-ceb4-4549-9ba8-478848718fdc",
+            "cost_usd": 2.1938586,
+            "duration_s": 359.855,
+            "turns": 6,
+            "result": "## CHG-001: specs written, three decisions needed\n\nThe investigation and spec steps are both done, and CHG-001 is now waiting on your answers to three decision cards.\n\n**Risk: HIGH.** The main reason is that `Users.Get` changes its signature in place, from `Get(id) (*http.Response, error)` to `Get(ctx, id) (Customer, error)`. The blast radius also flags that the response includes the customer's phone number (personal data), that the change needs a security review, and that it adds a timeout. It changes only the orders service.\n\nThe orders spec has 8 requirements and 10 acceptance criteria. It adds two errors callers can match with `errors.Is`: `ErrCustomerNotFound` and `ErrUsersUnavailable`. Each call stops after 2 s, or sooner if the caller's context ends first.\n\nNo health data came back for the orders→users calls: error rate, 404 rate, timeouts and users latency were all empty. Those numbers are unknown, not zero, so nobody has checked whether a 2 s timeout fits users' real latency. The plan will include that check before merge.\n\n### D-1: The users service never answers 404. How should `Users.Get` handle an unknown customer?\nThe users handler always answers 200, echoing the requested id with an empty name and phone. So the PRD's \"customer not found\" case can't happen against the live service today. The users service belongs to `@acme/identity`.\n- **a.** Follow the PRD: only a 404 means \"not found\", and the PR asks `@acme/identity` about the missing 404. Until they fix it, an unknown id comes back as a customer with an empty name and phone.\n- **b.** Also treat a 200 with an empty name as \"not found\". This works against today's service, but it guesses at another team's data, and a real user with an empty name would show up as not found.\n- **c.** Treat a 200 with an empty id or name as \"users unavailable\". Empty profiles show up as an upstream fault rather than silently, but callers will see it as often as unknown ids occur, and nobody has measured that.\n- **Recommended: a.** If unanswered, it defaults to **a**, which is safe.\n\n### D-2: Prod shows about 120 requests per minute from orders to users, but no code on `main` calls `Users.Get`\nThe only caller is `clients_test.go:25`. Either the prod image 3.1.0 holds code that isn't on `main`, or the metric is crediting another service's traffic to orders.\n- **a.** Make the plan's first task find where that traffic comes from. The PR stays a draft until the answer is recorded. It costs one check before shipping.\n- **b.** Assume the repo is the whole story and name the gap in the PR. If hidden callers exist, you'd find out only after release.\n- **Recommended: a.** If unanswered, it defaults to **a**, which is safe.\n\n### D-7: Change `Users.Get` in place, or add a new method beside it?\n- **a.** Change it in place, as the PRD names it. This is the smallest change, and any hidden caller fails when it's next built rather than at runtime. The risk stays HIGH and the rollback is a revert.\n- **b.** Add `GetCustomer(ctx, id)`, keep the old `Get`, and remove it in a later task. Nothing breaks now, but the method name differs from the PRD and the spec has to be updated in the plan step.\n- **Recommended: a.** **There is no safe default, so this one needs an answer.**\n\n**Next**, to accept all three recommendations:\n```\n/athel:decide CHG-001 D-1=a D-2=a D-7=a\n```"
+          },
+          {
+            "session_id": "e081ca38-0d99-45af-b631-eac40934d2e1",
+            "cost_usd": 0.0753704,
+            "duration_s": 8.084,
+            "turns": 3,
+            "result": "I recorded your answers for CHG-001: **D-1 = a**, **D-2 = a** and **D-7 = a**.\n\n- No defaults were applied and there are no reminders.\n- No decision cards are left open, and CHG-001 is still in `awaiting_decisions`.\n\nNext, run `/athel:plan CHG-001` to write the task plan."
+          },
+          {
+            "session_id": "20ded1d9-1b24-4f6f-8da1-38cc62727a77",
+            "cost_usd": 0.413263,
+            "duration_s": 74.059,
+            "turns": 7,
+            "result": "The plan for CHG-001 is set. The trace check passed with nothing missing, and the change is now **planned**.\n\n**Tasks (repo: orders, in order)**\n1. **T-01:** Find where the 120 requests per minute from orders to users come from, and read users latency before merge. No code. It has three env actions, all of them notes in the PR body:\n   - **D-2:** Record which commit built `ghcr.io/acme/orders:3.1.0` compared with main, and what labels that traffic as coming from orders. List any caller of Users.Get that isn't on main. **The PR stays draft until this is recorded.**\n   - **D-6:** Record users p99 latency for orders over 7 days and the UsersLatency alert threshold, and compare them with the 2 s timeout.\n   - **D-1:** Ask `@acme/identity` about the users service. It answers 200 with an empty profile for unknown ids and never 404, so the not-found error can't trigger today.\n2. **T-02** (depends on T-01): Users.Get takes the caller's context and returns a decoded Customer or typed errors, with a 2 s timeout. Files: `clients/users.go` and `clients/clients_test.go`. It covers AC-1 to AC-10.\n\n**Gates:** build, unit, lint\n\n**Risk:** HIGH\n\n**Open assumptions** (you can still reverse these; no defaults were applied without an answer):\n- **A-1:** The 2 s limit covers the whole call, including reading the body. It's a deadline taken from the caller's context.\n- **A-2:** A 2xx response whose body can't be decoded as a customer counts as the call failing.\n- **A-3:** Only Users.Get changes; LegacyProfile stays as it is.\n\n**Estimate:** about 2 hours, $8\n\n**Notes**\n- The trace lists PRD-2.1 and PRD-2.2 (the PRD's goal statement) as not cited by any requirement. This didn't block the plan.\n- If T-01 finds callers of Users.Get that aren't on main, nothing in the plan handles them yet. You would decide at review whether to fix them in this change or a follow-up.\n- The architect read `.athel/repos/github.com-acme-orders/conventions.md` directly instead of through the CLI, which breaks the rule. It wrote nothing there.\n\nNext, type: `/athel:approve CHG-001`"
+          },
+          {
+            "session_id": "7315a2a9-a262-4ca9-9b4c-e5dc42a19437",
+            "cost_usd": 0.089108,
+            "duration_s": 11.15,
+            "turns": 3,
+            "result": "Plan of CHG-001 approved (hash `sha256:3bfbf493f0a7b82444f05bfa16d4ea7a4b028ab9dd7e588fabdce96baddf5172`).\n\nThe plan has two tasks in the `orders` repo:\n- **T-01** (comment, no file paths): before merge, the PR body has to record three things:\n  - Where the 120 rpm from orders to users comes from: which commit built image `3.1.0` compared with `main`, and what sets `client=orders`.\n  - The users p99 latency for `client=orders` over 7 days and the UsersLatency alert threshold, compared with the 2 s timeout.\n  - A question to `@acme/identity` asking them to confirm that unknown ids get a 200, never a 404.\n\n  The PR stays a draft until the first item is recorded.\n- **T-02** (edit, test, commit) in `clients/users.go` and `clients/clients_test.go`. It depends on T-01.\n  - `Users.Get` will take a `ctx`, return a decoded `Customer` with typed errors, and use a 2 s timeout. This covers AC-1 to AC-10.\n  - The build, unit and lint checks must pass.\n  - Rollback is reverting the commit.\n\nThe change is now in `plan_approved` and this session holds its lock. Run `/athel:build CHG-001` to start building."
+          },
+          {
+            "session_id": "8e62fda4-8441-4490-b2b1-3ff91b335c19",
+            "cost_usd": 3.9349502000000003,
+            "duration_s": 767.266,
+            "turns": 36,
+            "result": "CHG-001 is now marked **blocked** at T-02. T-01 is done; it changes no code. T-02 can't finish because the QA agent can't run tests here, and it can't be marked done without a QA report.\n\n**Why:** Athel's hook refuses every `go` command from the role agents with `E-POLICY-SCOPE, rule 7`. Their shells start in the workspace root, not in `repos/orders@CHG-001`, and neither `cd` nor `go -C \u003cworktree\u003e` gets past it. So QA couldn't run the suite or save a report in either round, and `athel build done` needs one for each round. The developer had the same problem. The gates I run through the CLI work, and the code passes them.\n\n**Where T-02 stands:**\n- **Done:** the new `Users.Get` and all four findings from round 1, at head `0a0a09e`.\n- **Still open for round 3:** R1-05, `Get` should return `ErrUsersUnavailable` when the returned customer's id differs from the one requested. R2-01, a doc comment fix.\n\n**To continue:** change the hook so the role agents can run commands in the worktree, or have their shells start inside it. Then run `/athel:build CHG-001`. No decision card is open, so the skill will move the change back to building and pick up T-02 at round 3.\n\nI didn't push anything or open a PR."
+          }
+        ],
+        "artifacts": {
+          "state": "blocked",
+          "kinds": [
+            "internal",
+            "internal"
+          ],
+          "findings": [
+            "clients/payments.go:12-14",
+            "clients/users.go:73-76"
+          ],
+          "prs": null,
+          "gate_problems": null,
+          "lines": 0,
+          "lint_ok": true,
+          "clones_unchanged": true,
+          "planted_kept": false,
+          "pushed": false
+        },
+        "error": "the build is blocked with no card to answer"
+      }
+    ]
+  },
+  "claude": "2.1.311 (Claude Code)",
+  "commit": "12c4b08c9fa6293b7a372201907c83c2ebada37a",
+  "cost_usd": 6.8507094,
+  "model": "",
+  "runs": 1,
+  "runs_per_case": 1,
+  "schema": "athel-evals/m4-build@1",
+  "started": "2026-11-18T12:41:37Z",
+  "valid": 0
+}

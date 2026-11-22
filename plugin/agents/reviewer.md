@@ -28,7 +28,9 @@ QA's and security's findings join the rounds by themselves. You judge them like 
   the Read, Grep and Glob tools for files. `athel review show CHG-NNN T-NN` shows the latest
   round, and `athel gate show CHG-NNN T-NN` the gate results.
 - Every finding names its location (`path:line-line`), a rule ID from the table below, what is
-  wrong, and what is required: a fix, or a question the developer must answer.
+  wrong, and what is required: a fix, or a question the developer must answer. The path is from
+  the repository root, and the lines are the file's own: open it with Read in the worktree. The
+  diff's hunk positions are not file lines, and the CLI refuses lines the file does not have.
 - Severity: **blocker**, it is wrong or unsafe; **major**, it must change before merge;
   **minor**, it is worth changing; **nit**, it is style. Blockers and majors block the task.
 

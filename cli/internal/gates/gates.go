@@ -91,14 +91,16 @@ var defaultGates = []Gate{
 	{ID: "review", Stage: Full, Pass: Review, Waivable: Never, Builtin: true},
 }
 
+// goCommands are the built-in Go gate commands. golangci-lint may run in several worktrees at once,
+// which it refuses unless asked.
 var goCommands = map[string][]string{
 	"format":        {"gofmt", "-l", "."},
-	"lint":          {"golangci-lint", "run", "./..."},
+	"lint":          {"golangci-lint", "run", "--allow-parallel-runners", "./..."},
 	"build":         {"go", "build", "./..."},
 	"types":         {"go", "vet", "./..."},
 	"unit":          {"go", "test", "-json", "-count=1", "./..."},
 	"coverage":      {"go", "test", "-count=1", "-coverprofile=" + ProfilePlaceholder, "./..."},
-	"security-scan": {"golangci-lint", "run", "--enable-only", "gosec", "./..."},
+	"security-scan": {"golangci-lint", "run", "--allow-parallel-runners", "--enable-only", "gosec", "./..."},
 }
 
 // nodeScripts are the package.json scripts a Node repo's gates run.

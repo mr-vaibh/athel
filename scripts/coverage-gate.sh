@@ -4,7 +4,9 @@
 # requires 90%+ on every package of the CLI.
 set -euo pipefail
 threshold="${1:-90}"
-out="$(go test -count=1 -race -covermode=atomic -coverprofile=coverage.out ./... 2>&1)" || {
+# The cli package alone takes about 9 minutes under -race, beside the eval packages that build Go
+# code; go test's default 10-minute limit is a time budget, not a quality bar.
+out="$(go test -count=1 -race -timeout 20m -covermode=atomic -coverprofile=coverage.out ./... 2>&1)" || {
   printf '%s\n' "$out"
   exit 1
 }

@@ -1,0 +1,90 @@
+{
+  "cases": {
+    "typed-client-errors": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is blocked, not in_review",
+            "no ready, open PR in acme/orders",
+            "the PR was not opened as a draft and then marked ready",
+            "the PR changes more lines than the limit",
+            "run failed: the build is blocked with no card to answer"
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "a8514c72-6fc7-4b83-b319-ec45ad654093",
+            "cost_usd": 0.14464,
+            "duration_s": 15.581,
+            "turns": 7,
+            "result": "I created change **CHG-001**, \"Clear errors from the users client in orders\". It is in `draft`, and the PRD is captured and numbered.\nThe next step is `/athel:spec CHG-001`, which investigates, reviews the PRD and writes the specs."
+          },
+          {
+            "session_id": "62007833-82ed-48d5-baea-b9f9af313e4c",
+            "cost_usd": 2.0574005000000004,
+            "duration_s": 332.072,
+            "turns": 6,
+            "result": "CHG-001 is specified and is now in `awaiting_decisions`. Two decision cards need your answer before the plan can start. The planned risk is **HIGH**.\n\n**Why the risk is HIGH:** `Users.Get` changes signature, to `Get(ctx, id) (Customer, error)`. Its only known caller is `clients/clients_test.go:25`, and that test is part of this change. A second rule fired at MEDIUM because there is no traffic data for that caller. The change also touches personal data (the phone number), so the plan will include a security review. The users service, notifications, `main.go`, `LegacyProfile` and `Payments.Charge` are all out of scope.\n\nThe spec is at `.athel/changes/CHG-001/spec/orders.md`:\n- A 404 matches `ErrCustomerNotFound` with `errors.Is`.\n- Any other non-2xx, a transport error, a timeout, a cancellation or a body that can't be decoded matches `ErrUsersUnavailable`. The error keeps the status or the cause, but never includes the response body.\n- Each call has a 2-second timeout and uses the caller's context.\n- `phone` is passed through unchanged, so the format change in the open users PR acme/users#812 won't break it.\n\n---\n\n**D-1: The users service never answers 404 today. How should `Users.Get` report an unknown customer?**\n`GET /v1/users/{id}` always returns 200 for any id, with `name` and `phone` empty (`users/api/user.go:24-26`).\n- **a) Only a real 404 means not found.** Any 200 is decoded as a customer, even with empty fields. The not-found path is tested but won't happen in prod until users returns 404. The plan adds a request to `@acme/identity` to start doing that. Nothing has to be undone later.\n- **b) A 404, or a 200 with both `name` and `phone` empty, means not found.** Unknown ids get not-found today. A real customer with no name or phone yet would also come back as not found, and this rule has to be removed once users returns 404.\n- **Recommended: a. Default: a** (safe to apply automatically). It matches the PRD and doesn't guess about another team's data.\n\n**D-7: Change `Users.Get` in place, or add a new method and retire the old one later?**\n- **a) Change it in place.** One PR, and a revert rolls it back. A caller outside this repo would fail to compile when it upgrades, rather than misbehave at runtime.\n- **b) Add `GetCustomer` now, then remove `Get` and rename `GetCustomer` back.** Nothing breaks now, but it takes two PRs, two ways to read a customer for a while, and the rename is a breaking change anyway.\n- **Recommended: a. Default: a** (safe to apply automatically). The only known caller is in this change.\n\n---\n\nThree things you should know:\n- Prod shows about 120 calls/min from orders to `GET /v1/users/{id}`, but no production code in the orders repo calls `Users.Get`. Something outside this repo may be calling it; that's what D-7 is about.\n- Nothing measures how fast users answers, so the 2-second timeout is an assumption. Tickets weren't searched, and nobody has read the diff of acme/users#812.\n- The architect reported that the reasoning text for D-5 (the decision to pass `phone` through unchanged) was cut off at \"#812\" when saved. The decision itself is complete.\n\nNext:\n\n```\n/athel:decide CHG-001 D-1=a D-7=a\n```"
+          },
+          {
+            "session_id": "7e56e0df-d228-4920-a871-8c0bbbc1e39d",
+            "cost_usd": 0.0756596,
+            "duration_s": 7.655,
+            "turns": 3,
+            "result": "I recorded your answers for CHG-001, \"Clear errors from the users client in orders\":\n\n- **D-1**: option a\n- **D-7**: option a\n\nNo defaults were applied and there are no reminders. No decision cards are left open, and the change is in `awaiting_decisions`, so the next step is `/athel:plan CHG-001`."
+          },
+          {
+            "session_id": "484f3c4b-f95f-4164-9a9a-a5e87254f8e4",
+            "cost_usd": 0.42862800000000006,
+            "duration_s": 67.947,
+            "turns": 7,
+            "result": "The plan for **CHG-001: Clear errors from the users client in orders** is ready for your approval. It covers all 8 acceptance criteria and the change is now `planned`.\n\n**Tasks: repo `orders`**\n1. **T-01:** `Users.Get(ctx, id)` uses the caller's context, gives up after 2 seconds, and returns a decoded `Customer`. Failures come back as `ErrCustomerNotFound` or `ErrUsersUnavailable`, which callers check with `errors.Is`. It changes `clients/users.go` and `clients/clients_test.go`, and adds `clients/users_test.go`. Covers AC-1 to AC-8.\n2. **T-02:** no code. It notifies the users team and runs after T-01.\n\n**Checks on each task:** build, unit, lint, security\n\n**Things for you to do outside the code (from T-02):**\n- Comment on acme/users#812 (phone normalisation): orders now reads `phone` as a plain string, so changing its format is safe but changing its type is not (decision D-5).\n- Ask @acme/identity to answer 404 for unknown ids. Orders will only treat a 404 as \"not found\", but today an unknown id comes back as a customer with an empty name and phone (decision D-1).\n\n**Risk:** HIGH. The blast radius flags personal data (phone) and the new timeout.\n\n**Open assumptions**\n- **A-1:** The customer has three text fields: ID, Name and Phone. Phone is never checked.\n- **A-2:** The users service answers well within 2 seconds. Nothing measures its response times today, so the new limit could cut off slow calls that would have succeeded.\n- **A-3:** An unreadable success response, a timeout or a cancelled call all count as a failed call.\n- **A-4:** \"Naming the status\" means the HTTP status code appears in the error message.\n- **A-5:** No production code in orders calls `Get`; only the test file does. That leaves the reported 120 calls per minute from orders to this endpoint unexplained. If some other code does call `Get`, it will fail to compile rather than misbehave.\n\nNo answers were filled in by default, and no decisions are waiting for you.\n\n**Estimate:** about 2 hours, about $8.\n\nTo approve the plan, type:\n\n```\n/athel:approve CHG-001\n```"
+          },
+          {
+            "session_id": "3827cc1b-fb13-45fb-bcf5-a75674fe9e48",
+            "cost_usd": 0.08762679999999999,
+            "duration_s": 10.973,
+            "turns": 3,
+            "result": "**CHG-001 plan**\n- **T-01** (orders, size M): `edit, create, test, commit, push, pr` on `clients/users.go`, `clients/users_test.go`, `clients/clients_test.go`. `Users.Get` takes the caller's context, times out after 2s, decodes a Customer and returns typed errors. Covers AC-1 to AC-8.\n- **T-02** (orders, size S, after T-01): `comment` only, no paths. It leaves two notes for the users team:\n  - A comment on acme/users PR 812: orders now reads `phone` as an opaque string, so changing the format is safe but changing the type is not.\n  - A request to @acme/identity to return 404 for unknown ids. Today an unknown id comes back as a customer with an empty name and phone, and orders only treats a 404 as `ErrCustomerNotFound`.\n- Plan hash: `sha256:f628efef498f2863742287616eaab2695a65b553b5f5cec500ba6a0c52e80684`\n\nPlan of CHG-001 approved (hash sha256:f628efef498f2863742287616eaab2695a65b553b5f5cec500ba6a0c52e80684).\n\nRun `/athel:build CHG-001` to start building."
+          },
+          {
+            "session_id": "352c97d6-3de5-4f37-866c-962359b4669f",
+            "cost_usd": 3.5259206000000005,
+            "duration_s": 582.867,
+            "turns": 25,
+            "result": "T-01 is done and its branch is pushed, but Athel refused to open the pull request because it's too big. CHG-001 is now blocked until you decide how to handle that.\n\n**The PR problem:** `athel pr open CHG-001 orders` reported 593 changed lines, and `git.yaml` allows 400 per PR. Its suggested split is T-01 alone (621 lines) and T-02 alone (0 lines), which doesn't bring T-01 under 400. Two ways forward:\n- Make a plan change request that splits T-01 into smaller pieces.\n- Raise the PR size limit for this change.\n\nThat choice is yours; I won't change the limit or the plan. No decision card was raised, so there's no `/athel:decide` line to answer. Once it's resolved, re-run `/athel:build CHG-001` to open the PR and pick up T-02.\n\n**T-01:** `Users.Get(ctx, id)` now stops after 2 seconds, returns a decoded `Customer`, and returns errors matching `ErrCustomerNotFound` or `ErrUsersUnavailable`. It took two rounds:\n- **Round 1:** the full gates failed on coverage: 87.5% of changed lines were covered and 90% is required. The reviewer and security agents also flagged that an empty id, `.` or `..` could reach the wrong users URL.\n- **Round 2:** the developer fixed all five findings. QA's new tests are committed, all full gates pass (run 4), and `athel build done` accepted the task.\n\n**Still open (none of these stopped T-01 being marked done):**\n- **Security finding S2-01 (minor):** if the users service answers 2xx with `null`, `{}`, or a different customer's id, `Get` returns an empty or wrong `Customer` with no error. The suggested fix is to check that the returned id matches the one asked for.\n- **Side finding SF-1:** `LegacyProfile` puts the id into the URL unescaped and has no timeout. It's outside this task.\n- **QA gap:** QA left 3xx redirects untested.\n- **T-02 is not started.** It changes no code and only lists two things for you to do yourself: comment on acme/users#812, and ask `@acme/identity` to return 404 for unknown ids.\n\nI also made two process mistakes:\n- I started the first developer agent in the background by mistake, which used up 1 of the 3 stops the Stop hook allows.\n- That agent couldn't run `go` from the workspace folder, so it wrote the code but didn't commit. A second developer agent, started from inside the worktree, checked that code, ran the build, tests and lint, and committed it."
+          }
+        ],
+        "artifacts": {
+          "state": "blocked",
+          "kinds": [
+            "internal",
+            "internal"
+          ],
+          "findings": [
+            "clients/users.go:93-95"
+          ],
+          "prs": null,
+          "gate_problems": null,
+          "lines": 593,
+          "lint_ok": true,
+          "clones_unchanged": true,
+          "planted_kept": true,
+          "pushed": true
+        },
+        "error": "the build is blocked with no card to answer"
+      }
+    ]
+  },
+  "claude": "2.1.311 (Claude Code)",
+  "commit": "b71a82b8d0b2e484e75b588c9eff3bf493b6f6e4",
+  "cost_usd": 6.3198755,
+  "model": "",
+  "runs": 1,
+  "runs_per_case": 1,
+  "schema": "athel-evals/m4-build@1",
+  "started": "2026-11-16T05:45:00Z",
+  "valid": 0
+}

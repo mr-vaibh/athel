@@ -15,6 +15,10 @@ command. Athel never merges and never deploys: humans do.
      next step is `/athel:build $ARGUMENTS` and stop. Otherwise run
      `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to ready_for_pr --by athel --reason "every task done"`.
    - **`ready_for_pr` or `in_review`:** continue.
+   - **`blocked` from `ready_for_pr`:** if `athel --json decide list $ARGUMENTS --open` shows a
+     card, show it with the `/athel:decide` line and stop. Otherwise run
+     `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to ready_for_pr --by athel --reason "resume shipping"`
+     and continue.
    - **Anything else:** say the change is not built yet and stop.
 
    The `ready_for_pr` guard checks that every task is done and every repo is pushed with its

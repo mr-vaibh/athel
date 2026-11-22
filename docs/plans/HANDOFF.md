@@ -78,17 +78,20 @@ M4-plan §9:
 | 14 network-deny sandbox test | `feat/m4-sandbox-net` | #104 | open, gate green |
 | 15 reviewer defect eval: corpus (24+6), setup, runner, grader; **paid run not made** | `feat/m4-evals-defects` | #105 | open, gate green |
 | 16 build eval: 3 PRDs, full-journey runner, grader re-runs gates; **paid run not made** | `feat/m4-evals-build` | #106 | open, gate green |
+| trial fixes: finding locations, spec-valid corpus, tasks without code (ADR 027), gate timeout 20m | `feat/m4-eval-trial-fixes` | #107 | open, gate green |
 | 17 M4 report | `docs/m4-report` | — | after the paid runs |
 
 CI passed on #77–#100 (checked 2026-11-15).
 
 Next:
-1. **Paid runs, each only with the owner's go-ahead, smoke runs first** (ATHEL_EVALS=1):
-   - defect eval (EC-2) smoke: `ATHEL_EVALS=1 ATHEL_EVALS_CASES=D01,D06,C01 ATHEL_EVALS_RUNS=1 go test
-     ./tests/evals/m4/defects -run TestEvals -timeout 0 -v`; then the full run (30 cases × 3 runs);
-   - build eval (EC-1) smoke: `ATHEL_EVALS=1 ATHEL_EVALS_CASES=typed-client-errors ATHEL_EVALS_RUNS=1 go test
-     ./tests/evals/m4/build -run TestEvals -timeout 0 -v`; then the full run (3 PRDs × 3 runs).
-   - Keep sandboxes with `ATHEL_EVALS_KEEP=<folder>` to debug. Record the results in `EVALS.md`.
+1. **Paid runs, each only with the owner's go-ahead.** Trials so far cost $61.95: 9 build trials
+   and 2 defect trials (`EVALS.md`).
+   - Build trial 9 was the first full journey to `in_review`. It is valid under the grader rule
+     that honours the developer-raised PR limit (ADR 028).
+   - Defect trial 2: 2/2 caught.
+
+   Ask the owner for the full runs: defects 30 × 3 (about $45–135) and build 3 PRDs × 3 (about
+   $45–150). Commands are in `EVALS.md`.
 2. Task 17: the M4 report (EC-1 and EC-2 results, carried gates), HANDOFF, ROADMAP; then the
    owner's merge OK for #77 to #106 in order.
 

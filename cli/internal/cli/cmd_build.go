@@ -262,8 +262,13 @@ func cmdBuildDone(r *runCtx, args []string) (any, error) {
 	return c.Build[i], nil
 }
 
-// notDone lists why a task is not done yet, and the baseline head its commits start from.
+// notDone lists why a task is not done yet, and the baseline head its commits start from. A task
+// with no paths changes no code: it has no gates, review or reports, only its cards (ADR 027).
 func (r *runCtx) notDone(g gateTask, head string) ([]string, string, error) {
+	if len(g.task.Paths) == 0 {
+		problems, err := r.blockingCards(g)
+		return problems, head, err
+	}
 	f, err := r.loadGates(g)
 	if err != nil {
 		return nil, "", err
@@ -288,17 +293,28 @@ func (r *runCtx) notDone(g gateTask, head string) ([]string, string, error) {
 		problems = append(problems, "QA or security findings are not in a review round yet: "+strings.Join(missing, ", "))
 	}
 	problems = append(problems, reportsBehind(g, rd)...)
-	dec, err := r.readDecisions(g.c.ID)
+	cards, err := r.blockingCards(g)
 	if err != nil {
 		return nil, "", err
 	}
-	for _, card := range dec.Open("") {
-		if slices.Contains(card.Blocks, g.task.ID) || slices.Contains(card.Blocks, "build") {
-			problems = append(problems, card.ID+" is unanswered and blocks it")
-		}
-	}
+	problems = append(problems, cards...)
 	sort.Strings(problems)
 	return problems, from, nil
+}
+
+// blockingCards are the unanswered cards that block the task or the build step.
+func (r *runCtx) blockingCards(g gateTask) ([]string, error) {
+	dec, err := r.readDecisions(g.c.ID)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, card := range dec.Open("") {
+		if slices.Contains(card.Blocks, g.task.ID) || slices.Contains(card.Blocks, "build") {
+			out = append(out, card.ID+" is unanswered and blocks it")
+		}
+	}
+	return out, nil
 }
 
 // reportsBehind: QA and security check every round, like the reviewer (doc 06 step 5;

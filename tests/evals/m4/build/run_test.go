@@ -63,7 +63,7 @@ func (r *runner) state() string {
 
 func (r *runner) prompt(name, text string) error {
 	r.n++
-	ctx, cancel := context.WithTimeout(context.Background(), r.set.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), limit(name, r.set.Timeout))
 	defer cancel()
 	s, err := r.sb.RunClaude(ctx, evalkit.Prompt{Text: text, Transcript: fmt.Sprintf("%02d-%s.jsonl", r.n, name), Model: r.set.Model})
 	r.res.Sessions = append(r.res.Sessions, s)
@@ -71,6 +71,15 @@ func (r *runner) prompt(name, text string) error {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	return nil
+}
+
+// limit is a session's time limit: a build session runs the developer, the gates and three
+// checkers, round after round, so it gets three times the others' (trial 5 hit 20 minutes).
+func limit(step string, base time.Duration) time.Duration {
+	if step == "build" {
+		return 3 * base
+	}
+	return base
 }
 
 // decide answers every open card with its recommendation, as the scripted developer.
@@ -103,20 +112,61 @@ func DecidePrompt(list map[string]any) string {
 }
 
 func (r *runner) run(prd string) error {
+	for _, phase := range []func(string) error{r.specify, r.build, r.ship} {
+		if err := phase(prd); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// specify is start and spec, then plan and approve, each after any open cards are answered.
+func (r *runner) specify(prd string) error {
 	for _, st := range []struct{ name, text string }{{"start", "/athel:start " + prd}, {"spec", "/athel:spec " + Change}} {
 		if err := r.prompt(st.name, st.text); err != nil {
 			return err
 		}
 	}
-	for _, st := range []struct{ name, text string }{{"plan", "/athel:plan " + Change}, {"approve", "/athel:approve " + Change}} {
-		if err := r.decide(); err != nil {
-			return err
-		}
-		if err := r.prompt(st.name, st.text); err != nil {
+	if err := r.decide(); err != nil {
+		return err
+	}
+	if err := r.prompt("plan", "/athel:plan "+Change); err != nil {
+		return err
+	}
+	if err := r.decide(); err != nil {
+		return err
+	}
+	// At CRITICAL risk the developer signs off the blast radius before approving (doc 05), as
+	// the plan step tells them to.
+	sum, err := r.athelJSON("plan", "summary", Change)
+	if err != nil {
+		return err
+	}
+	if sum["risk"] == "CRITICAL" {
+		if err := r.prompt("signoff", "/athel:signoff "+Change); err != nil {
 			return err
 		}
 	}
+	if err := r.prompt("approve", "/athel:approve "+Change); err != nil {
+		return err
+	}
+	if st := r.state(); st != "plan_approved" {
+		return fmt.Errorf("the plan was not approved: the change is %s", st)
+	}
+	return nil
+}
+
+// build runs /athel:build until every task is done, answering cards between sessions; a block
+// with no card to answer ends the run.
+func (r *runner) build(string) error {
 	for i := 0; i < buildSessions && r.state() != "ready_for_pr" && r.state() != "in_review"; i++ {
+		open, err := r.athelJSON("decide", "list", Change, "--open")
+		if err != nil {
+			return err
+		}
+		if r.state() == "blocked" && DecidePrompt(open) == "" {
+			return fmt.Errorf("the build is blocked with no card to answer")
+		}
 		if err := r.decide(); err != nil {
 			return err
 		}
@@ -124,16 +174,39 @@ func (r *runner) run(prd string) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// ship runs /athel:ship, the developer's /athel:triage when a finding is undecided, and ship
+// again if the change is not in review yet.
+func (r *runner) ship(string) error {
 	if err := r.prompt("ship", "/athel:ship "+Change); err != nil {
 		return err
 	}
-	if err := r.prompt("triage", "/athel:triage "+Change+" all=ticket"); err != nil {
+	f, err := r.athelJSON("finding", "list", Change)
+	if err != nil {
 		return err
+	}
+	if hasUndecided(f) {
+		if err := r.prompt("triage", "/athel:triage "+Change+" all=ticket"); err != nil {
+			return err
+		}
 	}
 	if r.state() != "in_review" {
 		return r.prompt("ship", "/athel:ship "+Change)
 	}
 	return nil
+}
+
+// hasUndecided reports whether `finding list` shows a finding the developer has not decided.
+func hasUndecided(list map[string]any) bool {
+	fs, _ := list["findings"].([]any)
+	for _, x := range fs {
+		if f, _ := x.(map[string]any); f["disposition"] == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func runOne(t *testing.T, c Case, run int, tl evalkit.Tools, set evalkit.Settings) Result {
@@ -232,6 +305,7 @@ func collect(sb *evalkit.Sandbox, c Case, before string) (Artifacts, error) {
 	for _, t := range pl.Tasks {
 		a.Kinds = append(a.Kinds, t.Kind)
 	}
+	a.AllowedLines = allowedLines(filepath.Join(dir, "decisions.yaml"), c.Repo)
 	var fs struct{ Findings []struct{ Location string } }
 	_ = readYAML(filepath.Join(dir, "findings.yaml"), &fs)
 	for _, f := range fs.Findings {
@@ -260,6 +334,34 @@ func collect(sb *evalkit.Sandbox, c Case, before string) (Artifacts, error) {
 		}
 	}
 	return a, nil
+}
+
+// allowedLines is the PR size the developer allowed for repo by answering its size card with
+// "a" (ADR 028), or 0.
+func allowedLines(path, repo string) int {
+	var f struct {
+		Decisions []struct {
+			Question string `yaml:"question"`
+			Options  []struct{ Key, Label string }
+			Answer   *struct{ Option string }
+		} `yaml:"decisions"`
+	}
+	if readYAML(path, &f) != nil {
+		return 0
+	}
+	allowed := 0
+	for _, d := range f.Decisions {
+		if d.Answer == nil || d.Answer.Option != "a" || !strings.HasPrefix(d.Question, "The "+repo+" PR is over git.yaml's limit") {
+			continue
+		}
+		for _, o := range d.Options {
+			var n int
+			if _, err := fmt.Sscanf(o.Label, "Allow up to %d changed lines in this PR", &n); err == nil && o.Key == "a" {
+				allowed = max(allowed, n)
+			}
+		}
+	}
+	return allowed
 }
 
 // recheck clones the pushed branch fresh and grades it: the gates, its size and the planted bug.

@@ -16,12 +16,12 @@ const qaReport = `cases:
 suite: {command: go test ./..., result: fail}
 gaps: [no test for a very long name]
 findings:
-  - {severity: major, location: "src/a.go:1", rule: errors.no-silent-catch, finding: An empty name is accepted., required: Reject it with a typed error.}
+  - {severity: major, location: "main.go:3", rule: errors.no-silent-catch, finding: An empty name is accepted., required: Reject it with a typed error.}
 `
 
 const securityReport = `checked: [input validation, secrets]
 findings:
-  - {severity: blocker, cwe: CWE-89, location: "src/a.go:1", rule: security.parameterised-queries, finding: The name is put into SQL text., required: Pass it as a parameter.}
+  - {severity: blocker, cwe: CWE-89, location: "main.go:3", rule: security.parameterised-queries, finding: The name is put into SQL text., required: Pass it as a parameter.}
 `
 
 func (h *harness) report(t *testing.T, kind, body string) map[string]any {
@@ -73,6 +73,8 @@ func TestReportChecks(t *testing.T) {
 		{"qa", "cases: []\nsuite: {command: x, result: pass}\ngaps: []\nfindings: []\nextra: 1\n", "extra"},
 		{"security", strings.Replace(securityReport, "cwe: CWE-89, ", "", 1), "CWE"},
 		{"build", "commands_run: []\nnotes: x\n", "commands_run"},
+		{"security", strings.Replace(securityReport, "main.go:3", "main.go:40-44", 1), "main.go has 3 lines; give line numbers of the file itself"},
+		{"security", strings.Replace(securityReport, "main.go:3", "src/gone.go:1", 1), "no such file in the task's worktree"},
 	}
 	for _, c := range cases {
 		h.stdin = c.body

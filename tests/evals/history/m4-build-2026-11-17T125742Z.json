@@ -1,0 +1,131 @@
+{
+  "cases": {
+    "typed-client-errors": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is building, not in_review",
+            "no ready, open PR in acme/orders",
+            "the PR was not opened as a draft and then marked ready",
+            "the branch was never pushed"
+          ]
+        },
+        "sessions": [
+          {
+            "session_id": "9739bfc5-83f0-43df-9141-19e5d8fd30c3",
+            "cost_usd": 0.14436919999999998,
+            "duration_s": 14.472,
+            "turns": 7,
+            "result": "I created **CHG-001**, \"Clear errors from the users client in orders\". It is in `draft`, and the PRD is saved and its statements are numbered.\nNext step: run `/athel:spec CHG-001`. It investigates, reviews the PRD and writes the specs."
+          },
+          {
+            "session_id": "f3fc4e04-1a7b-40ad-add7-0ebb2d7b16f5",
+            "cost_usd": 2.2708569,
+            "duration_s": 362.034,
+            "turns": 6,
+            "result": "CHG-001 is specified and now waits on four decisions from you. The specs are written for orders only, since users is just read as the upstream contract. The architect also settled three smaller design questions itself (error types, the new signature and timeout, decode failures); they're under \"Decided without a card\" below.\n\n**Risk: HIGH.** Three rules set it:\n- **The `Users.Get` signature changes**, which breaks every caller. Its only caller is its own test, which is part of this change.\n- **A new 2s timeout lands on a call whose traffic is unknown.**\n- **No runtime evidence exists for the orders→users call** (this rule alone is MEDIUM).\n\nThe change also decodes the customer's phone number, which is personal data.\n\n## Decision cards\n\n**D-1: users never answers 404 for a missing customer. How should `Users.Get` detect \"not found\"?**\nThe PRD expects a 404. In fact `GET /v1/users/{id}` always answers 200, echoing the id with an empty `name` and `phone`.\n- **a** Map only 404 to not found, as the PRD says, and ask @acme/identity to return a real 404. The not-found path stays unused until they do; meanwhile a missing customer comes back with an empty phone.\n- **b** Treat a 404, or a 200 with an empty name, as not found. This catches missing customers today, but relies on a detail of the users response nobody has promised. A real customer stored with an empty name would also show as not found.\n- **c** Map only 404 to not found, and report a 200 with an empty name as \"users unavailable\". A missing customer shows up as an error, but as the wrong kind.\n- Recommended: **a**. Default: **a**.\n\n**D-2: there is no latency data. How should the 2s timeout be applied?**\n- **a** Use a fixed 2s, bounded by the caller's context, and measure users p99 in staging before merging.\n- **b** Make 2s the default of a setting that can be changed. That's one more setting to document and test, with the same staging check.\n- **c** Use a fixed 2s with no check. If users p99 is above 2s, reads start failing only after deploy.\n- Recommended: **a**. Default: **a**.\n\n**D-3: Jira SHOP-12 (\"Normalise phone formats\") may change `phone`. How should orders treat it?**\n- **a** Decode it as an opaque string with no validation, and comment on SHOP-12 that orders reads it. A format change can't break the decode.\n- **b** Validate the format in orders. This ties orders to today's format, so SHOP-12 landing could make every read fail. The PRD doesn't ask for it.\n- Recommended: **a**. Default: **a**.\n\n**D-7: which safeguards should the plan carry, given the HIGH risk?**\n- **a** Add a security review task for the phone number (not logged, not put in error text), and make the D-2 staging latency check a merge gate. Rollback is reverting the PR.\n- **b** Option a, plus a flag that keeps the old code until switched on. That adds two code paths for a function nothing in production calls yet.\n- **c** Only the security review, with no latency gate. A timeout that is too short would only show up once a future caller uses `Users.Get` in production.\n- Recommended: **a**. Default: **a**.\n\n## Decided without a card\n- **D-4, errors:** two errors callers can match, `ErrCustomerNotFound` and `ErrUsersUnavailable`. Any other non-2xx status gives a `*StatusError` that matches \"users unavailable\". Errors are wrapped with `%w`, as orders' linter requires.\n- **D-5, signature and timeout:** `Get(ctx, id) (Customer, error)`. The 2s timeout is layered on the caller's context, so whichever deadline comes first wins.\n- **D-6, failures:** a decode failure or a cancelled call counts as \"users unavailable\", and the original cause stays in the error.\n\n## Also worth knowing\n- **Side finding SF-1, out of scope:** `LegacyProfile` in orders still calls a users endpoint that was removed in 2026-09, so it's probably failing today. It's recorded only; the PRD puts other clients out of scope.\n- **The investigation is incomplete:** no traffic, latency or health data exists for the orders→users call.\n- **No repos are listed on the change:** `athel state show` gives `repos: []`, though the specs cover orders and read users. It didn't stop the move to specified, but check it before `/athel:plan`.\n\nTo accept every recommendation, type:\n\n```\n/athel:decide CHG-001 D-1=a D-2=a D-3=a D-7=a\n```"
+          },
+          {
+            "session_id": "9576faaf-0856-47ed-8e46-5a4236b18e0e",
+            "cost_usd": 0.10061520000000002,
+            "duration_s": 12.053,
+            "turns": 5,
+            "result": "I've recorded all four of your answers for CHG-001 under the one-time grant: option **a** for D-1, D-2, D-3 and D-7.\n\n- **Defaults and reminders:** nothing else changed. No card's default came due, and there are no reminders.\n- **Open cards:** none are left.\n- **State:** CHG-001 is still `awaiting_decisions`, so it can move on.\n\nNext step: `/athel:plan CHG-001`"
+          },
+          {
+            "session_id": "5b26f95e-ae5f-41f8-8d9c-0539bd1d12aa",
+            "cost_usd": 0.34171260000000003,
+            "duration_s": 55.827,
+            "turns": 7,
+            "result": "The plan for CHG-001 is written, every acceptance criterion maps to a task, and the change is now **planned**.\n\n**Repo `orders`, in this order**\n1. **T-01:** `Users.Get(ctx, id)` returns a decoded `Customer` and typed not-found/unavailable errors. It times out after 2 seconds, or sooner if the caller's own deadline is earlier. The work stays inside `clients/**`.\n2. **T-02:** no code. Before merge, check how fast `GET /v1/users/id` answers from orders in staging and confirm the slowest 1% of calls take well under 2 seconds.\n3. **T-03:** no code. Two messages to send:\n   - Comment on Jira SHOP-12 that orders reads `phone` as a plain string.\n   - Ask `@acme/identity` to return 404 for unknown ids.\n\n**Gates:** build, unit, lint, security, review. The security gate also checks that the phone number never appears in logs or error text.\n\n**Things you do outside the code:** the staging latency check (T-02), and the Jira comment and the 404 request to identity (T-03).\n\n**Risk: HIGH.** The signature change breaks the old call, but the only caller is a test inside this change. The new timeout is on a call for which there is no traffic data.\n\n**Open assumptions** (no defaults were applied without an answer; all cards were answered):\n- **A-1:** a failed call means a network error, a timeout, the caller cancelling, or a success response whose body can't be decoded.\n- **A-2:** the 2-second limit sits on top of the caller's context, and whichever deadline is earlier wins.\n- **A-3:** fields in the users response that orders doesn't know about are ignored.\n\n**Estimate:** 2.5 hours, about $10.\n\n**Two caveats:**\n- Until identity returns 404, an unknown id still comes back as a customer with an empty name and phone, not a not-found error. That follows from your answer on D-1.\n- The architect couldn't open the orders repo, so T-01 names the `clients/**` area from the spec rather than exact files.\n\nNext, type: `/athel:approve CHG-001`"
+          },
+          {
+            "session_id": "b51698a9-07e9-4558-86ec-8a0d4edcd249",
+            "cost_usd": 0.0913666,
+            "duration_s": 10.142,
+            "turns": 3,
+            "result": "Plan of CHG-001 approved (hash `sha256:5fd4980151ae73582416a33ecc95b3a25d89a6f329c251b6df3eec20af0eae75`).\n\nThe plan has three tasks:\n- **T-01:** change `Users.Get` in the orders repo (`clients/**`) so it takes a context, decodes `Customer` and returns typed errors, with a 2-second timeout. This task can edit, test, commit, push and open a PR.\n- **T-02:** a comment-only task. It checks that the p99 latency of the users `GET /v1/users/id` call in staging is well under 2 seconds before the PR is merged.\n- **T-03:** a comment-only task. It notes on Jira SHOP-12 that orders reads the phone field, and asks the identity team to return a 404 for unknown ids.\n\nTo start building, run `/athel:build CHG-001`."
+          },
+          {
+            "session_id": "29c8abfc-ceff-42d9-a5ce-27e0ce8a2be3",
+            "cost_usd": 0,
+            "duration_s": 0,
+            "turns": 0
+          },
+          {
+            "session_id": "7e18fee4-0c18-474a-b29d-5bcc81e481c4",
+            "cost_usd": 0.1226602,
+            "duration_s": 13.381,
+            "turns": 4,
+            "result": "I stopped before doing anything because another session is already building CHG-001.\n\n- **State:** CHG-001 is `building`. Task T-01 is in progress (started 13:07) and has no commits yet.\n- **Lock:** Session `29c8abfc-…` has held the lock since 13:07. Its last heartbeat was 13:26:44, so it isn't stale until **13:56:44**. Athel refused `state enter` for T-01 (`E-STATE-LOCK-HELD`) and gave this session read-only access.\n\nI didn't take the lock over, because that would mean two sessions working on T-01 in the same worktree. What to do next:\n\n1. **If that other session is still running:** let it finish T-01 there, or check its progress with `/athel:status`.\n2. **If it has died or been abandoned:** once the lock goes stale after 13:56:44, run `/athel:resume --take-over` in this session, then `/athel:build CHG-001`. That will carry on with T-01."
+          },
+          {
+            "session_id": "4105136f-1c27-44ec-bd5c-7ff7204c7327",
+            "cost_usd": 0.094562,
+            "duration_s": 8.81,
+            "turns": 2,
+            "result": "I stopped before building anything because another session is still working on CHG-001.\n\n- **State:** `building`. Task T-01 is in progress, started at 13:07.\n- **Lock:** session `29c8abfc-ceff-42d9-a5ce-27e0ce8a2be3` holds it. It last checked in at 13:26:44 and stays active until **13:56:44**.\n\nIf I ran the build loop now, two sessions would be editing the same worktree and change records, so I didn't take the lock or run any command that changes state.\n\nYour options:\n1. **That session is still running:** let it finish T-01 there.\n2. **That session is gone (closed or crashed):** wait until 13:56, then run `/athel:resume` in this session to take the lock. Then run `/athel:build CHG-001` again, and it will pick up T-01 where it stopped."
+          },
+          {
+            "session_id": "67a75e44-61cc-41ba-9350-36df441c6f93",
+            "cost_usd": 0.10377220000000001,
+            "duration_s": 10.308,
+            "turns": 3,
+            "result": "I stopped before doing anything: another Claude session is building CHG-001 right now.\n\n- **State:** `building`. Task T-01 started at 13:07 UTC and is still running.\n- **Lock:** held by session `29c8abfc-ceff-42d9-a5ce-27e0ce8a2be3`. It last checked in at 13:26:44 UTC, about a minute ago, so it isn't stale. It only goes stale at 13:56:44 UTC.\n\nIf this session ran the developer, gates or git steps as well, the two sessions would collide on the same worktree (`repos/orders@CHG-001`). So I ran no agents, gates or git steps.\n\nYour options:\n1. **Let the other session finish.** Go to that terminal and let it continue T-01.\n2. **Continue here instead.** Close or stop the other session first. Once the lock is released or goes stale after 13:56 UTC, run `/athel:resume` here to take the lock, then `/athel:build CHG-001`."
+          },
+          {
+            "session_id": "b4308ddd-024d-4b6b-a759-f5d5aa317a71",
+            "cost_usd": 0.0870596,
+            "duration_s": 7.949,
+            "turns": 3,
+            "result": "CHG-001 isn't ready to ship yet, so I stopped before changing anything.\n\n- **State:** the change is still `building`.\n- **Unfinished task:** T-01 is in progress. It has no commits yet and is the only task in the plan.\n- **Lock:** another session (`29c8abfc…`) holds the change lock and is running the build step now. The lock was last renewed at 13:26 and goes stale at 13:56 if nobody renews it.\n- **Repo:** `orders` hasn't been pushed and has no draft PR.\n\nThe next step is `/athel:build CHG-001`. Run it from the session that holds the lock, or let that session finish T-01. Then run `/athel:ship CHG-001` again."
+          },
+          {
+            "session_id": "8c4c703e-b714-417a-aad9-fed84f71de1d",
+            "cost_usd": 0.07176640000000001,
+            "duration_s": 7.654,
+            "turns": 2,
+            "result": "I couldn't record the triage: nothing was saved and no tickets were drafted.\n\n**Why:** `athel` refused with `E-STATE-LOCK-HELD`. Another Claude session (`29c8abfc…`) holds the lock on CHG-001, so this session can only read it. That session took the lock at 13:07 UTC. Its last heartbeat was at 13:26, which is only recent enough to count as alive. The lock goes stale at **13:56:44 UTC** if that session stops sending heartbeats.\n\n**What you can do:**\n- **If that session is yours and still open:** run `/athel:triage CHG-001 all=ticket` there.\n- **If that session has been closed:** after 13:56:44 UTC, run `/athel:resume --take-over` here, then type `/athel:triage CHG-001 all=ticket` again. Your current grant can only be used once and expires 10 minutes after you typed the command, so you'll need to type it fresh.\n\nI haven't taken over the lock because that would cut off the other session's build."
+          },
+          {
+            "session_id": "91191b93-041c-4bf1-a2eb-9b1e038d8e48",
+            "cost_usd": 0.0860392,
+            "duration_s": 7.864,
+            "turns": 3,
+            "result": "I didn't start shipping CHG-001 because it isn't built yet. It's still in `building`, and its only task, T-01, is in progress with no commits. The orders repo hasn't been pushed and has no draft PR.\n\nAnother session (`29c8abfc…`) is also holding the change lock right now, and that lock won't count as stale until 13:56 UTC.\n\n**Next step:** finish the build with `/athel:build CHG-001`. Run it from the session that holds the lock, or wait until the lock goes stale and take it over with `/athel:resume`. Once T-01 is done, run `/athel:ship CHG-001` again."
+          }
+        ],
+        "artifacts": {
+          "state": "building",
+          "kinds": [
+            "internal",
+            "internal",
+            "internal"
+          ],
+          "findings": [
+            "orders/clients/users.go:14-17",
+            "clients/users.go:93-95"
+          ],
+          "prs": null,
+          "gate_problems": null,
+          "lines": 0,
+          "lint_ok": true,
+          "clones_unchanged": true,
+          "planted_kept": false,
+          "pushed": false
+        }
+      }
+    ]
+  },
+  "claude": "",
+  "commit": "0d6df1ec30f0def12481fe87a5da9405d52738b9",
+  "cost_usd": 3.5147801,
+  "model": "",
+  "runs": 1,
+  "runs_per_case": 1,
+  "schema": "athel-evals/m4-build@1",
+  "started": "2026-11-17T12:57:42Z",
+  "valid": 0
+}

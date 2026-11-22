@@ -86,3 +86,19 @@ func TestBuildDone(t *testing.T) {
 		t.Errorf("a done task is not done again, and the full run is of an older commit: %v", env)
 	}
 }
+
+// TestTaskWithoutCodeIsDoneAtOnce (ADR 027): a task with no paths changes no code, so it has no
+// gates, review or reports; it is done at once, and its shared actions go to the developer in
+// the PR body.
+func TestTaskWithoutCodeIsDoneAtOnce(t *testing.T) {
+	h, _ := goGates(t, "gates: []}\n", "gates: []}\n  - {id: T-02, title: confirm the window, repo: users, kind: internal, paths: [], verbs: [comment], covers: [AC-1], depends_on: [], size: S, gates: [], env_actions: [comment on the ticket with the agreed date]}\n")
+	h.mustOK("state", "enter", "CHG-001", "build", "--task", "T-02")
+	done := h.mustOK("build", "done", "CHG-001", "T-02")
+	if done["status"] != "done" || len(done["commits"].([]any)) != 0 {
+		t.Errorf("done with no commits: %v", done)
+	}
+	body := asJSON(t, h.mustOK("pr", "body", "CHG-001", "users"))
+	if !strings.Contains(body, "Shared actions for the developer") || !strings.Contains(body, "T-02: comment on the ticket with the agreed date") {
+		t.Errorf("the PR body lists the shared action: %s", body)
+	}
+}

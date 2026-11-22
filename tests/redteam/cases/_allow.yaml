@@ -48,3 +48,5 @@ cases:
   - {name: security saves its report, command: "athel security save CHG-001 T-01 -", agent: athel:security, expect: {decision: allow, rule: "7x"}}
   - {name: developer edits a planned file, tool: Edit, input: {file_path: "{tree}/src/phone.go", old_string: a, new_string: b}, agent: athel:developer, expect: {decision: allow, rule: "10"}}
   - {name: developer saves its result, command: "athel build save CHG-001 T-01 -", agent: athel:developer, expect: {decision: allow, rule: "7x"}}
+  - {name: QA runs the worktree's tests with go -C, command: "go -C {tree} test ./...", agent: athel:qa, expect: {decision: allow, rule: "10"}}
+  - {name: developer vets the worktree with go -C, command: "go -C {tree} vet ./...", agent: athel:developer, expect: {decision: allow, rule: "10"}}

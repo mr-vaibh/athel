@@ -240,10 +240,12 @@ func (ctx Context) qaScope(a classify.Action) (aerr.Code, string) {
 	if a.Tier != classify.W0 {
 		return aerr.PolicyAgentScope, why
 	}
-	if len(a.Paths) == 0 {
-		if a.Verb == "test" {
-			return "", ""
-		}
+	switch {
+	case a.Verb == "test":
+		// A test run's path is the folder it runs in (go -C); rule 7 checks it is a planned
+		// worktree.
+		return "", ""
+	case len(a.Paths) == 0:
 		return aerr.PolicyAgentScope, why
 	}
 	for _, p := range a.Paths {

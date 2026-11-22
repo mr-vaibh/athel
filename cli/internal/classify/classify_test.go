@@ -321,6 +321,18 @@ func TestGoCheckersAreKnown(t *testing.T) {
 	}
 }
 
+// TestBuildToolFolder: go -C, npm --prefix and yarn --cwd name the folder the command acts in.
+func TestBuildToolFolder(t *testing.T) {
+	for cmd, want := range map[string]string{"go -C /w/repo test ./...": "/w/repo", "npm --prefix /w/app test": "/w/app",
+		"yarn --cwd sub test": "/home/sub", "go test ./...": ""} {
+		raw, _ := json.Marshal(map[string]string{"command": cmd})
+		r := Classify(Call{Tool: "Bash", Input: raw, Cwd: "/home"}, nil, Options{})
+		if got := strings.Join(r.Actions[0].Paths, ","); got != want || r.Actions[0].Verb != "test" {
+			t.Errorf("%s: paths %q verb %q", cmd, got, r.Actions[0].Verb)
+		}
+	}
+}
+
 func TestPackagesInterpretersAndFiles(t *testing.T) {
 	checkTiers(t, testPolicy(t, nil), []tierCase{
 		{"npm install", W0, ""}, {"npm ls", R0, ""}, {"npm publish", W3, ""}, {"pnpm publish", W3, ""}, {"npx some-tool", W0, ""},

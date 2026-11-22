@@ -1,0 +1,208 @@
+{
+  "cases": {
+    "C01": [
+      {
+        "run": 1,
+        "grade": {
+          "caught": false,
+          "false_alarms": 0,
+          "findings": 4
+        },
+        "session": {
+          "session_id": "5a353d72-0133-46f0-b149-cc6e5f239711",
+          "cost_usd": 0.3342808,
+          "duration_s": 69.005,
+          "turns": 4,
+          "result": "I'm stopping here and haven't run either command the stop hook suggests. You told me to stop once the reviewer returned. Marking T-01 done would mean running its gates first and fixing what they report. Ending the step as blocked would change the change's state. Both go past what you asked for.\n\nT-01 is still open, with the build step running. The reviewer approved it in round 1 with no blockers or majors, which leaves 2 minor findings, 2 nits and side finding SF-1 open.\n\nTo go on, you can either run `/athel:build CHG-001` to finish T-01's gates, or have me end the step with `athel state exit CHG-001 build --result blocked --reason \"...\"`."
+        },
+        "findings": [
+          {
+            "id": "R1-01",
+            "severity": "minor",
+            "source": "reviewer",
+            "location": "locales/locales.go:39-42",
+            "rule": "boundary.validate-input"
+          },
+          {
+            "id": "R1-02",
+            "severity": "minor",
+            "source": "reviewer",
+            "location": "locales/locales.go:44",
+            "rule": "observability.structured-logs"
+          },
+          {
+            "id": "R1-03",
+            "severity": "nit",
+            "source": "reviewer",
+            "location": "locales/locales.go:15-40",
+            "rule": "readability.conventions"
+          },
+          {
+            "id": "R1-04",
+            "severity": "nit",
+            "source": "reviewer",
+            "location": "locales/locales_test.go:50-51",
+            "rule": "tests.repo-style"
+          }
+        ]
+      }
+    ],
+    "D01": [
+      {
+        "run": 1,
+        "grade": {
+          "caught": true,
+          "matched_by": "R1-01",
+          "false_alarms": 0,
+          "findings": 3
+        },
+        "session": {
+          "session_id": "f8caecce-ef9e-4e06-85b6-1947186a8f6b",
+          "cost_usd": 0.3915282,
+          "duration_s": 62.999,
+          "turns": 4,
+          "result": "I've left T-01 as it is. You asked me to stop once the reviewer returned, and the stop hook's two options both go beyond that:\n\n- **Carry on the build:** send R1-01 to R1-03 to the developer agent, run the gates, then `athel build done CHG-001 T-01`. That is the next step of `/athel:build`, not the step you asked for.\n- **Mark it blocked:** `athel state exit CHG-001 build --result blocked --reason \"...\"`. That would record a block that isn't real, since the task just has review findings to fix.\n\nSo the step is still running, and this session holds the lock on CHG-001 until it goes stale at 17:03. The hook will probably fire up to 2 more times. Tell me if you want me to carry on with the fixes or end the step another way."
+        },
+        "findings": [
+          {
+            "id": "R1-01",
+            "severity": "blocker",
+            "source": "reviewer",
+            "location": "preferences/preferences.go:43-49",
+            "rule": "errors.no-silent-catch"
+          },
+          {
+            "id": "R1-02",
+            "severity": "blocker",
+            "source": "reviewer",
+            "location": "preferences/preferences.go:37-40",
+            "rule": "security.authz"
+          },
+          {
+            "id": "R1-03",
+            "severity": "major",
+            "source": "reviewer",
+            "location": "preferences/preferences_test.go:21-42",
+            "rule": "tests.failure-paths"
+          }
+        ]
+      }
+    ],
+    "D06": [
+      {
+        "run": 1,
+        "grade": {
+          "caught": true,
+          "matched_by": "R1-01",
+          "false_alarms": 0,
+          "findings": 10
+        },
+        "session": {
+          "session_id": "e7b67244-619d-4794-b26a-24c335406359",
+          "cost_usd": 0.6389696000000001,
+          "duration_s": 9.39,
+          "turns": 2,
+          "result": "I'm stopping here and leaving T-01 open. You asked for step 9 only, and both review agents have returned. Running `athel build done` is wrong while a blocker and majors are still open. Marking the step blocked is also wrong, because nothing outside the task is in the way; it just needs another round of fixes. Whether to send the findings back to the developer agent for round 2 is up to you."
+        },
+        "findings": [
+          {
+            "id": "R1-01",
+            "severity": "blocker",
+            "source": "reviewer",
+            "location": "search/search.go:29-30",
+            "rule": "security.parameterised-queries"
+          },
+          {
+            "id": "R1-02",
+            "severity": "major",
+            "source": "reviewer",
+            "location": "search/search.go:49-55",
+            "rule": "security.authz"
+          },
+          {
+            "id": "R1-03",
+            "severity": "major",
+            "source": "reviewer",
+            "location": "search/search_test.go:25-35",
+            "rule": "tests.ac-covered"
+          },
+          {
+            "id": "R1-04",
+            "severity": "minor",
+            "source": "reviewer",
+            "location": "search/search.go:29",
+            "rule": "correctness.edge-case"
+          },
+          {
+            "id": "R1-05",
+            "severity": "minor",
+            "source": "reviewer",
+            "location": "search/search.go:35-43",
+            "rule": "correctness.edge-case"
+          },
+          {
+            "id": "R1-06",
+            "severity": "minor",
+            "source": "reviewer",
+            "location": "search/search.go:62",
+            "rule": "errors.no-silent-catch"
+          },
+          {
+            "id": "R1-07",
+            "severity": "minor",
+            "source": "reviewer",
+            "location": "search/search.go:50-54",
+            "rule": "boundary.validate-input"
+          },
+          {
+            "id": "R1-08",
+            "severity": "blocker",
+            "source": "security",
+            "location": "search/search.go:29-30",
+            "rule": "security.parameterised-queries"
+          },
+          {
+            "id": "R1-09",
+            "severity": "major",
+            "source": "security",
+            "location": "search/search.go:49-55",
+            "rule": "security.authz"
+          },
+          {
+            "id": "R1-10",
+            "severity": "minor",
+            "source": "security",
+            "location": "search/search.go:50-54",
+            "rule": "security.input-validation"
+          }
+        ]
+      }
+    ]
+  },
+  "claude": "2.1.311 (Claude Code)",
+  "commit": "6be8ae1f7af3b8d1e49ac5751aa60e18573bd599",
+  "cost_usd": 1.3647786,
+  "model": "",
+  "runs_per_case": 1,
+  "schema": "athel-evals/m4-defects@1",
+  "started": "2026-11-15T16:32:23Z",
+  "summary": {
+    "defect_runs": 2,
+    "caught": 2,
+    "catch_rate": 1,
+    "clean_runs": 1,
+    "false_alarm_runs": 0,
+    "by_category": {
+      "errors": [
+        1,
+        1
+      ],
+      "security": [
+        1,
+        1
+      ]
+    },
+    "missed": {},
+    "met": true
+  }
+}
