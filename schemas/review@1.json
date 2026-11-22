@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/review@1.json",
+  "title": "athel/review@1",
+  "description": "One review round of one task (.athel/changes/CHG-NNN/reviews/T-NN/round-N.yaml, doc 06 \u00a7Iterative review protocol, FR-BUILD-007/008): every finding with its status and history, carried forward until a verified fix or a human waiver closes it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "round",
+    "head",
+    "verdict",
+    "findings"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/review@1"
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "head": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verdict": {
+      "enum": [
+        "approved",
+        "changes_requested"
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "severity",
+          "source",
+          "location",
+          "rule",
+          "finding",
+          "required",
+          "status",
+          "history"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^R[1-9][0-9]*-[0-9]{2,}$"
+          },
+          "severity": {
+            "enum": [
+              "blocker",
+              "major",
+              "minor",
+              "nit"
+            ]
+          },
+          "source": {
+            "enum": [
+              "reviewer",
+              "security",
+              "qa",
+              "gate"
+            ]
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rule": {
+            "type": "string",
+            "minLength": 1
+          },
+          "finding": {
+            "type": "string",
+            "minLength": 1
+          },
+          "required": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "open",
+              "fixed",
+              "verified",
+              "waived",
+              "disputed"
+            ]
+          },
+          "fixed_in": {
+            "type": "string"
+          },
+          "dispute": {
+            "type": "string"
+          },
+          "history": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "round",
+                "status"
+              ],
+              "properties": {
+                "round": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "status": {
+                  "enum": [
+                    "open",
+                    "fixed",
+                    "verified",
+                    "waived",
+                    "disputed"
+                  ]
+                },
+                "note": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

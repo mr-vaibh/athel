@@ -37,6 +37,7 @@ const (
 	Mutation    = "mutation"     // HIGH-risk changes: ≥ 70% of changed-line mutants killed
 	Security    = "security"     // no new SAST finding, no secret, no new vulnerable dependency
 	Performance = "performance"  // benchmarks within the latency budget risk_notes names
+	Review      = "review"       // the latest review round approves and nothing blocks
 )
 
 // Skipped is a gate that does not apply to this task (for example mutation below HIGH risk);
@@ -84,6 +85,7 @@ var defaultGates = []Gate{
 	{ID: "mutation", Stage: Full, Pass: Mutation, Waivable: Human},
 	{ID: "performance", Stage: Full, Pass: Performance, Waivable: Human},
 	{ID: "migration", Stage: Full, Pass: Migration, Waivable: Never, Builtin: true},
+	{ID: "review", Stage: Full, Pass: Review, Waivable: Never, Builtin: true},
 }
 
 var goCommands = map[string][]string{

@@ -286,7 +286,10 @@ func TestGateFullStage(t *testing.T) {
 			t.Fatalf("%v %s", err, out)
 		}
 	}
-	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 13 {
+	h.stdin = "verdict: approved\n"
+	h.mustOK("review", "save", "CHG-001", "T-01", "-")
+	h.stdin = ""
+	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 14 {
 		t.Fatalf("a tested, simple change is green on the full stage: %v", run)
 	}
 	untested := "package src\n\n// Sub subtracts.\nfunc Sub(a, b int) int {\n\tc := a - b\n\tc++\n\tc--\n\treturn c\n}\n"
@@ -406,7 +409,7 @@ func TestGateMutation(t *testing.T) {
 	h, tree := goGates(t)
 	h.stdin = plannedBlast()
 	h.mustOK("blast", "save", "--change", "CHG-001", "-")
-	h.stdin = ""
+	h.reviewRound(t, "verdict: approved\n")
 	h.mustOK("gate", "baseline", "CHG-001", "T-01")
 	pinned := map[string]string{
 		"src/pos.go":      "package src\n\n// Pos reports a positive number.\nfunc Pos(a int) bool {\n\treturn a > 0\n}\n",

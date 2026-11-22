@@ -62,29 +62,29 @@ M4-plan §9:
 | 07a built-in Go mutation gate (HIGH and CRITICAL risk) | `feat/m4-gates-mutation` | #88 | open, gate green |
 | 07b security-scan gate | `feat/m4-gates-security` | #89 | open, gate green |
 | 07c performance gate (latency budget in `risk_notes`) | `feat/m4-gates-perf` | #90 | open, gate green |
-| 07d migration gate (static checks; up, down, up on a throwaway PostgreSQL) | `feat/m4-gates-migration` | #91 | open, gate green (CI running) |
-| 08 review rounds: `review@1`, carry-forward, limits, disputes | `feat/m4-review` | — | **next** |
-| 09–17 | see M4-plan §9 | — | not started |
+| 07d migration gate (static checks; up, down, up on a throwaway PostgreSQL) | `feat/m4-gates-migration` | #91 | open, gate green |
+| 08 review rounds: `review@1`, carry-forward, limits, disputes, `review` gate | `feat/m4-review` | #92 | open, gate green |
+| 09 waivers: `/athel:waive`, reason, expiry, security owner | `feat/m4-waivers` | — | **next** |
+| 10–17 | see M4-plan §9 | — | not started |
 
-CI passed on #77–#90 (checked 2026-11-14).
+CI passed on #77–#91 (checked 2026-11-14).
 
 Next:
-1. **Task 08** on `feat/m4-review`, branched from `feat/m4-gates-migration`. It covers
-   FR-BUILD-007/008/010 and doc 06 §Iterative review:
-   - **`review@1`** round files, `reviews/<task>/round-N.yaml`, using doc 06's finding format.
-     IDs are `R<round>-<n>` from the CLI. Sources: reviewer, security, qa, gate. Statuses:
-     open, fixed, verified, waived, disputed. Each finding keeps its history.
-   - **`athel review save CHG TASK -`:**
-     - round N+1 must carry forward every open finding of round N;
-     - only the reviewer moves a finding to `verified`;
-     - the developer marks it `fixed` with a commit, or `disputed` with a reason.
-   - **Limits:**
-     - round 6 raises an A6 card;
-     - a third identical gate failure in a row raises a card;
-     - two rounds of dispute on one finding raise a card with both arguments.
-   - **`done` is refused** while a blocker or major finding is open (task 10 calls the
-     check). The `review` gate (never waivable) reads it.
-2. Then task 09 (waivers, `/athel:waive`), 10 (build engine and `pr ready`), 11 (side
+1. **Task 09** on `feat/m4-waivers`, branched from `feat/m4-review`. It covers
+   FR-BUILD-014:
+   - **`/athel:waive CHG <gate|finding> --task T-NN --reason … --until YYYY-MM-DD`** is a
+     human-origin grant, the ADR 019 pattern: a new skill, the classifier marks
+     `athel gate waive` as human-only, and the hook creates the grant;
+   - **`athel gate waive`** records `change.yaml waivers[]` (`change@4` gets a typed waiver
+     record, changed in place since it is unreleased);
+   - **refused:** a never-waivable gate (build, unit, types, format, contract, migration,
+     review, ac-tests); a missing reason; an expiry in the past or more than 30 days ahead;
+     `security-scan` waived by anyone but the security owner (`config security_owner`); a
+     blocker finding;
+   - **waived gates count as passing** in `gate run` while the waiver holds; an expired
+     waiver stops counting; a waived major finding is set `waived` in the latest round;
+   - the PR body lists every waiver.
+2. Then task 10 (build engine and `pr ready`), 11 (side
    findings), 12 (agents and policy), 13 (skills), 14 (network-deny test), 15–16 (evals: paid,
    so ask first), 17 (report).
 
