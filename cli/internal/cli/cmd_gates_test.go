@@ -37,9 +37,14 @@ func goGates(t *testing.T) (*harness, string) {
 	h.mustOK("git", "preflight", "CHG-001", "users")
 	h.mustOK("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "preflight clear")
 	bin := t.TempDir()
-	lint := "#!/bin/sh\necho 'main.go:1:1: old finding (gosec)'\nif [ -f src/bad.go ]; then echo 'src/bad.go:3:1: new finding (revive)'; fi\nexit 1\n"
-	if err := os.WriteFile(filepath.Join(bin, "golangci-lint"), []byte(lint), 0o700); err != nil {
-		t.Fatal(err)
+	lint := "#!/bin/sh\necho 'main.go:1:1: old finding (gosec)'\nif [ -f src/bad.go ]; then echo 'src/bad.go:3:1: new finding (revive)'; fi\n" +
+		"if [ -f src/unsafe.go ]; then echo 'src/unsafe.go:5:2: G404: weak random number generator (gosec)'; fi\nexit 1\n"
+	vuln := "#!/bin/sh\nif grep -q evil go.sum 2>/dev/null; then echo 'Vulnerability #1: GO-2026-0001'; exit 3; fi\n" +
+		"if grep -q broken go.sum 2>/dev/null; then echo 'network down' >&2; exit 1; fi\necho 'No vulnerabilities found.'\n"
+	for name, script := range map[string]string{"golangci-lint": lint, "govulncheck": vuln} {
+		if err := os.WriteFile(filepath.Join(bin, name), []byte(script), 0o700); err != nil {
+			t.Fatal(err)
+		}
 	}
 	cache, err := exec.Command("go", "env", "GOCACHE").Output()
 	if err != nil {
@@ -281,7 +286,7 @@ func TestGateFullStage(t *testing.T) {
 			t.Fatalf("%v %s", err, out)
 		}
 	}
-	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 10 {
+	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 11 {
 		t.Fatalf("a tested, simple change is green on the full stage: %v", run)
 	}
 	untested := "package src\n\n// Sub subtracts.\nfunc Sub(a, b int) int {\n\tc := a - b\n\tc++\n\tc--\n\treturn c\n}\n"
@@ -431,5 +436,41 @@ func TestGateMutation(t *testing.T) {
 	}
 	if show := asJSON(t, h.mustOK("gate", "show", "CHG-001", "T-01")); !strings.Contains(show, "survived: src/big.go line 5: \\u003e to \\u003e=") {
 		t.Errorf("the surviving mutant is named: %s", show)
+	}
+}
+
+// TestGateSecurityScan (doc 06): a new gosec finding, a secret that slipped past the hooks and a
+// vulnerable dependency each fail the scan; findings already on base do not.
+func TestGateSecurityScan(t *testing.T) {
+	h, tree := goGates(t)
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	changes := []struct{ file, body string }{
+		{"src/unsafe.go", "package src\n\nimport \"math/rand\"\n\n// N is random.\nfunc N() int { return rand.Int() }\n"},
+		{"src/key.go", "package src\n\n// Token is a secret.\nconst Token = \"ghp_0123456789abcdefghijABCDEFGHIJ012345\"\n"},
+		{"go.sum", "example.com/evil v1.0.0 h1:abc=\n"},
+	}
+	for _, c := range changes {
+		if out, err := commit(t, h, tree, c.file, c.body, goodMsg, "--no-verify"); err != nil {
+			t.Fatalf("%v %s", err, out)
+		}
+	}
+	_, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
+	if !strings.Contains(asJSON(t, env), "security-scan fail: security findings the security owner must see") {
+		t.Fatalf("%v", env)
+	}
+	show := asJSON(t, h.mustOK("gate", "show", "CHG-001", "T-01"))
+	for _, want := range []string{"new SAST finding: src/unsafe.go:5:2: G404", "secret in the added lines of src/key.go (github-token)", "vulnerable dependency: Vulnerability #1: GO-2026-0001"} {
+		if !strings.Contains(show, want) {
+			t.Errorf("evidence lacks %q", want)
+		}
+	}
+	if strings.Contains(show, "new SAST finding: main.go") || strings.Contains(show, "ghp_") {
+		t.Errorf("a finding on base is not new, and a secret is never quoted: %s", show)
+	}
+	if out, err := commit(t, h, tree, "go.sum", "example.com/broken v1.0.0 h1:abc=\n", goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	if _, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01"); !strings.Contains(asJSON(t, env), "security-scan unavailable: a dependency changed and the audit could not run") {
+		t.Errorf("an audit that cannot run is unavailable, never green: %v", env)
 	}
 }

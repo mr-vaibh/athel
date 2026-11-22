@@ -97,9 +97,10 @@ func remoteShell(name string, cmd shellparse.Command) Action {
 
 // pkgRule says which subcommands of a package tool publish (W3) and which only read (R0).
 type pkgRule struct {
-	publish []string
-	read    []string
-	unknown bool // runs an arbitrary package
+	publish    []string
+	read       []string
+	unknown    bool // runs an arbitrary package
+	remoteRead bool // only reads from the network (a vulnerability database)
 }
 
 var nodePM = pkgRule{publish: []string{"publish", "deprecate", "unpublish", "dist-tag", "owner", "token", "access"},
@@ -121,6 +122,9 @@ var pkgRules = map[string]pkgRule{
 	// in the folder they run in.
 	"gofmt": {}, "goimports": {}, "staticcheck": {},
 	"golangci-lint": {read: []string{"version", "help", "linters"}},
+	// govulncheck reads Go's vulnerability database at vuln.go.dev (owner's Q3, ADR 023
+	// follow-up); nothing else.
+	"govulncheck": {remoteRead: true},
 }
 
 // packageCommand classifies build tools and package managers: installs and builds stay local
@@ -137,6 +141,8 @@ func packageCommand(name string, cmd shellparse.Command) (Action, bool) {
 	}
 	a := Action{Tool: name, Verb: sub, Text: text(cmd), Tier: W0}
 	switch {
+	case rule.remoteRead:
+		a.Tier, a.Remote = R1, true
 	case rule.unknown:
 		a.Uncertain = UnknownCommand
 	case slices.Contains(rule.publish, sub):
