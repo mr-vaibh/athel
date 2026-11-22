@@ -11,6 +11,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      # Tests run Go on fixture repos; Go must never download a toolchain (no network in tests).
+      GOTOOLCHAIN: local
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
