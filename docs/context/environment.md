@@ -16,6 +16,8 @@ There is no project-local toolchain and no environment script: plain `go`, `gh` 
 | gh | 2.103.3 | `brew upgrade gh` | Any 2.x works |
 | git | 2.50.1 (Apple Git-155) | pre-installed | |
 | Claude Code | 2.1.311 | pre-installed | For live plugin checks (`claude --plugin-dir ./plugin`) |
+| PostgreSQL | 17.9 | `brew install postgresql@17` (already present) | M4 migration gate (owner approved 2026-11-14, Q2). Tests start a throwaway server with `initdb` and `pg_ctl` in a temp folder, never the system one |
+| govulncheck | 1.9.0 | `go install golang.org/x/vuln/cmd/govulncheck@v1.9.0` | M4 dependency audit (owner approved 2026-11-14, Q3). It may reach only `vuln.go.dev`, Go's official vulnerability database |
 
 Homebrew verifies each bottle's SHA-256 against the formula before installing.
 
@@ -41,6 +43,8 @@ local one too (`brew upgrade golangci-lint`), or lint results can differ between
 
 ```sh
 brew install go golangci-lint gh        # Go latest stable; golangci-lint v2 (match CI's pin)
+brew install postgresql@17              # M4 migration gate (tests only)
+go install golang.org/x/vuln/cmd/govulncheck@v1.9.0   # M4 dependency audit
 gh auth login && gh auth setup-git     # an account with write access to mr-vaibh/athel
 git clone https://github.com/mr-vaibh/athel.git && cd athel
 git config user.name "mr-vaibh" && git config user.email "shuklavaibhav336@gmail.com"
