@@ -13,9 +13,9 @@ import (
 // goGates is a building change on users, whose base is a small Go module with a passing test,
 // with one commit on Athel's branch: a test naming AC-1, the AC its task covers. A scripted
 // golangci-lint is on PATH: one old finding always, and a new one when src/bad.go exists.
-func goGates(t *testing.T) (*harness, string) {
+func goGates(t *testing.T, plan ...string) (*harness, string) {
 	t.Helper()
-	h, src, git := approvedOnUsersRemote(t)
+	h, src, git := approvedOnUsersRemote(t, plan...)
 	h.exe = athelBinary(t)
 	mate := teammate(t, src, git)
 	for file, body := range map[string]string{
@@ -286,7 +286,7 @@ func TestGateFullStage(t *testing.T) {
 			t.Fatalf("%v %s", err, out)
 		}
 	}
-	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 11 {
+	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 12 {
 		t.Fatalf("a tested, simple change is green on the full stage: %v", run)
 	}
 	untested := "package src\n\n// Sub subtracts.\nfunc Sub(a, b int) int {\n\tc := a - b\n\tc++\n\tc--\n\treturn c\n}\n"
@@ -472,5 +472,42 @@ func TestGateSecurityScan(t *testing.T) {
 	}
 	if _, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01"); !strings.Contains(asJSON(t, env), "security-scan unavailable: a dependency changed and the audit could not run") {
 		t.Errorf("an audit that cannot run is unavailable, never green: %v", env)
+	}
+}
+
+// TestGatePerformance (doc 06): a task whose risk_notes name a latency budget must add a
+// benchmark, and every benchmark of its packages must be within the budget.
+func TestGatePerformance(t *testing.T) {
+	h, tree := goGates(t, "covers: [AC-1]", "covers: [AC-1], risk_notes: \"latency budget 50ms\"")
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	if _, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01"); !strings.Contains(asJSON(t, env), "performance fail: no changed Go package to benchmark against the budget 50ms") {
+		t.Errorf("a budgeted task with no Go change yet: %v", env)
+	}
+	if out, err := commit(t, h, tree, "src/fast.go", "package src\n\n// Fast is quick.\nfunc Fast() int { return 1 }\n", goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	if _, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01"); !strings.Contains(asJSON(t, env), "performance fail: no benchmark in ./src") {
+		t.Errorf("a budgeted task without a benchmark: %v", env)
+	}
+	bench := "package src\n\nimport (\n\t\"testing\"\n\t\"time\"\n)\n\nfunc BenchmarkFast(b *testing.B) {\n\tfor range b.N {\n\t\tFast()\n\t}\n}\n\n" +
+		"func BenchmarkSlow(b *testing.B) {\n\tfor range b.N {\n\t\ttime.Sleep(80 * time.Millisecond)\n\t}\n}\n\nfunc TestFast(t *testing.T) { Fast() }\n"
+	if out, err := commit(t, h, tree, "src/fast_test.go", bench, goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	_, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
+	if !strings.Contains(asJSON(t, env), "performance fail: over the latency budget 50ms") {
+		t.Errorf("a benchmark over the budget: %v", env)
+	}
+	if show := asJSON(t, h.mustOK("gate", "show", "CHG-001", "T-01")); !strings.Contains(show, "BenchmarkSlow takes") || strings.Contains(show, "BenchmarkFast takes") {
+		t.Errorf("only the slow benchmark is named: %s", show)
+	}
+}
+
+func TestGateSmallHelpers(t *testing.T) {
+	if cmpOr("LOW", "x") != "LOW" || cmpOr("", "x") != "x" {
+		t.Error("cmpOr")
+	}
+	if (&helpError{text: "usage"}).Error() != "usage" {
+		t.Error("helpError")
 	}
 }
