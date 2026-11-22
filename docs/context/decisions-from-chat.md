@@ -76,3 +76,4 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-21 | Round 4 (the last pre-approved): all 9 build runs, only the 6 cut off by the usage limit, or wait? | "Yes, all 9" | Build full 4; EVALS.md |
 | 2026-11-23 | Build eval stands at 4 of 9 valid, with 3 runs lost to the usage limit. Spend more on runs? | "Re-run event-name-field": only its 3 runs, about $20–30 | Build full 5 (event-name-field only); EVALS.md |
 | 2026-11-23 | Merge #77–#111 into main in order once checks are green: now, after the runs, or not yet? | "Merge after the runs": merge #77–#111 in order, checks green, once the event-name-field re-run is in and any fixes it needs have landed in the stack | HANDOFF |
+| 2026-11-23 | M4: EC-2 met, EC-1 6 of 9 (bar every run). Close how? | "One fix pass + 9 runs": fix side-finding filing and late-round minor findings, then one full build run of 9 (about $50–70) | M4-report §7; next M4 fix branch |
