@@ -59,3 +59,22 @@ func Plan(repo string, paths, verbs []string) string {
 		"  - {id: T-01, title: phone validation, repo: " + repo + ", kind: internal, paths: [\"" + strings.Join(paths, `", "`) + "\"], verbs: [" +
 		strings.Join(verbs, ", ") + "], covers: [AC-1], depends_on: [], size: S, gates: []}\n"
 }
+
+// Preflight is a clean git preflight report (preflight@1) for repo in CHG-001, planned at
+// paths. Suites whose worktree is a plain folder, with no remote or gh to run `athel git
+// preflight` against, write it to .athel/changes/CHG-001/preflight/<repo>.md so the building
+// guard sees a preflight; the guard still validates it.
+func Preflight(repo string, paths []string) string {
+	return "# Preflight: " + repo + " (CHG-001)\n\n**Clear:** no one else's open work touches the planned paths.\n\n## Report\n\n```yaml\n" +
+		"schema: athel/preflight@1\nchange: CHG-001\nrepo: " + repo + "\nremote: example.invalid/acme/" + repo + "\nbase: main\n" +
+		"base_head: \"" + strings.Repeat("0", 40) + "\"\nbranch: athel/CHG-001-test\nat: \"2026-11-14T12:00:00.000Z\"\n" +
+		"planned_paths: [" + strings.Join(quoted(paths), ", ") + "]\nopen_prs: []\nbranches: []\nrecent_commits: []\noverlaps: []\nclean: true\ncard: null\n```\n"
+}
+
+func quoted(list []string) []string {
+	out := make([]string, len(list))
+	for i, s := range list {
+		out[i] = `"` + s + `"`
+	}
+	return out
+}

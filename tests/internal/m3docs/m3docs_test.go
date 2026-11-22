@@ -46,3 +46,22 @@ func TestShellMirrorsGo(t *testing.T) {
 		}
 	}
 }
+
+func TestPreflightReport(t *testing.T) {
+	md := Preflight("svc", []string{"src/**", "test/**"})
+	_, block, _ := strings.Cut(md, "```yaml\n")
+	block, _, _ = strings.Cut(block, "```")
+	var r struct {
+		Schema   string   `yaml:"schema"`
+		Repo     string   `yaml:"repo"`
+		BaseHead string   `yaml:"base_head"`
+		Paths    []string `yaml:"planned_paths"`
+		Clean    bool     `yaml:"clean"`
+	}
+	if err := yaml.Unmarshal([]byte(block), &r); err != nil {
+		t.Fatal(err)
+	}
+	if r.Schema != "athel/preflight@1" || r.Repo != "svc" || len(r.BaseHead) != 40 || strings.Join(r.Paths, ",") != "src/**,test/**" || !r.Clean {
+		t.Errorf("%+v", r)
+	}
+}
