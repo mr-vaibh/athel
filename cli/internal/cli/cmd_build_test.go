@@ -69,6 +69,7 @@ func TestBuildDone(t *testing.T) {
 	if errCode(env) != string(aerr.GateRed) || !strings.Contains(asJSON(t, env), "no full gate run") || !strings.Contains(asJSON(t, env), "the review is not done") {
 		t.Fatalf("not done yet: %v", env)
 	}
+	h.checked(t, "src/calc_test.go")
 	h.reviewRound(t, "verdict: approved\n")
 	h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01")
 	done := h.mustOK("build", "done", "CHG-001", "T-01")

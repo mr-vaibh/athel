@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mr-vaibh/athel/cli/internal/build"
 	"github.com/mr-vaibh/athel/cli/internal/state"
 )
 
@@ -90,13 +91,35 @@ func nextAction(c *state.Change, readOnly bool) string {
 				at += " (" + *cp.Note + ")"
 			}
 		}
+		if c.Step.Task != nil {
+			at += "; the task is " + *c.Step.Task + ", continue it with /athel:build " + c.ID
+		}
 		return fmt.Sprintf("continue step %s (attempt %d) from %s", c.Step.Name, c.Step.Attempt, at)
+	}
+	if a := shipAction(c); a != "" {
+		return a
 	}
 	next := make([]string, 0)
 	for _, s := range state.NextStates(c) {
 		next = append(next, string(s))
 	}
 	return fmt.Sprintf("%s is %s with no step running; next allowed states: %s", c.ID, c.State, strings.Join(next, ", "))
+}
+
+// shipAction is the next action of a change being built or shipped, or "".
+func shipAction(c *state.Change) string {
+	switch c.State {
+	case state.Building:
+		for _, t := range c.Build {
+			if t.Status == build.InProgress {
+				return "task " + t.ID + " is in progress: continue it with /athel:build " + c.ID
+			}
+		}
+		return "continue building with /athel:build " + c.ID + "; when every task is done, /athel:ship " + c.ID
+	case state.ReadyForPR:
+		return "ship it with /athel:ship " + c.ID
+	}
+	return ""
 }
 
 func otherActive(s *state.Store, id string) ([]changeSummary, error) {

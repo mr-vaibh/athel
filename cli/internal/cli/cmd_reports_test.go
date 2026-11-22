@@ -6,7 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mr-vaibh/athel/cli/internal/build"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/state"
 )
 
 const qaReport = `cases:
@@ -110,6 +112,77 @@ func TestReportTemplates(t *testing.T) {
 		code, out, _ := h.run(kind, "template")
 		if code != 0 || !strings.Contains(out, want) {
 			t.Errorf("%s template: %d %s", kind, code, out)
+		}
+	}
+}
+
+// checked saves a clean QA report (its case in testFile, a test file the task changed) and a
+// clean security report, as the checkers do each round.
+func (h *harness) checked(t *testing.T, testFile string) {
+	t.Helper()
+	h.report(t, "qa", "cases: [{category: boundary, file: "+testFile+", name: TestEdge, result: pass}]\nsuite: {command: go test ./..., result: pass}\ngaps: []\nfindings: []\n")
+	h.report(t, "security", "checked: [input validation]\nfindings: []\n")
+}
+
+// TestDoneNeedsBothReports: QA and security check every review round, so a task is done only
+// with a report from each for each round (doc 06 step 5).
+func TestDoneNeedsBothReports(t *testing.T) {
+	h, tree := goGates(t)
+	h.mustOK("state", "enter", "CHG-001", "build", "--task", "T-01")
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	if out, err := commit(t, h, tree, "src/edge_test.go", "package src\n", goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	h.report(t, "qa", "cases: [{category: boundary, file: src/edge_test.go, name: TestEdge, result: pass}]\nsuite: {command: go test ./..., result: pass}\ngaps: []\nfindings: []\n")
+	h.reviewRound(t, "verdict: approved\n")
+	h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01")
+	if _, env := h.runJSON("build", "done", "CHG-001", "T-01"); !strings.Contains(asJSON(t, env), "security has reported for 0 of 1 review rounds") || strings.Contains(asJSON(t, env), "QA has") {
+		t.Errorf("security never reported: %v", env)
+	}
+	h.report(t, "security", "checked: [input validation]\nfindings: []\n")
+	h.mustOK("build", "done", "CHG-001", "T-01")
+}
+
+// TestReadyNeedsNoBlastDrift (FR-BLAST-001/005): the change is ready for PR only when its real
+// diff stays inside the planned blast radius; without a planned report there is nothing to
+// compare against, so that refuses too.
+func TestReadyNeedsNoBlastDrift(t *testing.T) {
+	h, tree := goGates(t)
+	ready := func() string {
+		_, env := h.runJSON("state", "transition", "CHG-001", "--to", "ready_for_pr", "--by", "athel", "--reason", "r")
+		return asJSON(t, env)
+	}
+	if out := ready(); !strings.Contains(out, "has no blast-radius.md") {
+		t.Errorf("no planned report: %s", out)
+	}
+	h.stdin = plannedBlast()
+	h.mustOK("blast", "save", "--change", "CHG-001", "-")
+	h.stdin = ""
+	if out, err := commit(t, h, tree, "src/topic.go", "package src\n\nconst Topic = \"users.updated.v9\"\n", goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	if out := ready(); !strings.Contains(out, "users changes what the planned blast radius does not name (event users.updated.v9") {
+		t.Errorf("an unplanned event: %s", out)
+	}
+}
+
+// TestResumeInsideATask: a new session learns which task to continue and with which skill.
+func TestResumeInsideATask(t *testing.T) {
+	task := "T-02"
+	cases := []struct {
+		c    state.Change
+		want string
+	}{
+		{state.Change{ID: "CHG-001", State: state.Building, Step: &state.Step{Name: "build", Task: &task, Status: state.StepRunning, Attempt: 1}},
+			"the task is T-02, continue it with /athel:build CHG-001"},
+		{state.Change{ID: "CHG-001", State: state.Building, Build: []build.Task{{ID: "T-01", Status: build.Done}, {ID: "T-03", Status: build.InProgress}}},
+			"task T-03 is in progress: continue it with /athel:build CHG-001"},
+		{state.Change{ID: "CHG-001", State: state.Building}, "continue building with /athel:build CHG-001"},
+		{state.Change{ID: "CHG-001", State: state.ReadyForPR}, "ship it with /athel:ship CHG-001"},
+	}
+	for _, c := range cases {
+		if got := nextAction(&c.c, false); !strings.Contains(got, c.want) {
+			t.Errorf("%s: %q", c.want, got)
 		}
 	}
 }
