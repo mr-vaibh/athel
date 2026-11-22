@@ -1,0 +1,12 @@
+# A side finding, as any agent records it with `athel finding add CHG-NNN -`: a problem you
+# noticed outside your task's scope. Never fix it inside the change; the developer decides at
+# PR time. The CLI gives it its ID (SF-n).
+found_by: reviewer                # the role that noticed it
+found_in: {step: build, task: T-02}
+location: internal/library/export.go:88-97
+category: reliability             # bug | security | performance | reliability | dead-code | dependency | test-gap | docs
+severity: medium                  # critical | high | medium | low
+effort: S                         # S under 30 lines, M under 150, L larger
+fix_risk: low                     # low | medium | high
+evidence: The CSV export loads every loan into memory before writing; it ran out of memory on 2 million rows.
+suggested_fix: Stream rows to the writer in batches of 1000.

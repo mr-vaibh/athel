@@ -92,7 +92,11 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "scout": {"description": "Model of the scout subagent (M2 plan Q5).", "enum": ["haiku", "sonnet", "opus", "inherit"]}
+        "scout": {"description": "Model of the scout subagent (M2 plan Q5).", "enum": ["haiku", "sonnet", "opus", "inherit"]},
+        "developer": {"description": "Model of the developer subagent (M4; doc 06: the strongest tier).", "enum": ["haiku", "sonnet", "opus", "inherit"]},
+        "qa": {"description": "Model of the QA subagent (M4).", "enum": ["haiku", "sonnet", "opus", "inherit"]},
+        "security": {"description": "Model of the security subagent (M4).", "enum": ["haiku", "sonnet", "opus", "inherit"]},
+        "reviewer": {"description": "Model of the reviewer subagent (M4; doc 06: may differ from the developer's for independence).", "enum": ["haiku", "sonnet", "opus", "inherit"]}
       }
     }
   }

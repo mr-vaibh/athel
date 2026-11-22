@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/quality"
 )
 
 // SchemaID is a round file's format.
@@ -147,6 +148,8 @@ func checkDraft(d Draft) error {
 		return invalid("source is one of " + strings.Join(sources, ", "))
 	case d.Location == "" || d.Rule == "" || d.Finding == "" || d.Required == "":
 		return invalid("every finding has a location, a rule, the finding and the required fix or question (FR-BUILD-007)")
+	case !quality.Known(d.Rule):
+		return invalid(d.Rule + " is not a rule of the code quality standard; athel review rules lists them")
 	}
 	return nil
 }

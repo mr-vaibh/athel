@@ -60,6 +60,10 @@ func (r *runCtx) editFindings(id string, fn func(f *findings.File) error) error 
 	return err
 }
 
+func cmdFindingTemplate(r *runCtx, args []string) (any, error) {
+	return printTemplate(r, args, "finding template", string(findings.Template))
+}
+
 // cmdFindingAdd records a side finding read from a file or stdin.
 func cmdFindingAdd(r *runCtx, args []string) (any, error) {
 	pos, err := parse(r.newFlags("finding add"), args, 2)

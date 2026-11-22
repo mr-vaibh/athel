@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/quality"
 )
 
 // Schema IDs.
@@ -185,6 +186,8 @@ func checkFindings(kind string, fs []Finding, cwe bool) error {
 			return invalid(kind, "every security finding names its CWE category, like CWE-89")
 		case f.Location == "" || f.Rule == "" || f.Finding == "" || f.Required == "":
 			return invalid(kind, "every finding has a location, a rule, the finding and the required fix")
+		case !quality.Known(f.Rule):
+			return invalid(kind, f.Rule+" is not a rule of the code quality standard; athel review rules lists them")
 		}
 	}
 	return nil

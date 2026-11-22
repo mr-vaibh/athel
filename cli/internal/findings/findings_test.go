@@ -1,8 +1,11 @@
 package findings
 
 import (
+	"bytes"
 	"strings"
 	"testing"
+
+	"go.yaml.in/yaml/v3"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 )
@@ -97,5 +100,17 @@ func TestPresentation(t *testing.T) {
 	}
 	if got := (&File{}).Summary(); got != "No issues found outside this change." {
 		t.Errorf("%q", got)
+	}
+}
+
+func TestTemplateIsAValidDraft(t *testing.T) {
+	dec := yaml.NewDecoder(bytes.NewReader(Template))
+	dec.KnownFields(true)
+	var d Draft
+	if err := dec.Decode(&d); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (&File{}).Add(d); err != nil {
+		t.Error(err)
 	}
 }

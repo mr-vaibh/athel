@@ -25,7 +25,9 @@ var schemaVocabulary = []string{"touches_auth_payments_pii"}
 func TestPluginNeverHintsAtTheFixture(t *testing.T) {
 	roots := []string{"../../../plugin/agents", "../../../plugin/skills", "../../../cli/internal/investigation/template.yaml",
 		"../../../cli/internal/spec/template.yaml", "../../../cli/internal/decisions/template.yaml", "../../../cli/internal/plan/template.yaml",
-		"../../../cli/internal/prd/review_template.yaml", "../../../cli/internal/blast/template.yaml"}
+		"../../../cli/internal/prd/review_template.yaml", "../../../cli/internal/blast/template.yaml",
+		// M4: the build roles' templates.
+		"../../../cli/internal/review/template.yaml", "../../../cli/internal/reports", "../../../cli/internal/findings/template.yaml"}
 	for _, root := range roots {
 		err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {

@@ -12,6 +12,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/decisions"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/gates"
+	"github.com/mr-vaibh/athel/cli/internal/quality"
 	"github.com/mr-vaibh/athel/cli/internal/review"
 )
 
@@ -20,6 +21,14 @@ import (
 
 func cmdReviewTemplate(r *runCtx, args []string) (any, error) {
 	return printTemplate(r, args, "review template", string(review.Template))
+}
+
+// cmdReviewRules lists the code quality standard's rule IDs that findings cite (doc 06).
+func cmdReviewRules(r *runCtx, args []string) (any, error) {
+	if _, err := parse(r.newFlags("review rules"), args, 0); err != nil {
+		return nil, err
+	}
+	return quality.Rules, nil
 }
 
 // latestRound reads a task's newest round, or nil before the first.
