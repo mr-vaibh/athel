@@ -141,3 +141,30 @@ func TestUpdateBuild(t *testing.T) {
 		t.Errorf("fn's error: %v", err)
 	}
 }
+
+func TestNoteStopBlock(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "x")
+	for want := 1; want <= 2; want++ {
+		if n, err := s.NoteStopBlock(c.ID, testSession); err != nil || n != want {
+			t.Fatalf("block %d: %d %v", want, n, err)
+		}
+	}
+	if _, err := s.NoteStopBlock(c.ID, ""); !aerr.HasCode(err, aerr.StateNoSession) {
+		t.Errorf("no session: %v", err)
+	}
+	if _, err := s.NoteStopBlock(c.ID, "other"); !aerr.HasCode(err, aerr.StateLockHeld) {
+		t.Errorf("another session: %v", err)
+	}
+}
+
+func TestFrozen(t *testing.T) {
+	c := &Change{ID: "CHG-001"}
+	if c.Frozen() != nil {
+		t.Error("an untouched change is not frozen")
+	}
+	c.tampered = true
+	if err := c.Frozen(); !aerr.HasCode(err, aerr.IntegrityState) {
+		t.Errorf("%v", err)
+	}
+}

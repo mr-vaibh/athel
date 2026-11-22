@@ -58,6 +58,15 @@ func verify(c *Change, data []byte, unsealed bool) error {
 // Tampered reports whether change.yaml was edited outside the CLI since its last write.
 func (c *Change) Tampered() bool { return c.tampered }
 
+// Frozen is the error for a change edited outside the CLI, or nil: callers that judge a change's
+// content (step guards) check it first, so a hand edit is never judged as if it were Athel's.
+func (c *Change) Frozen() error {
+	if !c.tampered {
+		return nil
+	}
+	return tamperedError(c)
+}
+
 func tamperedError(c *Change) error {
 	return aerr.New(aerr.IntegrityState, "change.yaml of "+c.ID+" was edited outside the athel CLI; it is frozen until the developer reviews it").
 		WithNextAction("review the file, then run `athel integrity accept " + c.ID + " --reason \"...\"` in a terminal")

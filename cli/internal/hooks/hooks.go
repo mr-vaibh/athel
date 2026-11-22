@@ -28,6 +28,7 @@ const (
 	RuleLogOnly   = "log-only"
 	RuleScrub     = "scrub"
 	RuleGrant     = "grant"
+	RuleStopBlock = "stop-block" // M4: the build step's task is unfinished
 )
 
 // StopBlockLimit is doc 02's limit: after 3 blocked stops the step moves to blocked.
@@ -281,12 +282,16 @@ func sessionEnd(req *hookio.Request, d Deps) Outcome {
 	return o
 }
 
-// stop logs only in M0. ShouldBlockStop carries the loop protection M1+ gates will use.
+// stop keeps the session working while its build step's task is unfinished (doc 06 build loop
+// step 7: "the Stop hook refuses to end the step while the task is neither done nor blocked"),
+// and checks the scout's save.
 func stop(req *hookio.Request, d Deps) Outcome {
 	o := Outcome{Rule: RuleLogOnly, Result: "ok", Change: activeChange(d, req.SessionID)}
-	o.Response.BlockStop = ShouldBlockStop(req, false, 0)
-	if req.Event == hookio.SubagentStop && req.AgentType == hookio.ScoutAgent {
+	switch {
+	case req.Event == hookio.SubagentStop && req.AgentType == hookio.ScoutAgent:
 		scoutStop(req, d, &o)
+	case req.Event == hookio.Stop:
+		buildStop(req, d, &o)
 	}
 	return o
 }
