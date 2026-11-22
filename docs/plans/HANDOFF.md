@@ -1,10 +1,12 @@
 # HANDOFF
 
-Last updated: 2026-11-11, session 4 (M2 merged; M3 full run 1 recorded), on the owner's personal machine. Tools
+Last updated: 2026-11-14, session 4 (M3 merged; M4 approved and started), on the owner's personal machine. Tools
 are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Where we are
 
+- **M3 Specify: done and merged** (PRs #60–#76, 2026-11-12; `main` CI green at `9339c36`). Exit
+  criteria met: 9/9 eval runs valid, blast recall 100% (`docs/plans/M3-report.md`).
 - **M0 Skeleton, M1 Guardrails, M2 Understand: done and merged into `main`.**
   - M0 and M1: PRs #1–#42.
   - M2: PRs #43–#58, merged 2026-11-10 in order with merge commits; `main` CI green at
@@ -39,44 +41,29 @@ are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Exact next step
 
-M3 is approved (2026-11-10) and being built as stacked PRs on `docs/m3-plan` (#60):
+M4 Build is **approved** (2026-11-14, `docs/plans/M4-plan.md`, with Q1–Q4 answered: budget OK,
+PostgreSQL yes, `govulncheck` limited to `vuln.go.dev`, and the live GitHub check and dogfooding
+yes in principle, asked again before each). It is built as stacked PRs, one per task of
+M4-plan §9:
 
-| Task | Branch | PR |
-|---|---|---|
-| plan | `docs/m3-plan` | #60 (base main) |
-| 00 gateway-trap hint | `feat/m3-eval-carry` | #61 |
-| 01 new schemas | `feat/m3-schemas` | #62 |
-| 02 PRD intake | `feat/m3-prd` | #63 |
-| 03 decision cards | `feat/m3-decisions` | #64 |
-| 04 /athel:decide (ADR 019) | `feat/m3-decide-human` | #65 |
-| 05 specs | `feat/m3-spec` | #66 |
-| 06 conventions | `feat/m3-conventions` | #67 |
-| 07 plan@2 and lints (ADR 020) | `feat/m3-plan-lints` | #68 |
-| 08 trace and step guards (ADR 021) | `feat/m3-trace` | #69 |
-| 08b fixture: eval PRDs, table sizes, prepared branches | `feat/m3-fixture` | #70 |
-| 09 planned blast, /athel:signoff | `feat/m3-blast-planned` | #71 |
-| 10 actual blast from the diff (ADR 022) | `feat/m3-blast-actual` | #72 |
-| 11a architect agent, read-only policy, templates | `feat/m3-architect-policy` | #73 |
-| 11b skills spec, decide, plan, signoff; status cards | `feat/m3-skills` | #74 |
-| 13 M3 eval harness, plus fixes the smoke runs found (review and blast templates, draft errors, sandbox SSH mapping, E.164 split, architect maxTurns 60) | `feat/m3-evals` | #75 |
-| 14 M3 report, ROADMAP | `docs/m3-report` | #76 |
-
-Paid runs so far (each approved by the owner; details in `EVALS.md`): smokes 1–3 not valid,
-and each found a cause that was fixed; smoke 4 valid ($3.70). Smokes total $12.11. Full run 1
-($28.27): 8 of 9 valid, so EC-1 is not met; blast recall 100%, so EC-2 is met. The failed run's
-cause (a card option "re-investigate first", which no lifecycle step can follow) is fixed in
-the architect's instructions at `0e7ee85`. Card precision is 20%, reported only. Total paid
-for M3 so far: $40.38.
+| Task | Branch | PR | Status |
+|---|---|---|---|
+| plan | `docs/m4-plan` | #77 (base main) | open |
+| 00a buildable Go fixture repos | `feat/m4-fixture-build` | #78 | open, gate green |
+| 00b fake GitHub PR store and call log | `feat/m4-fixture-prs` | #79 | open, gate green |
+| 01 worktrees, `change@4`, `OwnBranches` | `feat/m4-worktrees` | — | **next** |
+| 02–17 | see M4-plan §9 | — | not started |
 
 Next:
-1. 13: **done.** Full run 2 met the M3 eval bar: 9/9 valid, blast recall 100%, $29.74
-   (`EVALS.md`). Card over-asking is in the backlog for M4.
-2. 14: **done**: `docs/plans/M3-report.md`, ROADMAP updated, branch `docs/m3-report` (PR #76, base `feat/m3-evals`).
-3. **Done 2026-11-12:** the owner accepted M3; #60–#76 merged in order with merge commits; `main` CI green at `9339c36`. Next: the M4 plan (`docs/plans/M4-plan.md`, PR on `docs/m4-plan`) awaits the owner's review and answers to Q1–Q4. Build nothing in M4 before approval.
-
-M2 eval run 5 is done and recorded in `EVALS.md`: 51/54 valid, traps 27/27, labels 90.5%. Its
-last 6 sessions hit the usage limit and are excluded. Lesson: check the account's remaining
-usage before a paid run.
+1. **Task 01** on `feat/m4-worktrees`, branched from `feat/m4-fixture-prs`:
+   - a new package `internal/gitw` makes worktrees `workspace/repos/<repo>@<CHG>` from Athel's
+     cache clone (`repos.Cache`), never from the developer's clone;
+   - branch names come from `git.yaml` `branch_name`;
+   - `change@4` adds `repos[]` and `build.tasks[]`, with a `change@3` migration;
+   - `OwnBranches` in the engine context is filled from `change.yaml`;
+   - tests: `TestWorktreeFromCacheNotClone`, `TestDeveloperCloneUnchanged`.
+2. Continue the tasks in order, each its own PR stacked on the previous one.
+3. Paid evals only with the owner's go-ahead each time, smoke runs first.
 
 ## Open questions for the owner
 

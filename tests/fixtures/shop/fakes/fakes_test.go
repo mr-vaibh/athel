@@ -74,7 +74,7 @@ func TestShimCommands(t *testing.T) {
 		{"gh api repos/acme/orders/branches", 0, "main"},
 		{"gh api repos/acme/users/pulls", 1, "does not model"},
 		{"gh run list --repo acme/users", 0, "[]"},
-		{"gh pr merge 812", 1, "does not model"},
+		{"gh pr merge 812", 1, "never merges"},
 		{"praxis status", 0, "shop-fixture"},
 		{"praxis memory recall customer phone", 0, "users owns the customer phone"},
 		{"praxis memory list", 0, "Customer phone ownership"},
