@@ -286,7 +286,7 @@ func TestGateFullStage(t *testing.T) {
 			t.Fatalf("%v %s", err, out)
 		}
 	}
-	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 12 {
+	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 13 {
 		t.Fatalf("a tested, simple change is green on the full stage: %v", run)
 	}
 	untested := "package src\n\n// Sub subtracts.\nfunc Sub(a, b int) int {\n\tc := a - b\n\tc++\n\tc--\n\treturn c\n}\n"
@@ -509,5 +509,92 @@ func TestGateSmallHelpers(t *testing.T) {
 	}
 	if (&helpError{text: "usage"}).Error() != "usage" {
 		t.Error("helpError")
+	}
+}
+
+// lastResult is the named gate's result in a task's latest run.
+func lastResult(t *testing.T, h *harness, gate string) map[string]any {
+	t.Helper()
+	runs := h.mustOK("gate", "show", "CHG-001", "T-01")["runs"].([]any)
+	for _, r := range runs[len(runs)-1].(map[string]any)["results"].([]any) {
+		if m := r.(map[string]any); m["gate"] == gate {
+			return m
+		}
+	}
+	t.Fatalf("no %s result", gate)
+	return nil
+}
+
+// TestGateMigration runs a task's migrations up, down and up again on a throwaway PostgreSQL
+// (doc 06; never waivable), after the online-safety checks.
+func TestGateMigration(t *testing.T) {
+	h, tree := goGates(t)
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
+	if m := lastResult(t, h, "migration"); m["status"] != "skipped" {
+		t.Errorf("no migration, nothing to check: %v", m)
+	}
+	steps := []struct {
+		files  map[string]string
+		status string
+		detail string
+	}{
+		{map[string]string{"migrations/001_phones.up.sql": "CREATE TABLE phones (id text PRIMARY KEY);\n", "migrations/001_phones.down.sql": "DROP TABLE phones;\n"}, "pass", ""},
+		{map[string]string{"migrations/002_idx.up.sql": "CREATE INDEX phones_id ON phones (id);\n", "migrations/002_idx.down.sql": "DROP INDEX phones_id;\n"}, "fail", "without CONCURRENTLY"},
+		{map[string]string{"migrations/002_idx.up.sql": "SELECT 1;\n", "migrations/003_nodown.up.sql": "SELECT 1;\n"}, "fail", "003_nodown.up.sql has no down migration"},
+		{map[string]string{"migrations/003_nodown.down.sql": "SELECT 1;\n", "migrations/004_broken.up.sql": "CREATE TABLE (;\n", "migrations/004_broken.down.sql": "SELECT 1;\n"}, "fail", "004_broken.up.sql"},
+	}
+	for i, st := range steps {
+		for file, body := range st.files {
+			if out, err := commit(t, h, tree, file, body, goodMsg); err != nil {
+				t.Fatalf("%v %s", err, out)
+			}
+		}
+		h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
+		m := lastResult(t, h, "migration")
+		if m["status"] != st.status || !strings.Contains(asJSON(t, m["details"]), st.detail) {
+			t.Errorf("step %d: %v", i+1, m)
+		}
+	}
+}
+
+// pgStub is a folder with scripted initdb, pg_ctl and psql that exit with the given codes.
+func pgStub(t *testing.T, initdb, pgctl int) string {
+	t.Helper()
+	dir := t.TempDir()
+	for name, code := range map[string]int{"initdb": initdb, "pg_ctl": pgctl, "psql": 0} {
+		script := "#!/bin/sh\necho " + name + " ran\nexit " + itoa(code) + "\n"
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(script), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return dir
+}
+
+func TestPostgresHelpers(t *testing.T) {
+	stub := pgStub(t, 0, 0)
+	env := map[string]string{"PATH": stub}
+	r := &runCtx{env: Env{Getenv: func(k string) string { return env[k] }}}
+	if got := r.findPG(); got != stub {
+		t.Errorf("PATH first: %q", got)
+	}
+	env["PATH"], env["ATHEL_PG_BIN"] = "/nonexistent", stub
+	if got := r.findPG(); got != stub {
+		t.Errorf("then ATHEL_PG_BIN: %q", got)
+	}
+	for name, s := range map[string]string{"initdb": pgStub(t, 1, 0), "pg_ctl start": pgStub(t, 0, 1)} {
+		if _, err := r.startPG(s); err == nil || !strings.Contains(err.Error(), name) {
+			t.Errorf("%s failing: %v", name, err)
+		}
+	}
+	g := gateTask{dir: t.TempDir()}
+	if why := r.runMigrations(g, pgStub(t, 1, 0), []string{"migrations/001.up.sql"}); !strings.Contains(why, "initdb") {
+		t.Errorf("a database that cannot start: %q", why)
+	}
+	if got := r.staticMigrationChecks(g, []string{"migrations/missing.up.sql"}); len(got) != 1 || !strings.Contains(got[0], "no such file") {
+		t.Errorf("an unreadable migration is reported: %q", got)
+	}
+	if got := strings.Join(dirsOf([]string{"b/2.sql", "a/1.sql", "b/3.sql"}), ","); got != "a,b" {
+		t.Errorf("%q", got)
 	}
 }

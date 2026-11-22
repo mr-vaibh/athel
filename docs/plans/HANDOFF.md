@@ -61,32 +61,36 @@ M4-plan §9:
 | 06b contract and `ac-tests` gates, per-repo `gates.yaml` overrides | `feat/m4-gates-contract` | #87 | open, gate green |
 | 07a built-in Go mutation gate (HIGH and CRITICAL risk) | `feat/m4-gates-mutation` | #88 | open, gate green |
 | 07b security-scan gate | `feat/m4-gates-security` | #89 | open, gate green |
-| 07c performance gate (latency budget in `risk_notes`) | `feat/m4-gates-perf` | — | **next** |
-| 07d migration gate (static checks; up and down on a throwaway PostgreSQL) | — | — | not started |
-| 08–17 | see M4-plan §9 | — | not started |
+| 07c performance gate (latency budget in `risk_notes`) | `feat/m4-gates-perf` | #90 | open, gate green |
+| 07d migration gate (static checks; up, down, up on a throwaway PostgreSQL) | `feat/m4-gates-migration` | #91 | open, gate green (CI running) |
+| 08 review rounds: `review@1`, carry-forward, limits, disputes | `feat/m4-review` | — | **next** |
+| 09–17 | see M4-plan §9 | — | not started |
+
+CI passed on #77–#90 (checked 2026-11-14).
 
 Next:
-1. **Task 07c** on `feat/m4-gates-perf`, branched from `feat/m4-gates-security`: the
-   **performance** gate (full stage, waivable by a human):
-   - it applies only when the task's `risk_notes` names a latency budget, for example
-     "latency budget 200µs";
-   - it runs `go test -run '^$' -bench . -benchmem` on the packages of the changed files;
-   - every benchmark must be within the budget (ns/op);
-   - no benchmark in a budgeted package fails, because the task must add one.
-2. **Task 07d:** the **migration** gate (never waivable), when the diff adds migrations:
-   - static online-safety checks;
-   - up, down and up again on a throwaway PostgreSQL 17 (`initdb`, then `pg_ctl` on a Unix
-     socket in a temp folder, with no TCP).
+1. **Task 08** on `feat/m4-review`, branched from `feat/m4-gates-migration`. It covers
+   FR-BUILD-007/008/010 and doc 06 §Iterative review:
+   - **`review@1`** round files, `reviews/<task>/round-N.yaml`, using doc 06's finding format.
+     IDs are `R<round>-<n>` from the CLI. Sources: reviewer, security, qa, gate. Statuses:
+     open, fixed, verified, waived, disputed. Each finding keeps its history.
+   - **`athel review save CHG TASK -`:**
+     - round N+1 must carry forward every open finding of round N;
+     - only the reviewer moves a finding to `verified`;
+     - the developer marks it `fixed` with a commit, or `disputed` with a reason.
+   - **Limits:**
+     - round 6 raises an A6 card;
+     - a third identical gate failure in a row raises a card;
+     - two rounds of dispute on one finding raise a card with both arguments.
+   - **`done` is refused** while a blocker or major finding is open (task 10 calls the
+     check). The `review` gate (never waivable) reads it.
+2. Then task 09 (waivers, `/athel:waive`), 10 (build engine and `pr ready`), 11 (side
+   findings), 12 (agents and policy), 13 (skills), 14 (network-deny test), 15–16 (evals: paid,
+   so ask first), 17 (report).
 
-   PostgreSQL is found on PATH, in `ATHEL_PG_BIN`, or in standard install folders. CI needs
-   `ATHEL_PG_BIN` set, since Ubuntu runners have `/usr/lib/postgresql/*/bin`. These are
-   Athel's own throwaway database commands, not repo commands; record that as an ADR 023
-   follow-up.
-
-   Watch out: the `cli` package is at 90.3% and its tests take 5–8 minutes, so add a test with
-   every path.
-2. Continue the tasks in order, each its own PR stacked on the previous one.
-3. Paid evals only with the owner's go-ahead each time, smoke runs first.
+Coverage: the `cli` package is at 90.4% and its tests take about 6 minutes. A focused
+coverage push is due before M4 ends; list the weakest functions with
+`go tool cover -func` and test them.
 
 ## Open questions for the owner
 

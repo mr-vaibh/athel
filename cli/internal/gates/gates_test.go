@@ -15,7 +15,7 @@ func ids(gs []Gate) string {
 
 func TestDefaults(t *testing.T) {
 	g := Defaults(Go, nil)
-	if ids(g) != "format,lint,build,types,unit,ac-tests,security-scan,contract,coverage,complexity,mutation,performance" {
+	if ids(g) != "format,lint,build,types,unit,ac-tests,security-scan,contract,coverage,complexity,mutation,performance,migration" {
 		t.Fatalf("go gates in doc 06 order: %s", ids(g))
 	}
 	for i, gate := range g {
@@ -43,7 +43,7 @@ func TestNodeAndUnknownDefaults(t *testing.T) {
 		t.Errorf("node unit = %v", node[4].Command)
 	}
 	for _, gate := range Defaults("", nil) {
-		if gate.Available() != (gate.ID == "ac-tests" || gate.ID == "contract") {
+		if gate.Available() != (gate.ID == "ac-tests" || gate.ID == "contract" || gate.ID == "migration") {
 			t.Errorf("an unknown language has no default commands: %+v", gate)
 		}
 	}
