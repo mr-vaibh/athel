@@ -94,7 +94,7 @@ func readSkill(t *testing.T, name string) skill {
 
 // mutatingCommands are athel commands that change state; skills that run them must pass the
 // session so the CLI can take the change lock for it.
-var mutatingCommands = regexp.MustCompile(`athel [^\n` + "`" + `]*\b(change new|state (transition|enter|exit)|checkpoint set|lock (acquire|release|refresh)|budget add|resume|decide (add|record|present|answer|tick)|blast (save|signoff)|spec save|plan set|trace|conventions save|prd (index|review save|add-version)|gate (baseline|run|waive)|git (worktree|preflight|push)|pr (open|update)|review (save|fix|dispute))\b`)
+var mutatingCommands = regexp.MustCompile(`athel [^\n` + "`" + `]*\b(change new|state (transition|enter|exit)|checkpoint set|lock (acquire|release|refresh)|budget add|resume|decide (add|record|present|answer|tick)|blast (save|signoff)|spec save|plan set|trace|conventions save|prd (index|review save|add-version)|gate (baseline|run|waive)|git (worktree|preflight|push)|pr (open|update)|review (save|fix|dispute)|finding (add|triage)|build (context|done))\b`)
 
 // checkSkillCommands: every athel command a skill names prints JSON, and every one that changes
 // state carries the session so the CLI can take the change lock for it.
@@ -119,7 +119,7 @@ func checkSkillCommands(t *testing.T, s skill) {
 }
 
 func TestSkillsCallOnlyCLI(t *testing.T) {
-	for _, name := range []string{"start", "status", "resume", "approve", "accept", "decide", "signoff", "waive"} {
+	for _, name := range []string{"start", "status", "resume", "approve", "accept", "decide", "signoff", "waive", "triage"} {
 		t.Run(name, func(t *testing.T) {
 			s := readSkill(t, name)
 			if s.frontmatter["allowed-tools"] != "Bash(athel:*)" {
@@ -184,6 +184,7 @@ func TestHumanSkillsAreHumanOnly(t *testing.T) {
 		"decide":  "decide answer <CHG-NNN> <answers>",
 		"signoff": "blast signoff $ARGUMENTS",
 		"waive":   "gate waive <CHG-NNN> <T-NN> <subject> --until <date> --reason '<reason>'",
+		"triage":  "finding triage <CHG-NNN> <choices>",
 	} {
 		s := readSkill(t, name)
 		if s.frontmatter["disable-model-invocation"] != true {

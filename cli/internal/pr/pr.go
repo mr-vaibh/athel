@@ -116,6 +116,7 @@ type BodyInput struct {
 	Linked                               []Linked
 	Rollback                             []string
 	Waivers                              []string // FR-BUILD-014: every waiver appears in the PR body
+	Findings                             []string // FR-FIND-003: side findings, not fixed here
 }
 
 // Body is the PR description with doc 04's sections, in order.
@@ -143,7 +144,14 @@ func Body(in BodyInput) string {
 		b.WriteString("- " + w + "\n")
 	}
 	b.WriteString("\n## Security notes\n\nNo security report yet.\n\n")
-	b.WriteString("## Side findings (not fixed here)\n\nNone recorded.\n\n## Linked PRs and merge order\n\n")
+	b.WriteString("## Side findings (not fixed here)\n\n")
+	if len(in.Findings) == 0 {
+		b.WriteString("None recorded.\n")
+	}
+	for _, f := range in.Findings {
+		b.WriteString("- " + f + "\n")
+	}
+	b.WriteString("\n## Linked PRs and merge order\n\n")
 	if len(in.Linked) == 0 {
 		b.WriteString("No other repo in this change.\n")
 	}

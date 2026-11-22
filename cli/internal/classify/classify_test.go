@@ -371,6 +371,8 @@ func TestAthelCalls(t *testing.T) {
 		{"athel review template", R0, "review template", false}, {"athel git lint CHG-001 users", R0, "git lint", false},
 		{"athel pr body CHG-001 users", R0, "pr body", false}, {"athel gate run CHG-001 T-01", W0, "gate run", false},
 		{"athel build next CHG-001", R0, "build next", false}, {"athel build done CHG-001 T-01", W0, "build done", false},
+		{"athel finding list CHG-001", R0, "finding list", false}, {"athel finding triage CHG-001 SF-1=ticket", W0, "finding triage", true},
+		{"athel finding triage CHG-001 SF-1=later", W0, "finding triage", true},
 		{"athel gate waive CHG-001 T-01 lint --until 2026-11-20 --reason ok", W0, "gate waive", true},
 		{"athel fact add -", W0, "fact add", false}, {"athel fact use F-0001 --purpose decision --change CHG-001", W0, "fact use", false},
 		{"athel fact archive", W0, "fact archive", false}, {"athel fact verify F-0001 --observed 0=toolu_1", W0, "fact verify", false},

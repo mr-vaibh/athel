@@ -45,6 +45,8 @@ fact find|0|E-STATE-NOT-INITIALISED|ok|ok
 fact show|1|E-STATE-NOT-INITIALISED|E-STATE-INVALID|E-STATE-INVALID
 fact use|1|E-STATE-NOT-INITIALISED|E-STATE-INVALID|E-STATE-INVALID
 fact verify|1|E-STATE-NOT-INITIALISED|E-STATE-INVALID|E-STATE-INVALID
+finding add|2|E-STATE-IO|E-STATE-IO|E-STATE-IO
+finding list|1|E-STATE-NOT-INITIALISED|E-STATE-NOT-FOUND|E-STATE-NOT-FOUND
 gate baseline|2|E-STATE-NO-SESSION|E-STATE-NOT-FOUND|E-STATE-NO-SESSION
 gate run|2|E-STATE-NO-SESSION|E-STATE-NOT-FOUND|E-STATE-NO-SESSION
 gate show|2|E-STATE-NOT-INITIALISED|E-STATE-NOT-FOUND|E-STATE-NOT-FOUND
@@ -145,7 +147,7 @@ func TestEveryCommandRefusesCleanly(t *testing.T) {
 var needsFlags = map[string]bool{
 	"ask new": true, "blast check": true, "blast diff": true, "blast save": true, "change new": true,
 	"decide answer": true, "decide present": true, "git hook": true, "hook": true, "integrity accept": true,
-	"investigation save": true, "investigation validate": true, "plan diff": true, "policy decide": true,
+	"investigation save": true, "finding triage": true, "investigation validate": true, "plan diff": true, "policy decide": true,
 	"prd add-version": true, "prd diff": true, "state transition": true,
 }
 

@@ -157,6 +157,9 @@ func commands() map[string]command {
 		"build next":             cmdBuildNext,
 		"build context":          cmdBuildContext,
 		"build done":             cmdBuildDone,
+		"finding add":            cmdFindingAdd,
+		"finding list":           cmdFindingList,
+		"finding triage":         cmdFindingTriage,
 	}
 }
 
