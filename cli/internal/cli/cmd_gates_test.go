@@ -140,9 +140,10 @@ func TestGateFlaky(t *testing.T) {
 		green  bool
 		note   string
 	}{
-		// run 1 baseline, run 2 the gate, run 3 the re-run, runs 4–6 on the baseline checkout
-		"flaky only after the change": {[]int{2}, false, "flaky only after this change"},
-		"flaky on base too":           {[]int{2, 4}, true, "flaky on base too"},
+		// runs 1–2 the baseline (unit, coverage), run 3 the unit gate, run 4 the re-run, runs 5–7
+		// on the baseline checkout
+		"flaky only after the change": {[]int{3}, false, "flaky only after this change"},
+		"flaky on base too":           {[]int{3, 5}, true, "flaky on base too"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			h, tree := goGates(t)
@@ -245,5 +246,69 @@ func TestGateToolNotRunnable(t *testing.T) {
 	h.env["PATH"] = bin + string(os.PathListSeparator) + h.env["PATH"]
 	if _, env := h.runJSON("gate", "run", "CHG-001", "T-01"); !strings.Contains(asJSON(t, env), "format unavailable") {
 		t.Errorf("a gate tool that cannot run: %v", env)
+	}
+}
+
+// complexFunc is a Go function with cyclomatic complexity 16.
+const complexFunc = "package src\n\nfunc Complex(n int) int {\n\tswitch n {\n" +
+	"\tcase 1:\n\tcase 2:\n\tcase 3:\n\tcase 4:\n\tcase 5:\n\tcase 6:\n\tcase 7:\n\tcase 8:\n" +
+	"\tcase 9:\n\tcase 10:\n\tcase 11:\n\tcase 12:\n\tcase 13:\n\tcase 14:\n\tcase 15:\n\t}\n\treturn n\n}\n"
+
+func TestGateFullStage(t *testing.T) {
+	h, tree := goGates(t)
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	tested := map[string]string{
+		"src/calc.go":      "package src\n\n// Add adds.\nfunc Add(a, b int) int {\n\treturn a + b\n}\n",
+		"src/calc_test.go": "package src\n\nimport \"testing\"\n\nfunc TestAdd(t *testing.T) {\n\tif Add(1, 2) != 3 {\n\t\tt.Fatal(\"add\")\n\t}\n}\n",
+	}
+	for file, body := range tested {
+		if out, err := commit(t, h, tree, file, body, goodMsg); err != nil {
+			t.Fatalf("%v %s", err, out)
+		}
+	}
+	if run := h.mustOK("gate", "run", "--stage", "full", "CHG-001", "T-01"); run["green"] != true || len(run["results"].([]any)) != 7 {
+		t.Fatalf("a tested, simple change is green on the full stage: %v", run)
+	}
+	untested := "package src\n\n// Sub subtracts.\nfunc Sub(a, b int) int {\n\tc := a - b\n\tc++\n\tc--\n\treturn c\n}\n"
+	for file, body := range map[string]string{"src/sub.go": untested, "src/complex.go": complexFunc} {
+		if out, err := commit(t, h, tree, file, body, goodMsg); err != nil {
+			t.Fatalf("%v %s", err, out)
+		}
+	}
+	_, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
+	msg := asJSON(t, env)
+	for _, want := range []string{"coverage fail: coverage is below doc 06's bar", "complexity fail"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("full stage lacks %q: %s", want, msg)
+		}
+	}
+	show := asJSON(t, h.mustOK("gate", "show", "CHG-001", "T-01"))
+	for _, want := range []string{"changed lines", "src/complex.go: Complex has complexity 16 (limit 15)"} {
+		if !strings.Contains(show, want) {
+			t.Errorf("evidence lacks %q", want)
+		}
+	}
+}
+
+func TestGateFullStageBroken(t *testing.T) {
+	h, tree := goGates(t)
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	if out, err := commit(t, h, tree, "src/broken.go", "package src\n\nfunc Broken( {\n", goodMsg); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	_, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
+	msg := asJSON(t, env)
+	for _, want := range []string{"coverage fail: the tests did not run to a coverage profile", "complexity fail: src/broken.go does not parse"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("lacks %q: %s", want, msg)
+		}
+	}
+	if argv, profile, done := withProfile([]string{"go", "vet"}); profile != "" || strings.Join(argv, " ") != "go vet" {
+		t.Errorf("a command without the placeholder is unchanged: %v %q", argv, profile)
+	} else {
+		done()
+	}
+	if goModule(t.TempDir()) != "" {
+		t.Error("no go.mod, no module")
 	}
 }

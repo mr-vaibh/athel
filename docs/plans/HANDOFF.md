@@ -57,23 +57,23 @@ M4-plan §9:
 | 04a `athel git push` | `feat/m4-push-pr` | #83 | open, gate green |
 | 04b `athel pr body|open|update`, ADR 026 | `feat/m4-pr` | #84 | open, gate green (`pr ready` moves to task 10) |
 | 05 gates: defaults, classifier-checked runner (ADR 023), baseline, flaky, evidence | `feat/m4-gates` | #85 | open, gate green |
-| 06 coverage (changed lines), complexity, contract, `ac-tests` gates; ADR 025 part 1 | `feat/m4-gates-quality` | — | **next** |
+| 06a changed-lines coverage and complexity gates (ADR 025) | `feat/m4-gates-quality` | #86 | open, gate green |
+| 06b contract and `ac-tests` gates, per-repo `gates.yaml` overrides | `feat/m4-gates-contract` | — | **next** |
 | 07–17 | see M4-plan §9 | — | not started |
 
 Next:
-1. **Task 06** on `feat/m4-gates-quality`, branched from `feat/m4-gates`. It adds full-stage
-   gates to `internal/gates` and `cmd_gates.go`:
-   - **coverage:** changed-lines coverage ≥ 90% (`go test -coverprofile` joined with
-     `git diff -U0` against the baseline head), and the total does not drop more than
-     0.5 points against the baseline;
-   - **complexity:** no new function with cyclomatic complexity over 15 or longer than 80
-     lines (`go/ast`);
-   - **contract:** from M3's `blast diff`, API and event changes must match the plan;
-   - **`ac-tests`:** every AC the task covers appears in a changed test name or tag;
-   - per-repo overrides in `.athel/config/gates.yaml` (`gates@1` schema).
+1. **Task 06b** on `feat/m4-gates-contract`, branched from `feat/m4-gates-quality`:
+   - **contract** (full stage, never waivable): M3's `blast diff` gives the change surface of
+     the task's diff; `blast check` compares it with the planned report. Changes not in the
+     plan fail;
+   - **`ac-tests`** (cheap stage, never waivable): every AC the task covers
+     (`plan.yaml covers`) appears in at least one changed test file's text (FR-BUILD-003);
+   - per-repo overrides in `.athel/config/gates.yaml` (new `gates@1` schema: replace a
+     gate's command, or add a gate). The policy rules apply: a replaced command still passes
+     ADR 023's check.
 
    Watch out: the `cli` package is at 90.5%, so every new command needs its error paths
-   tested.
+   tested. A gate run is about 10 s per test.
 2. Continue the tasks in order, each its own PR stacked on the previous one.
 3. Paid evals only with the owner's go-ahead each time, smoke runs first.
 

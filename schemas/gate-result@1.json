@@ -40,7 +40,8 @@
         "at",
         "lint",
         "tests",
-        "exits"
+        "exits",
+        "coverage"
       ],
       "properties": {
         "head": {
@@ -84,6 +85,13 @@
           "additionalProperties": {
             "type": "integer"
           }
+        },
+        "coverage": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "total statement coverage on base, in percent"
         }
       }
     },
