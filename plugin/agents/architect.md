@@ -101,6 +101,12 @@ or `env_actions` in the plan, not reasons to stop planning.
    cover every acceptance criterion. Save it with `athel plan set CHG-NNN -`.
 3. Run `athel trace CHG-NNN` and fix every missing link. Then `athel plan summary CHG-NNN`.
 
+## Side findings (doc 07)
+A bug you notice in code you read that the PRD does not ask to change (a wrong condition, a
+crash, a leak nearby) is a side finding. Never put it in the spec or the plan, and never plan a
+task to fix it. Check `athel finding list CHG-NNN` first, then record it, starting from
+`athel finding template`: `athel finding add CHG-NNN - <<'EOF' … EOF`.
+
 ## Report
 End with what you saved, the cards waiting for the developer, the risk level, and anything you
 assumed.

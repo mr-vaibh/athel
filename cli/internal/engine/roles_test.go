@@ -121,3 +121,20 @@ func TestGoDashCTargetsTheWorktree(t *testing.T) {
 		t.Errorf("tests outside the worktrees: %+v", r)
 	}
 }
+
+// TestScoutAndArchitectRecordSideFindings (doc 07: any agent records a side finding at any time):
+// both read-only roles may run athel finding add and list, and still write nothing else.
+func TestScoutAndArchitectRecordSideFindings(t *testing.T) {
+	_, add := bash("athel finding add CHG-001 -")
+	_, list := bash("athel finding list CHG-001")
+	_, touch := bash("touch " + tree + "/src/a.go")
+	for _, agent := range []string{hookio.ScoutAgent, hookio.ArchitectAgent} {
+		t.Run(agent, func(t *testing.T) {
+			run(t, []ruleCase{
+				{"a side finding", "Bash", add, as(agent), Allow, "7x", ""},
+				{"the findings so far", "Bash", list, as(agent), Allow, "7x", ""},
+				{"a file write", "Bash", touch, as(agent), Deny, "3", aerr.PolicyAgentReadOnly},
+			})
+		})
+	}
+}
