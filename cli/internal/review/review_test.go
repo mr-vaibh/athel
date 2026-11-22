@@ -14,7 +14,7 @@ func newFinding(sev, loc string) Draft {
 }
 
 func TestFirstRoundGivesIDs(t *testing.T) {
-	r, err := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3"), newFinding(Nit, "src/b.go:9")}}, "abc")
+	r, err := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3"), newFinding(Nit, "src/b.go:9")}}, "abc", MaxRounds)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,15 +24,15 @@ func TestFirstRoundGivesIDs(t *testing.T) {
 }
 
 func TestLaterRoundsCarryEveryOpenFinding(t *testing.T) {
-	r1, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3"), newFinding(Minor, "src/b.go:9")}}, "h1")
+	r1, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3"), newFinding(Minor, "src/b.go:9")}}, "h1", MaxRounds)
 	if err := r1.Fix("R1-01", "c1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Next(r1, Submission{Verdict: Approved, Previous: []Resolution{{ID: "R1-01", Status: Verified}}}, "h2"); !aerr.HasCode(err, aerr.StateInvalid) || !strings.Contains(err.Error(), "R1-02") {
+	if _, err := Next(r1, Submission{Verdict: Approved, Previous: []Resolution{{ID: "R1-01", Status: Verified}}}, "h2", MaxRounds); !aerr.HasCode(err, aerr.StateInvalid) || !strings.Contains(err.Error(), "R1-02") {
 		t.Errorf("a round that drops an open finding: %v", err)
 	}
 	r2, err := Next(r1, Submission{Verdict: ChangesRequested, Previous: []Resolution{{ID: "R1-01", Status: Verified}, {ID: "R1-02", Status: Open, Note: "still"}},
-		New: []Draft{newFinding(Blocker, "src/c.go:1")}}, "h2")
+		New: []Draft{newFinding(Blocker, "src/c.go:1")}}, "h2", MaxRounds)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,14 +42,14 @@ func TestLaterRoundsCarryEveryOpenFinding(t *testing.T) {
 	if open := r2.Blocking(); strings.Join(open, ",") != "R2-01" {
 		t.Errorf("an open blocker blocks, a minor does not: %v", open)
 	}
-	r3, err := Next(r2, Submission{Verdict: Approved, Previous: []Resolution{{ID: "R1-02", Status: Open}, {ID: "R2-01", Status: Verified}}}, "h3")
+	r3, err := Next(r2, Submission{Verdict: Approved, Previous: []Resolution{{ID: "R1-02", Status: Open}, {ID: "R2-01", Status: Verified}}}, "h3", MaxRounds)
 	if err == nil || !strings.Contains(err.Error(), "R2-01 is open, not fixed") {
 		t.Errorf("only a fixed finding can be verified: %+v %v", r3, err)
 	}
 }
 
 func TestDeveloperActions(t *testing.T) {
-	r, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1")
+	r, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1", MaxRounds)
 	for _, err := range []error{r.Fix("R9-09", "c"), r.Dispute("R9-09", "why"), r.Dispute("R1-01", " "), r.Fix("R1-01", "")} {
 		if !aerr.HasCode(err, aerr.StateInvalid) && !aerr.HasCode(err, aerr.StateNotFound) {
 			t.Errorf("refused: %v", err)
@@ -64,9 +64,9 @@ func TestDeveloperActions(t *testing.T) {
 }
 
 func TestDisputedTwiceAndRoundLimit(t *testing.T) {
-	r, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1")
+	r, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1", MaxRounds)
 	_ = r.Dispute("R1-01", "no")
-	r2, _ := Next(r, Submission{Verdict: ChangesRequested, Previous: []Resolution{{ID: "R1-01", Status: Open, Note: "still a bug"}}}, "h2")
+	r2, _ := Next(r, Submission{Verdict: ChangesRequested, Previous: []Resolution{{ID: "R1-01", Status: Open, Note: "still a bug"}}}, "h2", MaxRounds)
 	_ = r2.Dispute("R1-01", "still no")
 	if r2.Disputes("R1-01") != 2 || strings.Join(r2.DisputedTwice(), ",") != "R1-01" {
 		t.Errorf("two rounds of dispute: %d %v", r2.Disputes("R1-01"), r2.DisputedTwice())
@@ -74,25 +74,28 @@ func TestDisputedTwiceAndRoundLimit(t *testing.T) {
 	last := r2
 	for i := 3; i <= MaxRounds; i++ {
 		var err error
-		if last, err = Next(last, Submission{Verdict: ChangesRequested, Previous: []Resolution{{ID: "R1-01", Status: Open}}}, "h"); err != nil {
+		if last, err = Next(last, Submission{Verdict: ChangesRequested, Previous: []Resolution{{ID: "R1-01", Status: Open}}}, "h", MaxRounds); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := Next(last, Submission{Verdict: Approved, Previous: []Resolution{{ID: "R1-01", Status: Open}}}, "h"); !aerr.HasCode(err, aerr.BudgetRounds) {
+	if _, err := Next(last, Submission{Verdict: Approved, Previous: []Resolution{{ID: "R1-01", Status: Open}}}, "h", MaxRounds); !aerr.HasCode(err, aerr.BudgetRounds) {
 		t.Errorf("a sixth round: %v", err)
+	}
+	if r6, err := Next(last, Submission{Verdict: ChangesRequested, Previous: []Resolution{{ID: "R1-01", Status: Open}}}, "h", 2*MaxRounds); err != nil || r6.Round != MaxRounds+1 {
+		t.Errorf("a sixth round once more rounds are allowed: %v %v", r6, err)
 	}
 }
 
 func TestDone(t *testing.T) {
-	r, _ := Next(nil, Submission{Verdict: Approved, New: []Draft{newFinding(Minor, "src/a.go:3")}}, "h1")
+	r, _ := Next(nil, Submission{Verdict: Approved, New: []Draft{newFinding(Minor, "src/a.go:3")}}, "h1", MaxRounds)
 	if !r.Done() {
 		t.Error("approved with only a minor finding is done")
 	}
-	r2, _ := Next(nil, Submission{Verdict: ChangesRequested}, "h1")
+	r2, _ := Next(nil, Submission{Verdict: ChangesRequested}, "h1", MaxRounds)
 	if r2.Done() {
 		t.Error("changes requested is not done")
 	}
-	r3, _ := Next(nil, Submission{Verdict: Approved, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1")
+	r3, _ := Next(nil, Submission{Verdict: Approved, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1", MaxRounds)
 	if r3.Done() {
 		t.Error("an open major finding is never done, whatever the verdict")
 	}
@@ -116,12 +119,12 @@ func TestSubmissionChecks(t *testing.T) {
 		{Verdict: Approved, New: []Draft{{Severity: Major, Source: "reviewer", Location: "a", Rule: "style.tabs", Finding: "f", Required: "q"}}},
 	}
 	for i, s := range bad {
-		if _, err := Next(nil, s, "h"); err == nil {
+		if _, err := Next(nil, s, "h", MaxRounds); err == nil {
 			t.Errorf("submission %d: want an error", i)
 		}
 	}
-	r, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1")
-	if _, err := Next(r, Submission{Verdict: Approved, Previous: []Resolution{{ID: "R1-01", Status: Waived}}}, "h2"); err == nil {
+	r, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1", MaxRounds)
+	if _, err := Next(r, Submission{Verdict: Approved, Previous: []Resolution{{ID: "R1-01", Status: Waived}}}, "h2", MaxRounds); err == nil {
 		t.Error("only a human waives (task 09), never the reviewer")
 	}
 }
@@ -135,8 +138,8 @@ func TestLocationFile(t *testing.T) {
 }
 
 func TestUnknownEarlierFinding(t *testing.T) {
-	r, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1")
-	if _, err := Next(r, Submission{Verdict: Approved, Previous: []Resolution{{ID: "R1-01", Status: Open}, {ID: "R1-99", Status: Open}}}, "h2"); err == nil || !strings.Contains(err.Error(), "no earlier finding") {
+	r, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "src/a.go:3")}}, "h1", MaxRounds)
+	if _, err := Next(r, Submission{Verdict: Approved, Previous: []Resolution{{ID: "R1-01", Status: Open}, {ID: "R1-99", Status: Open}}}, "h2", MaxRounds); err == nil || !strings.Contains(err.Error(), "no earlier finding") {
 		t.Errorf("%v", err)
 	}
 	if r.Disputes("R9-09") != 0 {
@@ -149,16 +152,16 @@ func TestTemplateIsAValidSubmission(t *testing.T) {
 	if err := yaml.Unmarshal(Template, &s); err != nil {
 		t.Fatal(err)
 	}
-	r, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "a"), newFinding(Major, "b"), newFinding(Major, "c")}}, "h")
+	r, _ := Next(nil, Submission{Verdict: ChangesRequested, New: []Draft{newFinding(Major, "a"), newFinding(Major, "b"), newFinding(Major, "c")}}, "h", MaxRounds)
 	_ = r.Fix("R1-02", "c1")
 	r.Findings[0].Status = Verified
-	if _, err := Next(r, s, "h2"); err != nil {
+	if _, err := Next(r, s, "h2", MaxRounds); err != nil {
 		t.Errorf("the template is a valid second round: %v", err)
 	}
 }
 
 func TestWaive(t *testing.T) {
-	r, _ := Next(nil, Submission{Verdict: Approved, New: []Draft{newFinding(Major, "a"), newFinding(Blocker, "b"), newFinding(Minor, "c")}}, "h")
+	r, _ := Next(nil, Submission{Verdict: Approved, New: []Draft{newFinding(Major, "a"), newFinding(Blocker, "b"), newFinding(Minor, "c")}}, "h", MaxRounds)
 	if err := r.Waive("R1-01", "accepted risk"); err != nil || r.Findings[0].Status != Waived {
 		t.Errorf("a major is waived: %v", err)
 	}
@@ -170,7 +173,7 @@ func TestWaive(t *testing.T) {
 }
 
 func TestFoldReportFindings(t *testing.T) {
-	r1, _ := Next(nil, Submission{Verdict: Approved, New: []Draft{newFinding(Nit, "src/a.go:3")}}, "h1")
+	r1, _ := Next(nil, Submission{Verdict: Approved, New: []Draft{newFinding(Nit, "src/a.go:3")}}, "h1", MaxRounds)
 	sec := Folded{From: "S1-01", Source: "security", Severity: Blocker, Location: "src/q.go:9", Rule: "security.parameterised-queries", Finding: "x", Required: "y"}
 	if n := r1.Fold([]Folded{sec}); n != 1 || r1.Findings[1].ID != "R1-02" || r1.Findings[1].From != "S1-01" || r1.Findings[1].Status != Open {
 		t.Fatalf("%d %+v", n, r1.Findings)
@@ -181,7 +184,7 @@ func TestFoldReportFindings(t *testing.T) {
 	if open := r1.Blocking(); strings.Join(open, ",") != "R1-02" {
 		t.Errorf("an approved round still blocks on a security blocker: %v", open)
 	}
-	r2, err := Next(r1, Submission{Verdict: ChangesRequested, Previous: []Resolution{{ID: "R1-01", Status: Open}, {ID: "R1-02", Status: Open}}}, "h2")
+	r2, err := Next(r1, Submission{Verdict: ChangesRequested, Previous: []Resolution{{ID: "R1-01", Status: Open}, {ID: "R1-02", Status: Open}}}, "h2", MaxRounds)
 	if err != nil {
 		t.Fatal(err)
 	}

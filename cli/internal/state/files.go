@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 
 	"github.com/mr-vaibh/athel/cli/internal/build"
@@ -211,6 +212,46 @@ func (s *Store) UpdateBuild(id, session string, fn func(p *plan.Plan, recs []bui
 			return err
 		}
 		c.Build = recs
+		return nil
+	})
+}
+
+// RemoveSpec deletes spec/<service>.md before the plan is approved, when a decision has taken
+// that service out of the change: the plan cannot cover a spec nothing in the change implements.
+// The last spec stays, since a change without one has nothing to build.
+func (s *Store) RemoveSpec(id, session, service string) (*Change, error) {
+	if err := CheckSession(session); err != nil {
+		return nil, err
+	}
+	name := "spec/" + service + ".md"
+	if !IsChangeFile(name) {
+		return nil, aerr.New(aerr.StateInvalid, service+" is not a service name")
+	}
+	return s.Update(id, func(c *Change) error {
+		switch c.State {
+		case Investigating, Specified, AwaitingDecisions, Planned:
+		default:
+			return aerr.New(aerr.StateInvalid, c.ID+" is "+string(c.State)+"; a spec is removed only before the plan is approved")
+		}
+		if err := s.claim(c, session, s.Clock.Now()); err != nil {
+			return err
+		}
+		dir := filepath.Join(s.WS.ChangeDir(c.ID), "spec")
+		specs, err := filepath.Glob(filepath.Join(dir, "*.md"))
+		if err != nil {
+			return aerr.Wrap(aerr.StateIO, "list the specs", err)
+		}
+		path := filepath.Join(dir, service+".md")
+		switch {
+		case !slices.Contains(specs, path):
+			return aerr.New(aerr.StateNotFound, c.ID+" has no spec for "+service)
+		case len(specs) == 1:
+			return aerr.New(aerr.StateInvalid, service+" is the change's only spec; a change needs one").
+				WithNextAction("cancel the change instead if nothing is left to build")
+		}
+		if err := os.Remove(path); err != nil {
+			return aerr.Wrap(aerr.StateIO, "remove "+name, err)
+		}
 		return nil
 	})
 }

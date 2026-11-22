@@ -38,3 +38,7 @@ prints one JSON object per command.
 8. End with what the developer types next. With cards: one line they can copy, for example
    `/athel:decide $ARGUMENTS D-1=a D-2=b` (`skip=D-n` means "should not have asked"). Without
    cards: `/athel:plan $ARGUMENTS`.
+
+Run every subagent in the foreground and wait for its result in the same turn: never start one
+in the background and end your turn to wait, or the step stops half done. Several independent
+questions run in parallel when you delegate them in one message, in the foreground.

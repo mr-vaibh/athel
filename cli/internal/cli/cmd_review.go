@@ -31,24 +31,47 @@ func cmdReviewRules(r *runCtx, args []string) (any, error) {
 	return quality.Rules, nil
 }
 
-// latestRound reads a task's newest round, or nil before the first.
+// latestRound reads a task's newest round, or nil before the first. Rounds are numbered from 1
+// with no gaps, and may go past MaxRounds once the developer allowed more.
 func (r *runCtx) latestRound(g gateTask) (*review.Round, error) {
 	dir := filepath.Join(g.s.WS.ChangeDir(g.c.ID), "reviews", g.task.ID)
-	for n := review.MaxRounds; n >= 1; n-- {
-		b, err := os.ReadFile(filepath.Join(dir, fmt.Sprintf("round-%d.yaml", n))) //nolint:gosec // a round file of the change folder; the task ID was checked against the approved plan
+	var last []byte
+	n := 0
+	for {
+		b, err := os.ReadFile(filepath.Join(dir, fmt.Sprintf("round-%d.yaml", n+1))) //nolint:gosec // a round file of the change folder; the task ID was checked against the approved plan
 		if err != nil {
-			continue
+			break
 		}
-		if err := r.registry().ValidateYAML(review.SchemaID, b); err != nil {
-			return nil, err
-		}
-		var rd review.Round
-		if err := yaml.Unmarshal(b, &rd); err != nil {
-			return nil, aerr.Wrap(aerr.StateSchema, "round "+fmt.Sprint(n), err)
-		}
-		return &rd, nil
+		last, n = b, n+1
 	}
-	return nil, nil
+	if last == nil {
+		return nil, nil
+	}
+	if err := r.registry().ValidateYAML(review.SchemaID, last); err != nil {
+		return nil, err
+	}
+	var rd review.Round
+	if err := yaml.Unmarshal(last, &rd); err != nil {
+		return nil, aerr.Wrap(aerr.StateSchema, "round "+fmt.Sprint(n), err)
+	}
+	return &rd, nil
+}
+
+// roundLimit is the task's round limit: doc 06's 5, plus 5 more for each round-limit card the
+// developer answered "allow more rounds" (FR-BUILD-010), up to review.RoundCeiling.
+func (r *runCtx) roundLimit(g gateTask) (int, error) {
+	dec, err := r.readDecisions(g.c.ID)
+	if err != nil {
+		return 0, err
+	}
+	limit := review.MaxRounds
+	for _, e := range dec.Decisions {
+		c := e.Card
+		if c != nil && c.Answer != nil && c.Answer.Option == "b" && strings.HasPrefix(c.Question, roundLimitPrefix(g.task.ID)) {
+			limit += review.MaxRounds
+		}
+	}
+	return min(limit, review.RoundCeiling), nil
 }
 
 func (r *runCtx) saveRound(g gateTask, rd *review.Round) error {
@@ -96,9 +119,20 @@ func cmdReviewSave(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	next, err := review.Next(prev, sub, strings.TrimSpace(head))
+	return r.saveNextRound(g, prev, sub, strings.TrimSpace(head))
+}
+
+// saveNextRound saves the next round within the task's round limit, with QA's and security's
+// findings folded in. The last allowed round that is not done ends the loop with a card at
+// once, rather than on a next round nobody will run (doc 06: the task leaves the loop as a card).
+func (r *runCtx) saveNextRound(g gateTask, prev *review.Round, sub review.Submission, head string) (*review.Round, error) {
+	limit, err := r.roundLimit(g)
+	if err != nil {
+		return nil, err
+	}
+	next, err := review.Next(prev, sub, head, limit)
 	if aerr.HasCode(err, aerr.BudgetRounds) {
-		if _, cerr := r.raiseOnce(g.c.ID, roundLimitCard(g.task.ID)); cerr != nil {
+		if _, cerr := r.raiseOnce(g.c.ID, roundLimitCard(g.task.ID, prev)); cerr != nil {
 			return nil, cerr
 		}
 	}
@@ -110,7 +144,15 @@ func cmdReviewSave(r *runCtx, args []string) (any, error) {
 		return nil, err
 	}
 	next.Fold(all)
-	return next, r.saveRound(g, next)
+	if err := r.saveRound(g, next); err != nil {
+		return nil, err
+	}
+	if next.Round >= limit && !next.Done() {
+		if _, err := r.raiseOnce(g.c.ID, roundLimitCard(g.task.ID, next)); err != nil {
+			return nil, err
+		}
+	}
+	return next, nil
 }
 
 // fixesTouchTheirFiles: the reviewer may verify a fix only if its commit is in the branch and
@@ -233,10 +275,29 @@ func (r *runCtx) judgeReview(g gateTask, o *gateOutcome) {
 	}
 }
 
-func roundLimitCard(task string) decisions.Draft {
+// maxCardContext is decision@1's limit on a card's context.
+const maxCardContext = 2000
+
+// clip shortens s to at most n characters, marking the cut, so a card built from free text
+// (a finding, a dispute) always fits its schema.
+func clip(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n-1]) + "…"
+}
+
+func roundLimitPrefix(task string) string { return "Task " + task + " reached " }
+
+func roundLimitCard(task string, last *review.Round) decisions.Draft {
+	context := "FR-BUILD-010: after 5 rounds the fix loop stops and asks instead of burning budget."
+	if open := last.Blocking(); len(open) > 0 {
+		context += " Still open: " + strings.Join(open, ", ") + ". A major finding can also be waived with a reason and an expiry: /athel:waive."
+	}
 	return decisions.Draft{
-		Rule: "A6", Step: "build", Question: "Task " + task + " reached " + fmt.Sprint(review.MaxRounds) + " review rounds. How should Athel go on?",
-		Context: "FR-BUILD-010: after 5 rounds the fix loop stops and asks instead of burning budget.",
+		Rule: "A6", Step: "build", Question: roundLimitPrefix(task) + fmt.Sprint(last.Round) + " review rounds. How should Athel go on?",
+		Context: clip(context, maxCardContext),
 		Options: []decisions.Option{
 			{Key: "a", Label: "Stop the task and look at it yourself", Consequence: "Athel writes nothing more for " + task + " until you answer again"},
 			{Key: "b", Label: "Allow more rounds", Consequence: "the loop continues; the open findings stay as they are"},
@@ -255,7 +316,7 @@ func disputeCard(task string, f review.Finding) decisions.Draft {
 	}
 	return decisions.Draft{
 		Rule: "A6", Step: "build", Question: "The reviewer and the developer disagree about " + f.ID + " in task " + task + ". Who is right?",
-		Context: f.ID + " (" + f.Severity + ", " + f.Location + "): " + f.Finding + " Reviewer: " + reviewer + " Developer: " + f.Dispute,
+		Context: clip(f.ID+" ("+f.Severity+", "+f.Location+"): "+clip(f.Finding, 500)+" Reviewer: "+clip(reviewer, 700)+" Developer: "+clip(f.Dispute, 700), maxCardContext),
 		Options: []decisions.Option{
 			{Key: "a", Label: "The reviewer: fix it", Consequence: "the developer makes the fix the finding asks for"},
 			{Key: "b", Label: "The developer: close the finding", Consequence: "the finding is closed by your decision, recorded with the card"},

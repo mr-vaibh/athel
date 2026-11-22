@@ -1,6 +1,6 @@
 # HANDOFF
 
-Last updated: 2026-11-14, session 4 (M3 merged; M4 approved and started), on the owner's personal machine. Tools
+Last updated: 2026-11-20, session 5 (M4 built; first full evals run and missed; fixes in a new PR), on the owner's personal machine. Tools
 are installed system-wide with Homebrew (`docs/context/environment.md`).
 
 ## Where we are
@@ -79,21 +79,30 @@ M4-plan §9:
 | 15 reviewer defect eval: corpus (24+6), setup, runner, grader; **paid run not made** | `feat/m4-evals-defects` | #105 | open, gate green |
 | 16 build eval: 3 PRDs, full-journey runner, grader re-runs gates; **paid run not made** | `feat/m4-evals-build` | #106 | open, gate green |
 | trial fixes: finding locations, spec-valid corpus, tasks without code (ADR 027), gate timeout 20m | `feat/m4-eval-trial-fixes` | #107 | open, gate green |
-| 17 M4 report | `docs/m4-report` | — | after the paid runs |
+| full-run fixes: no-code repos, round-limit card, dispute card length, mutant timeout, `spec remove`, foreground agents (ADR 029) | `feat/m4-full-run-fixes` | see `gh pr list` | open |
+| 17 M4 report | `docs/m4-report` | — | after the owner decides on a re-run |
 
-CI passed on #77–#100 (checked 2026-11-15).
+CI passed on #77–#107.
+
+**Full evals, 2026-11-19 (owner's "Both full runs"; $110.31, M4 eval total $172.26):** both
+missed. Reviewer 87.5% caught (bar 90%); build 2 of 9 runs valid. Details and causes are in
+`EVALS.md` and journal entry 17. Five Athel gaps found in the failed build sessions were fixed
+with tests on `feat/m4-full-run-fixes` (ADR 029).
 
 Next:
-1. **Paid runs, each only with the owner's go-ahead.** Trials so far cost $61.95: 9 build trials
-   and 2 defect trials (`EVALS.md`).
-   - Build trial 9 was the first full journey to `in_review`. It is valid under the grader rule
-     that honours the developer-raised PR limit (ADR 028).
-   - Defect trial 2: 2/2 caught.
-
-   Ask the owner for the full runs: defects 30 × 3 (about $45–135) and build 3 PRDs × 3 (about
-   $45–150). Commands are in `EVALS.md`.
-2. Task 17: the M4 report (EC-1 and EC-2 results, carried gates), HANDOFF, ROADMAP; then the
-   owner's merge OK for #77 to #106 in order.
+1. **Ask the owner** (none of these are mine to decide):
+   - D11 (its planted secret is stopped by Athel's own pre-commit check, so the reviewer never
+     sees it) and D04 (the reviewer found the untested error path but cited the test file, not
+     the planted lines). Counting either differently passes the 90% bar, so it changes a result
+     after it was seen. Recommendation: leave this run's 87.5% as the record; replace D11 with
+     a defect Athel's hooks do not stop, and let D04 also accept the test file, only for the
+     next run, recorded in `EVALS.md`.
+   - A paid re-run of both evals on the fixes (about $110, like the first).
+   - Merge OK for #77 → the fixes PR, in order.
+2. Then task 17: the M4 report from the draft (it states both runs plainly), ROADMAP.
+3. Not fixed and reported: in `saved-addresses` the reviewer and security keep a major on
+   ownership checks the approved spec allowed, until the round limit. With the scripted
+   developer taking the recommended "stop", those runs stay invalid.
 
 The `cli` package's tests take about 7 minutes.
 

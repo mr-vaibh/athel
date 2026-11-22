@@ -231,8 +231,14 @@ func (r *runCtx) saveManifest(g gateTask, name string, m *manifest) error {
 // cmdBuildDone marks a task done: its latest full gate run is green at the worktree's head, its
 // review is done, and no unanswered card blocks it (FR-BUILD-007/009).
 func cmdBuildDone(r *runCtx, args []string) (any, error) {
-	g, err := r.gateTask(args, "build done")
+	g, err := r.planTask(args, "build done", true)
 	if err != nil {
+		return nil, err
+	}
+	if len(g.task.Paths) == 0 {
+		return r.doneWithoutCode(g)
+	}
+	if g, err = r.withWorktree(g); err != nil {
 		return nil, err
 	}
 	head, err := r.gitOut(g.dir, "rev-parse", "HEAD")
@@ -252,8 +258,26 @@ func cmdBuildDone(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	return r.finishTask(g, strings.Fields(commits))
+}
+
+// doneWithoutCode finishes a task with no paths: it changes no code, so it has no worktree,
+// gates, review or reports, only its cards (ADR 027).
+func (r *runCtx) doneWithoutCode(g gateTask) (any, error) {
+	problems, err := r.blockingCards(g)
+	if err != nil {
+		return nil, err
+	}
+	if len(problems) > 0 {
+		return nil, aerr.New(aerr.GateRed, "task "+g.task.ID+" is not done: "+strings.Join(problems, "; ")).
+			WithNextAction("the developer answers the card with /athel:decide, then try again")
+	}
+	return r.finishTask(g, []string{})
+}
+
+func (r *runCtx) finishTask(g gateTask, commits []string) (any, error) {
 	c, err := g.s.UpdateBuild(g.c.ID, g.session, func(_ *plan.Plan, recs []build.Task) ([]build.Task, error) {
-		return build.Finish(recs, g.task.ID, strings.Fields(commits), clock.Format(r.env.Clock.Now()))
+		return build.Finish(recs, g.task.ID, commits, clock.Format(r.env.Clock.Now()))
 	})
 	if err != nil {
 		return nil, err
@@ -262,13 +286,9 @@ func cmdBuildDone(r *runCtx, args []string) (any, error) {
 	return c.Build[i], nil
 }
 
-// notDone lists why a task is not done yet, and the baseline head its commits start from. A task
-// with no paths changes no code: it has no gates, review or reports, only its cards (ADR 027).
+// notDone lists why a task that changes code is not done yet, and the baseline head its commits
+// start from.
 func (r *runCtx) notDone(g gateTask, head string) ([]string, string, error) {
-	if len(g.task.Paths) == 0 {
-		problems, err := r.blockingCards(g)
-		return problems, head, err
-	}
 	f, err := r.loadGates(g)
 	if err != nil {
 		return nil, "", err

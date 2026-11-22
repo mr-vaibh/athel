@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 )
@@ -442,6 +443,30 @@ func TestGateMutation(t *testing.T) {
 	}
 	if show := asJSON(t, h.mustOK("gate", "show", "CHG-001", "T-01")); !strings.Contains(show, "survived: src/big.go line 5: \\u003e to \\u003e=") {
 		t.Errorf("the surviving mutant is named: %s", show)
+	}
+}
+
+// TestGateMutantThatHangs: a mutant that makes a loop endless is stopped at its time limit and
+// counts as killed, so the gate ends (here i-1 to i+1 hangs, and > to >= survives).
+func TestGateMutantThatHangs(t *testing.T) {
+	h, tree := goGates(t)
+	h.mutantTimeout = 2 * time.Second
+	h.stdin = plannedBlast()
+	h.mustOK("blast", "save", "--change", "CHG-001", "-")
+	h.reviewRound(t, "verdict: approved\n")
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	files := map[string]string{
+		"src/sum.go":      "package src\n\n// Sum adds 1 to n.\nfunc Sum(n int) int {\n\ts := 0\n\tfor i := n; i > 0; i = i - 1 {\n\t\ts = s + i\n\t}\n\treturn s\n}\n",
+		"src/sum_test.go": "package src\n\nimport \"testing\"\n\nfunc TestSum(t *testing.T) {\n\tif Sum(3) != 6 {\n\t\tt.Fatal(\"sum\")\n\t}\n}\n",
+	}
+	for file, body := range files {
+		if out, err := commit(t, h, tree, file, body, goodMsg); err != nil {
+			t.Fatalf("%v %s", err, out)
+		}
+	}
+	_, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
+	if !strings.Contains(asJSON(t, env), "mutation fail: mutation score 67% (2 of 3 killed)") {
+		t.Errorf("the hanging mutant is killed, the gate ends: %v", env)
 	}
 }
 

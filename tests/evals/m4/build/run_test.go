@@ -18,8 +18,8 @@ import (
 
 // The runner (M4-plan §4.10) takes each PRD through Athel as a developer would, one `claude -p`
 // session per prompt in the same sandbox: /athel:start, /athel:spec, the developer's
-// /athel:decide with every card's recommended option (whenever cards are open), /athel:plan,
-// /athel:approve, /athel:build (again while tasks remain, up to buildSessions), /athel:ship and
+// /athel:decide with every card's recommended option (whenever cards are open), /athel:plan
+// (once more if it ended on a card), /athel:approve, /athel:build (again while tasks remain, up to buildSessions), /athel:ship and
 // /athel:triage with every finding set to ticket. It never answers anything else. Paid model
 // calls: only with ATHEL_EVALS=1 and the owner's go-ahead.
 
@@ -130,11 +130,18 @@ func (r *runner) specify(prd string) error {
 	if err := r.decide(); err != nil {
 		return err
 	}
-	if err := r.prompt("plan", "/athel:plan "+Change); err != nil {
-		return err
-	}
-	if err := r.decide(); err != nil {
-		return err
+	// A plan step that raises a card ends without a plan and tells the developer to run
+	// /athel:plan again once it is answered, which they do, once.
+	for range 2 {
+		if err := r.prompt("plan", "/athel:plan "+Change); err != nil {
+			return err
+		}
+		if err := r.decide(); err != nil {
+			return err
+		}
+		if _, err := r.athelJSON("plan", "summary", Change); err == nil {
+			break
+		}
 	}
 	// At CRITICAL risk the developer signs off the blast radius before approving (doc 05), as
 	// the plan step tells them to.

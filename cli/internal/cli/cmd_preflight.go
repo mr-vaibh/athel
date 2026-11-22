@@ -161,7 +161,7 @@ func (r *runCtx) buildingGuard(s *state.Store, id string) error {
 	var problems []string
 	var seen []string
 	for _, t := range p.Tasks {
-		if slices.Contains(seen, t.Repo) {
+		if slices.Contains(seen, t.Repo) || !p.WritesIn(t.Repo) {
 			continue
 		}
 		seen = append(seen, t.Repo)
