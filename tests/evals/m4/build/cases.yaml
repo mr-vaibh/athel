@@ -1,0 +1,55 @@
+# M4 exit criterion EC-1 (doc 08 M4 row; M4-plan §4.10): one-repo PRDs reach a PR with every gate
+# green. Each case's seed is committed to the repo's main before the run (so the shared fixture
+# stays as the M2 and M3 evals know it). planted is a nearby bug outside the PRD's scope: a side
+# finding must name its file, and its text must be unchanged on the pushed branch (FR-BUILD-013).
+# kinds are task kinds the plan must have.
+cases:
+  - id: saved-addresses
+    prd: prds/01-saved-addresses.md
+    repo: users
+    kinds: [internal]
+    seed:
+      api/display.go: |
+        package api
+
+        import "strings"
+
+        // Initials shortens a profile name for receipts: "Ada Lovelace" becomes "A. L.".
+        func Initials(name string) string {
+        	parts := strings.Fields(name)
+        	out := make([]string, 0, len(parts))
+        	for _, p := range parts {
+        		out = append(out, p[:1]+".")
+        	}
+        	return strings.Join(out, " ") + " " + name[len(name)-1:]
+        }
+    planted:
+      file: api/display.go
+      text: 'return strings.Join(out, " ") + " " + name[len(name)-1:]'
+  - id: typed-client-errors
+    prd: prds/02-typed-client-errors.md
+    repo: orders
+    kinds: [internal]
+    seed: {}
+    planted:
+      file: clients/users.go
+      text: 'return http.Get(u.Base + "/v1/users/" + id + "/legacy-profile")'
+  - id: event-name-field
+    prd: prds/03-event-name-field.md
+    repo: users
+    kinds: [expand]
+    seed:
+      events/retry.go: |
+        package events
+
+        // PublishWithRetry hands an event to send until it is accepted.
+        func PublishWithRetry(send func() error) {
+        	for {
+        		if err := send(); err == nil {
+        			return
+        		}
+        	}
+        }
+    planted:
+      file: events/retry.go
+      text: 'if err := send(); err == nil {'
