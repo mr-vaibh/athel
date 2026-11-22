@@ -160,6 +160,7 @@ func commands() map[string]command {
 		"finding add":            cmdFindingAdd,
 		"finding list":           cmdFindingList,
 		"finding triage":         cmdFindingTriage,
+		"finding fix":            cmdFindingFix,
 	}
 }
 

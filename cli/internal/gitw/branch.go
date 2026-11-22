@@ -5,10 +5,10 @@ import "strings"
 // maxSlug keeps branch names readable; the slug is cut at a word boundary.
 const maxSlug = 40
 
-// BranchName fills git.yaml's branch_name template (doc 04): {change_id} and {slug}, the
-// change title in lower-case ASCII words joined by hyphens.
-func BranchName(template, change, title string) string {
-	return strings.NewReplacer("{change_id}", change, "{slug}", Slug(title)).Replace(template)
+// BranchName fills a git.yaml branch template (doc 04): {change_id}, {slug} (the change title in
+// lower-case ASCII words joined by hyphens) and {finding_id} (side_finding_branch).
+func BranchName(template, change, title, finding string) string {
+	return strings.NewReplacer("{change_id}", change, "{slug}", Slug(title), "{finding_id}", finding).Replace(template)
 }
 
 // Slug is title as lower-case ASCII letters and digits, words joined by "-", at most maxSlug
