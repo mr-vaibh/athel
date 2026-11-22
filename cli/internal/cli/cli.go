@@ -140,6 +140,9 @@ func commands() map[string]command {
 		"git hook":               cmdGitHook,
 		"git lint":               cmdGitLint,
 		"git push":               cmdGitPush,
+		"pr body":                cmdPRBody,
+		"pr open":                cmdPROpen,
+		"pr update":              cmdPRUpdate,
 	}
 }
 

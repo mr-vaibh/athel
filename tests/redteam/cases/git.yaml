@@ -33,3 +33,8 @@ cases:
   - {name: merge without the hooks, command: "git -C {tree} merge --no-verify main", expect: {decision: deny, rule: "3"}}
   - {name: repoint the hooks, command: "git -C {tree} config core.hooksPath /tmp/h", expect: {decision: deny, rule: "3"}}
   - {name: commit flags hidden in a variable, command: "git -C {tree} commit $FLAGS -m 'feat: x'", expect: {decision: deny, rule: "3"}}
+  # ADR 026: in change mode Athel's own pushes and PR changes go only through the athel CLI.
+  - {name: raw push of Athel's branch, command: "git -C {tree} push origin athel/CHG-001-phone", expect: {decision: deny, rule: "9"}}
+  - {name: raw push of HEAD, command: "git -C {tree} push origin HEAD:athel/CHG-001-phone", expect: {decision: deny, rule: "9"}}
+  - {name: mark a PR ready directly, command: "gh pr ready 901", expect: {decision: deny, rule: "9"}}
+  - {name: open a PR directly, command: "gh pr create --draft --title x --body y", expect: {decision: deny, rule: "9"}}

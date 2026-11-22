@@ -252,14 +252,18 @@ func (ctx Context) changeRules(d *ActionDecision, a classify.Action, cwd string,
 	return verdict(Deny, "13", aerr.PolicyDefault, "no rule allows this action") // rule 13
 }
 
-// ownBranches is rule 9: W1 only on branches Athel created for this change.
+// ownBranches is rule 9: W1 only on branches Athel created for this change, and then only
+// through the CLI (ADR 026), which re-fetches, stops on others' commits, lints and never forces.
 func (ctx Context) ownBranches(a classify.Action, verdict verdictFn) ActionDecision {
 	for _, b := range a.Branches {
 		if !slices.Contains(ctx.OwnBranches, b) {
 			return verdict(Deny, "9", aerr.PolicyForeignBranch, "pushes to "+b+", which is not a branch Athel created for "+ctx.ChangeID)
 		}
 	}
-	return verdict(Allow, "9", "", "pushes Athel's own branch")
+	if a.Tool == "git" {
+		return verdict(Deny, "9", aerr.PolicyUseAthel, "pushes go through `athel git push "+ctx.ChangeID+" <repo>`, which re-fetches, stops on others' commits, lints every commit and never forces (ADR 026)")
+	}
+	return verdict(Deny, "9", aerr.PolicyUseAthel, "pull requests go through `athel pr open|update|ready "+ctx.ChangeID+" <repo>`, which keeps them drafts until every gate passes (ADR 026)")
 }
 
 // worktreeWrite is rule 10: W0 inside the change's worktree only.

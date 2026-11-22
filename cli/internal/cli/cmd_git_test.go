@@ -28,7 +28,7 @@ func approvedOnUsersRemote(t *testing.T) (*harness, string, func(string, ...stri
 	h, _, src, git := cacheFixture(t)
 	h.mustOK("state", "transition", "CHG-001", "--to", "investigating", "--by", "athel", "--reason", "r")
 	m3Spec(t, h)
-	h.mustOK("plan", "set", "CHG-001", writeTemp(t, "users-plan.yaml", strings.NewReplacer("repo: r,", "repo: users,", "verbs: [edit, test]", "verbs: [edit, test, commit, push]").Replace(m3PlanDoc)))
+	h.mustOK("plan", "set", "CHG-001", writeTemp(t, "users-plan.yaml", strings.NewReplacer("repo: r,", "repo: users,", "verbs: [edit, test]", "verbs: [edit, test, commit, push], rollback: revert the commit").Replace(m3PlanDoc)))
 	for _, to := range []string{"specified", "awaiting_decisions", "planned"} {
 		h.mustOK("state", "transition", "CHG-001", "--to", to, "--by", "athel", "--reason", "r")
 	}
@@ -54,11 +54,12 @@ func TestGitWorktree(t *testing.T) {
 	if len(repos) != 1 || repos[0].(map[string]any)["worktree"] != "repos/users@CHG-001" {
 		t.Errorf("change.yaml repos = %v", repos)
 	}
-	// Rule 9 now knows the branch Athel created: pushing it is Athel's own, any other is not.
+	// Rule 9 knows the branch Athel created: a raw push of it is denied with the athel command
+	// to use instead (ADR 026), a push of any other branch as someone else's.
 	push := func(branch string) map[string]any {
 		return h.decide("Bash", map[string]any{"command": "git push origin " + branch}, tree)
 	}
-	if d := push("athel/CHG-001-phone-update"); d["decision"] != "allow" || d["rule"] != "9" {
+	if d := push("athel/CHG-001-phone-update"); d["decision"] != "deny" || d["code"] != string(aerr.PolicyUseAthel) {
 		t.Errorf("own branch push = %v", d)
 	}
 	if d := push("athel/CHG-009-other"); d["decision"] != "deny" || d["code"] != string(aerr.PolicyForeignBranch) {

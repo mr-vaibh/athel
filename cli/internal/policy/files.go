@@ -143,6 +143,14 @@ type Git struct {
 	BranchName        string    `json:"branch_name"`         // M4: the template for Athel's branches
 	SideFindingBranch string    `json:"side_finding_branch"` // M4: the template for side-finding fix branches
 	Commit            GitCommit `json:"commit"`              // M4: how Athel's commits look (FR-GIT-005)
+	PR                GitPR     `json:"pr"`                  // M4: Athel's pull requests (FR-GIT-007/009)
+}
+
+// GitPR is git.yaml's pr section.
+type GitPR struct {
+	DraftUntilGatesPass bool     `json:"draft_until_gates_pass"`
+	MaxChangedLines     int      `json:"max_changed_lines"`
+	ExcludeFromSize     []string `json:"exclude_from_size"`
 }
 
 // GitCommit is git.yaml's commit section.
