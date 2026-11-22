@@ -32,6 +32,8 @@ const (
 	Tests       = "tests"        // no failure, skip or deletion compared with the baseline
 	Coverage    = "coverage"     // changed lines ≥ 90% covered; the total drops ≤ 0.5 points
 	Complexity  = "complexity"   // no function newly over complexity 15 or 80 lines
+	ACTests     = "ac-tests"     // every AC the task covers is named by a changed test
+	Contract    = "contract"     // API and event changes match the planned blast radius
 )
 
 // ProfilePlaceholder in a coverage command is replaced by the profile file the CLI reads.
@@ -67,6 +69,8 @@ var defaultGates = []Gate{
 	{ID: "build", Stage: Cheap, Pass: ExitZero, Waivable: Never},
 	{ID: "types", Stage: Cheap, Pass: ExitZero, Waivable: Never},
 	{ID: "unit", Stage: Cheap, Pass: Tests, Waivable: Never},
+	{ID: "ac-tests", Stage: Cheap, Pass: ACTests, Waivable: Never, Builtin: true},
+	{ID: "contract", Stage: Full, Pass: Contract, Waivable: Never, Builtin: true},
 	{ID: "coverage", Stage: Full, Pass: Coverage, Waivable: Human},
 	{ID: "complexity", Stage: Full, Pass: Complexity, Waivable: Human},
 }
@@ -91,7 +95,7 @@ func Defaults(lang string, scripts map[string]bool) []Gate {
 		switch lang {
 		case Go:
 			g.Command = goCommands[g.ID]
-			g.Builtin = g.Pass == Complexity
+			g.Builtin = g.Builtin || g.Pass == Complexity
 		case Node:
 			if s := nodeScripts[g.ID]; scripts[s] {
 				g.Command = []string{"npm", "run", "--silent", s}

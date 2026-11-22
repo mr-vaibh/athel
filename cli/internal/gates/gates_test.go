@@ -15,16 +15,16 @@ func ids(gs []Gate) string {
 
 func TestDefaults(t *testing.T) {
 	g := Defaults(Go, nil)
-	if ids(g) != "format,lint,build,types,unit,coverage,complexity" {
+	if ids(g) != "format,lint,build,types,unit,ac-tests,contract,coverage,complexity" {
 		t.Fatalf("go gates in doc 06 order: %s", ids(g))
 	}
 	for i, gate := range g {
-		if (gate.Stage == Cheap) != (i < 5) || !gate.Available() {
+		if (gate.Stage == Cheap) != (i < 6) || !gate.Available() {
 			t.Errorf("%+v", gate)
 		}
 	}
-	if !g[6].Builtin || len(g[6].Command) != 0 || !strings.Contains(strings.Join(g[5].Command, " "), "-coverprofile="+ProfilePlaceholder) {
-		t.Errorf("coverage runs the tests with a profile; complexity is computed by the CLI: %+v", g[5:])
+	if !g[8].Builtin || len(g[8].Command) != 0 || !strings.Contains(strings.Join(g[7].Command, " "), "-coverprofile="+ProfilePlaceholder) {
+		t.Errorf("coverage runs the tests with a profile; complexity is computed by the CLI: %+v", g[7:])
 	}
 	if g[0].Pass != NoOutput || g[1].Pass != NewFindings || g[4].Pass != Tests || g[1].Waivable != Human || g[2].Waivable != Never {
 		t.Errorf("pass criteria and waivers: %+v", g)
@@ -35,7 +35,7 @@ func TestNodeAndUnknownDefaults(t *testing.T) {
 	node := Defaults(Node, map[string]bool{"lint": true, "test": true})
 	for _, gate := range node {
 		has := len(gate.Command) > 0
-		if want := gate.ID == "lint" || gate.ID == "unit"; has != want || gate.Available() != want {
+		if want := gate.ID == "lint" || gate.ID == "unit"; has != want || gate.Available() != (want || gate.Builtin) {
 			t.Errorf("node %s has command %v; a gate without its package.json script is unavailable", gate.ID, gate.Command)
 		}
 	}
@@ -43,7 +43,7 @@ func TestNodeAndUnknownDefaults(t *testing.T) {
 		t.Errorf("node unit = %v", node[4].Command)
 	}
 	for _, gate := range Defaults("", nil) {
-		if gate.Available() {
+		if gate.Available() != (gate.ID == "ac-tests" || gate.ID == "contract") {
 			t.Errorf("an unknown language has no default commands: %+v", gate)
 		}
 	}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/gates@1.json",
+  "title": "athel/gates@1",
+  "description": "Per-repo gate overrides (.athel/config/gates.yaml, doc 06 'gates and thresholds set per repo in one file'). An entry naming a default gate replaces only its command; any other entry adds a gate. Athel's own checks and doc 06's pass criteria and waiver rules cannot be changed here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repos"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/gates@1"
+    },
+    "repos": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9._-]{1,100}$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{1,40}$"
+            },
+            "stage": {
+              "enum": [
+                "cheap",
+                "full"
+              ]
+            },
+            "pass": {
+              "enum": [
+                "exit-zero",
+                "no-output"
+              ]
+            },
+            "waivable": {
+              "enum": [
+                "never",
+                "human"
+              ]
+            },
+            "command": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

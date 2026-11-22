@@ -58,22 +58,27 @@ M4-plan §9:
 | 04b `athel pr body|open|update`, ADR 026 | `feat/m4-pr` | #84 | open, gate green (`pr ready` moves to task 10) |
 | 05 gates: defaults, classifier-checked runner (ADR 023), baseline, flaky, evidence | `feat/m4-gates` | #85 | open, gate green |
 | 06a changed-lines coverage and complexity gates (ADR 025) | `feat/m4-gates-quality` | #86 | open, gate green |
-| 06b contract and `ac-tests` gates, per-repo `gates.yaml` overrides | `feat/m4-gates-contract` | — | **next** |
-| 07–17 | see M4-plan §9 | — | not started |
+| 06b contract and `ac-tests` gates, per-repo `gates.yaml` overrides | `feat/m4-gates-contract` | #87 | open, gate green |
+| 07 deep gates: Go mutation, performance, migration (PostgreSQL), security-scan | `feat/m4-gates-deep` | — | **next** |
+| 08–17 | see M4-plan §9 | — | not started |
 
 Next:
-1. **Task 06b** on `feat/m4-gates-contract`, branched from `feat/m4-gates-quality`:
-   - **contract** (full stage, never waivable): M3's `blast diff` gives the change surface of
-     the task's diff; `blast check` compares it with the planned report. Changes not in the
-     plan fail;
-   - **`ac-tests`** (cheap stage, never waivable): every AC the task covers
-     (`plan.yaml covers`) appears in at least one changed test file's text (FR-BUILD-003);
-   - per-repo overrides in `.athel/config/gates.yaml` (new `gates@1` schema: replace a
-     gate's command, or add a gate). The policy rules apply: a replaced command still passes
-     ADR 023's check.
+1. **Task 07** on `feat/m4-gates-deep`, branched from `feat/m4-gates-contract`. Following
+   ADR 025 and M4-plan G4–G6:
+   - **mutation**, for HIGH-risk tasks only (the blast risk or the task's `risk_notes`): a
+     built-in Go mutator over the changed lines; at least 70% of mutants must be killed;
+     waivable by a human;
+   - **performance**, only when `risk_notes` names a latency budget: `go test -bench` against
+     the budget;
+   - **migration**, never waivable: static online-safety checks, plus up and down on a
+     throwaway PostgreSQL 17 (`initdb` and `pg_ctl` in a temp folder);
+   - **security-scan**, waivable only by the security owner:
+     - gosec findings that are new against the baseline;
+     - the secret patterns in added lines;
+     - `govulncheck`, only when `go.mod` or `go.sum` changed. It may reach only
+       `vuln.go.dev`, which needs an ADR 023 exception for that one command.
 
-   Watch out: the `cli` package is at 90.5%, so every new command needs its error paths
-   tested. A gate run is about 10 s per test.
+   Watch out: the `cli` package is at 90.4%, and its tests take about 5 minutes.
 2. Continue the tasks in order, each its own PR stacked on the previous one.
 3. Paid evals only with the owner's go-ahead each time, smoke runs first.
 

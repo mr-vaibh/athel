@@ -86,6 +86,7 @@ type gateTask struct {
 	task    plan.Task
 	dir     string
 	lang    string
+	base    string // the commit the change's branch was cut from
 }
 
 func (r *runCtx) gateTask(args []string, name string) (gateTask, error) {
@@ -119,7 +120,7 @@ func (r *runCtx) gateTask(args []string, name string) (gateTask, error) {
 	if !ok {
 		return gateTask{}, aerr.New(aerr.StateNotFound, c.ID+" has no worktree in "+g.task.Repo).WithNextAction("athel git preflight " + c.ID + " " + g.task.Repo)
 	}
-	g.dir = filepath.Join(s.WS.Root, filepath.FromSlash(w.Worktree))
+	g.dir, g.base = filepath.Join(s.WS.Root, filepath.FromSlash(w.Worktree)), w.BaseHead
 	entries, err := os.ReadDir(g.dir)
 	if err != nil {
 		return gateTask{}, aerr.Wrap(aerr.StateIO, "read "+g.dir, err)
@@ -130,6 +131,31 @@ func (r *runCtx) gateTask(args []string, name string) (gateTask, error) {
 	}
 	g.lang = gates.Detect(files)
 	return g, nil
+}
+
+// gateList is the task repo's gates: the defaults, with the repo's gates.yaml overrides.
+func (r *runCtx) gateList(g gateTask) ([]gates.Gate, error) {
+	b, err := os.ReadFile(filepath.Join(g.s.WS.Root, ".athel", "config", "gates.yaml"))
+	if errors.Is(err, os.ErrNotExist) {
+		return g.defaults(), nil
+	}
+	if err != nil {
+		return nil, aerr.Wrap(aerr.StateIO, "read .athel/config/gates.yaml", err)
+	}
+	if err := r.registry().ValidateYAML("athel/gates@1", b); err != nil {
+		return nil, aerr.Wrap(aerr.PolicyConfigInvalid, ".athel/config/gates.yaml", err)
+	}
+	var cfg struct {
+		Repos map[string][]gates.Gate `yaml:"repos"`
+	}
+	if err := yaml.Unmarshal(b, &cfg); err != nil {
+		return nil, aerr.Wrap(aerr.PolicyConfigInvalid, ".athel/config/gates.yaml", err)
+	}
+	list, err := gates.Override(g.defaults(), cfg.Repos[g.task.Repo])
+	if err != nil {
+		return nil, aerr.Wrap(aerr.PolicyConfigInvalid, ".athel/config/gates.yaml", err)
+	}
+	return list, nil
 }
 
 func (g gateTask) defaults() []gates.Gate {
@@ -193,8 +219,12 @@ func cmdGateBaseline(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	list, err := r.gateList(g)
+	if err != nil {
+		return nil, err
+	}
 	b := &gateBaseline{Head: strings.TrimSpace(head), At: clock.Format(r.env.Clock.Now()), Exits: map[string]int{}, Tests: gates.TestRun{Tests: map[string]string{}, BrokenPackages: []string{}}}
-	for _, gate := range g.defaults() {
+	for _, gate := range list {
 		if len(gate.Command) == 0 {
 			continue
 		}
@@ -238,8 +268,12 @@ func cmdGateRun(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	list, err := r.gateList(g)
+	if err != nil {
+		return nil, err
+	}
 	run := gateRun{N: len(f.Runs) + 1, Stage: *stage, Head: strings.TrimSpace(head), At: clock.Format(r.env.Clock.Now()), Green: true, Results: []gateOutcome{}}
-	for _, gate := range g.defaults() {
+	for _, gate := range list {
 		if gate.Stage != *stage && *stage == gates.Cheap {
 			continue
 		}
@@ -302,7 +336,7 @@ func (r *runCtx) evaluateGate(g gateTask, base *gateBaseline, gate gates.Gate, n
 		return o
 	case gate.Builtin:
 		o.Status = gates.Pass
-		r.judgeComplexity(g, base, &o)
+		r.judgeBuiltin(g, base, gate, &o)
 		return o
 	}
 	argv, profile, done := withProfile(gate.Command)
