@@ -242,7 +242,7 @@ func (r *runCtx) prDraft(s *state.Store, c *state.Change, w state.RepoWork) (prD
 		}
 	}
 	in.Rollback, in.Waivers, in.Actions = planNotes(s, c, w.Name)
-	if in.Findings, err = r.prFindings(s, c.ID); err != nil {
+	if err := r.prFindingLists(s, c, w.Name, &in); err != nil {
 		return prDraft{}, err
 	}
 	excluded := size.Excluded
@@ -282,6 +282,42 @@ func planNotes(s *state.Store, c *state.Change, repo string) ([]string, []string
 		}
 	}
 	return rollback, waivers, actions
+}
+
+// prFindingLists fills the side findings and the open minor review findings the PR lists.
+func (r *runCtx) prFindingLists(s *state.Store, c *state.Change, repo string, in *pr.BodyInput) error {
+	var err error
+	if in.Findings, err = r.prFindings(s, c.ID); err != nil {
+		return err
+	}
+	in.Minor, err = r.prMinor(s, c, repo)
+	return err
+}
+
+// prMinor lists the open minor and nit review findings of the plan's tasks in repo, from each
+// task's latest round: they never block, so the PR lists them (doc 06 severity table).
+func (r *runCtx) prMinor(s *state.Store, c *state.Change, repo string) ([]string, error) {
+	p, ok := s.ApprovedPlan(c)
+	if !ok {
+		return nil, nil
+	}
+	var out []string
+	for _, t := range p.Tasks {
+		if t.Repo != repo {
+			continue
+		}
+		rd, err := r.latestRound(gateTask{s: s, c: c, task: t})
+		if err != nil {
+			return nil, err
+		}
+		if rd == nil {
+			continue
+		}
+		for _, f := range rd.Unresolved() {
+			out = append(out, t.ID+" "+f.ID+" ("+f.Severity+", "+f.Status+") "+f.Location+": "+f.Finding)
+		}
+	}
+	return out, nil
 }
 
 // specFor is the change's spec for repo when it has one by that name, else every spec.
