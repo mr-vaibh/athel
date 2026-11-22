@@ -309,6 +309,18 @@ func TestNetworkDatabaseAndRemoteShells(t *testing.T) {
 	}
 }
 
+// TestGoCheckersAreKnown: the gate commands of a Go repo are local tools Athel knows, so the
+// engine can decide them without asking a human (ADR 023).
+func TestGoCheckersAreKnown(t *testing.T) {
+	pol := testPolicy(t, nil)
+	for cmd, tier := range map[string]Tier{"gofmt -l .": W0, "goimports -l .": W0, "golangci-lint run ./...": W0, "golangci-lint version": R0, "staticcheck ./...": W0} {
+		r := bash(t, pol, cmd, Options{})
+		if a := r.Actions[0]; a.Tier != tier || a.Uncertain != "" {
+			t.Errorf("%s: tier %s uncertain %q", cmd, a.Tier, a.Uncertain)
+		}
+	}
+}
+
 func TestPackagesInterpretersAndFiles(t *testing.T) {
 	checkTiers(t, testPolicy(t, nil), []tierCase{
 		{"npm install", W0, ""}, {"npm ls", R0, ""}, {"npm publish", W3, ""}, {"pnpm publish", W3, ""}, {"npx some-tool", W0, ""},

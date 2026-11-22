@@ -217,13 +217,7 @@ func (r *runCtx) gitOut(dir string, args ...string) (string, error) {
 // tool runs a read-only command-line tool found on the session's PATH, with the developer's
 // own login (gh keeps it under HOME), and returns its standard output.
 func (r *runCtx) tool(name string, args ...string) ([]byte, error) {
-	path := ""
-	for _, dir := range filepath.SplitList(r.env.Getenv("PATH")) {
-		if info, err := os.Stat(filepath.Join(dir, name)); err == nil && !info.IsDir() {
-			path = filepath.Join(dir, name)
-			break
-		}
-	}
+	path := lookPath(r.env.Getenv("PATH"), name)
 	if path == "" {
 		return nil, aerr.New(aerr.ToolUnreachable, name+" is not on PATH").WithNextAction("install " + name + " and log in, then retry")
 	}

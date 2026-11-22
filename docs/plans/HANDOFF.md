@@ -56,25 +56,24 @@ M4-plan §9:
 | 03 commit, branch and title lint; pre-commit checks | `feat/m4-git-lint` | #82 | open, gate green |
 | 04a `athel git push` | `feat/m4-push-pr` | #83 | open, gate green |
 | 04b `athel pr body|open|update`, ADR 026 | `feat/m4-pr` | #84 | open, gate green (`pr ready` moves to task 10) |
-| 05 gates: `gates@1`, policy-checked runner (ADR 023), baseline, evidence | `feat/m4-gates` | — | **next** |
-| 06–17 | see M4-plan §9 | — | not started |
+| 05 gates: defaults, classifier-checked runner (ADR 023), baseline, flaky, evidence | `feat/m4-gates` | #85 | open, gate green |
+| 06 coverage (changed lines), complexity, contract, `ac-tests` gates; ADR 025 part 1 | `feat/m4-gates-quality` | — | **next** |
+| 07–17 | see M4-plan §9 | — | not started |
 
 Next:
-1. **Task 05** on `feat/m4-gates`, branched from `feat/m4-pr`. It covers FR-BUILD-009 and the
-   doc 06 gate edge cases:
-   - **`gates@1`:** embedded defaults (doc 06's table: pass criterion, waivable by, stage cheap
-     or full), overridable per repo in `.athel/config/gates.yaml`; commands from the
-     conventions recipes or the language defaults.
-   - **ADR 023:** every gate command is classified and decided by the same engine as an
-     agent's Bash call, run in the task's worktree with a scrubbed environment and a timeout.
-   - **`athel gate baseline` and `athel gate run --stage cheap|full`:**
-     - evidence goes to `gates/<task>.yaml` (`gate-result@1`), with output in `artifacts/`;
-     - tests already failing on base never fail the task;
-     - skipped or deleted tests compared with the baseline fail `unit`;
-     - a flaky test is re-run up to 3 times;
-     - a gate whose tool is missing is unavailable, which blocks unless waived.
-   - Prepared fixture branches for a failing-on-base test and a flaky test.
-   - The `cli` package is at 90.7%: keep it above 90%.
+1. **Task 06** on `feat/m4-gates-quality`, branched from `feat/m4-gates`. It adds full-stage
+   gates to `internal/gates` and `cmd_gates.go`:
+   - **coverage:** changed-lines coverage ≥ 90% (`go test -coverprofile` joined with
+     `git diff -U0` against the baseline head), and the total does not drop more than
+     0.5 points against the baseline;
+   - **complexity:** no new function with cyclomatic complexity over 15 or longer than 80
+     lines (`go/ast`);
+   - **contract:** from M3's `blast diff`, API and event changes must match the plan;
+   - **`ac-tests`:** every AC the task covers appears in a changed test name or tag;
+   - per-repo overrides in `.athel/config/gates.yaml` (`gates@1` schema).
+
+   Watch out: the `cli` package is at 90.5%, so every new command needs its error paths
+   tested.
 2. Continue the tasks in order, each its own PR stacked on the previous one.
 3. Paid evals only with the owner's go-ahead each time, smoke runs first.
 
