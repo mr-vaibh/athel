@@ -144,13 +144,15 @@ func TestDefectSandbox(t *testing.T) {
 		t.Skipf("no corpus yet: %v", err)
 	}
 	c := all[0]
-	sb, err := evalkit.NewSandbox(t.TempDir(), buildTools(t))
+	tl := buildTools(t)
+	sb, err := evalkit.NewSandbox(t.TempDir(), tl)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := Prepare(sb, c); err != nil {
 		t.Fatal(err)
 	}
+	checkCommits(t, tl, all)
 	if _, err := os.Stat(filepath.Join(sb.WS, filepath.FromSlash(Manifest))); err != nil {
 		t.Fatalf("the reviewer's manifest: %v", err)
 	}
@@ -173,6 +175,50 @@ func TestDefectSandbox(t *testing.T) {
 	if g := GradeRun(c, fs, saved); !g.Caught || g.MatchedBy != "R1-01" {
 		t.Errorf("a finding on the planted lines with the defect's rule is caught: %+v", g)
 	}
+}
+
+// checkCommits: every case must reach the reviewer. Prepare commits a case through Athel's own
+// hooks, whose secret check would refuse a planted secret before any review round is saved. One
+// change per repo is prepared; each other case is committed on top of it, then undone.
+func checkCommits(t *testing.T, tl evalkit.Tools, all []Case) {
+	t.Helper()
+	for _, repo := range []string{"users", "orders"} {
+		t.Run(repo, func(t *testing.T) {
+			t.Parallel()
+			var cases []Case
+			for _, c := range all {
+				if c.Repo == repo {
+					cases = append(cases, c)
+				}
+			}
+			sb, err := evalkit.NewSandbox(t.TempDir(), tl)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := Prepare(sb, cases[0]); err != nil {
+				t.Fatalf("%s never reaches the reviewer: %v", cases[0].ID, err)
+			}
+			tree := Worktree(sb, cases[0])
+			head := git(t, tree, "rev-parse", "HEAD")
+			for _, c := range cases[1:] {
+				if err := commitCase(sb, c); err != nil {
+					t.Errorf("%s never reaches the reviewer: %v", c.ID, err)
+				}
+				git(t, tree, "reset", "-q", "--hard", head)
+				git(t, tree, "clean", "-fdq")
+			}
+		})
+	}
+}
+
+// git runs a git command in dir and returns its trimmed output.
+func git(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v %s", args, err, out)
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // onlyTaken reports whether a spec check's only problems are IDs another spec of the shared check

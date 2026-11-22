@@ -68,3 +68,6 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-19 | After build trial 7 ($51.65 so far): build trial 8, a trial then full runs, or stop? | "Yes, one more trial": about $7–15, then ask before the full runs | Build trial 8; HANDOFF |
 | 2026-11-19 | After build trial 8 ($55.22 so far): build trial 9, a trial then full runs, or stop? | "Yes, one more trial": about $7–15, then ask before the full runs | Build trial 9; HANDOFF |
 | 2026-11-19 | Full M4 evals after the trials ($61.95): both, reviewer only, one run each first, or stop? | "Both full runs": reviewer 30 × 3 (about $45–135) and build 3 × 3 (about $45–150), then the M4 report | Full runs; EVALS.md; M4 report |
+| 2026-11-21 | D11 and D04 in the reviewer eval (87.5%, bar 90%): keep the record and fix the cases, rescore this run, or leave them? | "Keep 87.5%, fix cases": this run stays at 87.5%. For the next run only, D11 becomes a defect Athel's hooks do not stop, and D04 also accepts its test file | `cases.yaml` D11 and D04; `Planted.Tests`; EVALS.md |
+| 2026-11-21 | Pay for a re-run of both full evals on the fixes (#108), about $110? | "Yes, re-run both" | Full runs 2; EVALS.md; M4 report |
+| 2026-11-21 | Merge #77–#108 now, after the re-run, or by the owner? | "Wait for the re-run": ask for the merge after the re-run shows the fixes work | HANDOFF |
