@@ -152,3 +152,11 @@ Owner approved re-running only `event-name-field` (3 runs): 2 of 3 valid, $14.79
 round 4: 6 of 9 valid; EC-1 (every run valid) not met. The 3 failures are 2 missed planted side
 bugs (model) and 1 round-limit stop (checker scope creep, backlog). Owner's merge OK: merge
 #77–#111 in order after this re-run, checks green.
+
+## Fix pass (2026-11-23)
+- #77–#111 merged into main in order (owner's OK). M4 report: PR #112 (open).
+- Owner: "One fix pass + 9 runs". Fix pass: PR #113 `feat/m4-review-minors` (ADR 033), check.sh
+  green. Build full 6 (all 9 runs, $50–70 approved) running on that branch.
+- Next: record build full 6 in EVALS.md; if every run is valid, update the M4 report (#112) to
+  EC-1 met and ask the owner to accept M4 and merge #112 and #113; if not, read the failed runs
+  (free), report, and ask before any more paid runs.
