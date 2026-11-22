@@ -49,7 +49,7 @@ func TestMigrateCommand(t *testing.T) {
 	h := setup(t)
 	cf := filepath.Join(h.root, ".athel", "changes", "CHG-001", "change.yaml")
 	b, _ := os.ReadFile(cf)
-	legacy := regexp.MustCompile(`(?m)^integrity:\n(  .*\n)*`).ReplaceAllString(strings.Replace(string(b), "change@3", "change@1", 1), "")
+	legacy := regexp.MustCompile(`(?m)^integrity:\n(  .*\n)*`).ReplaceAllString(strings.Replace(string(b), "change@4", "change@1", 1), "")
 	if err := os.WriteFile(cf, []byte(legacy), 0o600); err != nil {
 		t.Fatal(err)
 	}

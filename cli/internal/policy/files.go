@@ -137,9 +137,11 @@ type Environment struct {
 
 // Git is the subset of git.yaml the policy engine enforces in M1 (plus the rest for later).
 type Git struct {
-	BaseBranch string   `json:"base_branch"`
-	Protected  []string `json:"protected"`
-	Forbidden  []string `json:"forbidden"`
+	BaseBranch        string   `json:"base_branch"`
+	Protected         []string `json:"protected"`
+	Forbidden         []string `json:"forbidden"`
+	BranchName        string   `json:"branch_name"`         // M4: the template for Athel's branches
+	SideFindingBranch string   `json:"side_finding_branch"` // M4: the template for side-finding fix branches
 }
 
 // Set is the effective policy: every file merged, typed and hashed.

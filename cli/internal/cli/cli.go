@@ -133,6 +133,7 @@ func commands() map[string]command {
 		"repos survey":           cmdReposSurvey,
 		"conventions save":       cmdConventionsSave,
 		"conventions show":       cmdConventionsShow,
+		"git worktree":           cmdGitWorktree,
 	}
 }
 

@@ -103,6 +103,11 @@ func TestTaskMatch(t *testing.T) {
 		{Write{Repo: "user-service", Verb: "push"}, "T-03"},
 		{Write{Repo: "user-service", Verb: "comment"}, ""},
 	}
+	for repo, want := range map[string]bool{"user-service": true, "order-service": false, "": false} {
+		if p.WritesIn(repo) != want {
+			t.Errorf("WritesIn(%q) = %v", repo, !want)
+		}
+	}
 	for _, tt := range tests {
 		got := ""
 		if task := p.Match(tt.w); task != nil {

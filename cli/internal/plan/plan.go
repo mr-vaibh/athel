@@ -155,6 +155,11 @@ type Write struct {
 	Verb string // edit | create | delete | test | commit | push | pr | comment
 }
 
+// WritesIn reports whether any task of the plan writes in repo.
+func (p *Plan) WritesIn(repo string) bool {
+	return slices.ContainsFunc(p.Tasks, func(t Task) bool { return t.Repo == repo })
+}
+
 // Match returns the first task that allows w, or nil.
 func (p *Plan) Match(w Write) *Task {
 	for i := range p.Tasks {
