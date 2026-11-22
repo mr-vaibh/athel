@@ -2,9 +2,12 @@ package cli
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 
 	"github.com/mr-vaibh/athel/cli/internal/blast"
@@ -144,7 +147,121 @@ func (r *runCtx) judgeBuiltin(g gateTask, base *gateBaseline, gate gates.Gate, o
 		r.judgeACTests(g, o)
 	case gates.Contract:
 		r.judgeContract(g, o)
+	case gates.Mutation:
+		r.judgeMutation(g, base, o)
 	}
+}
+
+// judgeMutation runs the changed lines' mutants of a HIGH or CRITICAL change, each against its
+// package's tests through a Go build overlay, so the worktree is never touched (ADR 025).
+func (r *runCtx) judgeMutation(g gateTask, base *gateBaseline, o *gateOutcome) {
+	risk, err := r.blastRisk(g.s, g.c.ID)
+	if err != nil {
+		o.Status, o.Summary = "unavailable", err.Error()
+		return
+	}
+	if risk != "HIGH" && risk != "CRITICAL" {
+		o.Status, o.Summary = gates.Skipped, "not required: the change's risk is "+cmpOr(risk, "not assessed")+"; mutation runs at HIGH and CRITICAL"
+		return
+	}
+	mutants, err := r.changedMutants(g, base)
+	if err != nil {
+		o.Status, o.Summary = "unavailable", err.Error()
+		return
+	}
+	killed, survived := 0, 0
+	for _, m := range gates.Cap(mutants) {
+		switch r.runMutant(g, m) {
+		case gates.Fail:
+			killed++
+		case gates.Pass:
+			survived++
+			o.Details = append(o.Details, "survived: "+m.File+" "+m.Desc)
+		}
+	}
+	if score := gates.Score(killed, survived); score < gates.MinMutationScore {
+		o.Status = gates.Fail
+		o.Summary = fmt.Sprintf("mutation score %.0f%% (%d of %d killed); at least %.0f%% needed", score, killed, killed+survived, gates.MinMutationScore)
+	}
+}
+
+func cmpOr(s, alt string) string {
+	if s == "" {
+		return alt
+	}
+	return s
+}
+
+// changedMutants lists the mutants of the task's changed Go lines, file by file in name order.
+func (r *runCtx) changedMutants(g gateTask, base *gateBaseline) ([]gates.Mutant, error) {
+	diff, err := r.gitOut(g.dir, "diff", "-U0", "--no-color", "--no-ext-diff", base.Head)
+	if err != nil {
+		return nil, err
+	}
+	changed := gates.ChangedLines(diff)
+	files := make([]string, 0, len(changed))
+	for f := range changed {
+		files = append(files, f)
+	}
+	sort.Strings(files)
+	var out []gates.Mutant
+	for _, f := range files {
+		src, err := os.ReadFile(filepath.Join(g.dir, f)) //nolint:gosec // a changed file of the worktree
+		if err != nil {
+			return nil, err
+		}
+		ms, err := gates.Mutants(f, string(src), changed[f])
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ms...)
+	}
+	return out, nil
+}
+
+// runMutant runs one mutant's package tests: fail means the tests killed it, pass that it
+// survived, and anything else (it does not compile, it cannot run) that it does not count.
+func (r *runCtx) runMutant(g gateTask, m gates.Mutant) string {
+	tmp, err := os.MkdirTemp("", "athel-mutant-")
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = os.RemoveAll(tmp) }() // a throwaway folder
+	mutated, overlay := filepath.Join(tmp, filepath.Base(m.File)), filepath.Join(tmp, "overlay.json")
+	// Go names files by their real path, so a symlinked worktree folder (macOS /var) must be
+	// resolved, or the overlay would never apply and every mutant would seem to survive.
+	real, err := filepath.EvalSymlinks(filepath.Join(g.dir, m.File))
+	if err != nil {
+		return ""
+	}
+	spec, _ := json.Marshal(map[string]map[string]string{"Replace": {real: mutated}}) // strings always encode
+	if os.WriteFile(mutated, []byte(m.Src), 0o600) != nil || os.WriteFile(overlay, spec, 0o600) != nil {
+		return ""
+	}
+	argv := []string{"go", "test", "-count=1", "-json", "-overlay=" + overlay, "./" + filepath.Dir(m.File)}
+	if r.gateRefusal(g.dir, argv) != "" {
+		return ""
+	}
+	_, out, _, err := r.runGateCommand(g.dir, argv)
+	if err != nil {
+		return ""
+	}
+	run := gates.ParseGoTest(out)
+	switch {
+	case len(run.BrokenPackages) > 0:
+		return ""
+	case slices.Contains(mapValues(run.Tests), gates.Fail):
+		return gates.Fail
+	}
+	return gates.Pass
+}
+
+func mapValues(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for _, v := range m {
+		out = append(out, v)
+	}
+	return out
 }
 
 // judgeACTests: every AC the task covers is named by a test file changed since the change's

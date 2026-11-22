@@ -59,26 +59,28 @@ M4-plan §9:
 | 05 gates: defaults, classifier-checked runner (ADR 023), baseline, flaky, evidence | `feat/m4-gates` | #85 | open, gate green |
 | 06a changed-lines coverage and complexity gates (ADR 025) | `feat/m4-gates-quality` | #86 | open, gate green |
 | 06b contract and `ac-tests` gates, per-repo `gates.yaml` overrides | `feat/m4-gates-contract` | #87 | open, gate green |
-| 07 deep gates: Go mutation, performance, migration (PostgreSQL), security-scan | `feat/m4-gates-deep` | — | **next** |
+| 07a built-in Go mutation gate (HIGH and CRITICAL risk) | `feat/m4-gates-mutation` | #88 | open, gate green |
+| 07b security-scan gate | `feat/m4-gates-security` | — | **next** |
+| 07c migration (PostgreSQL) and performance gates | — | — | not started |
 | 08–17 | see M4-plan §9 | — | not started |
 
 Next:
-1. **Task 07** on `feat/m4-gates-deep`, branched from `feat/m4-gates-contract`. Following
-   ADR 025 and M4-plan G4–G6:
-   - **mutation**, for HIGH-risk tasks only (the blast risk or the task's `risk_notes`): a
-     built-in Go mutator over the changed lines; at least 70% of mutants must be killed;
-     waivable by a human;
-   - **performance**, only when `risk_notes` names a latency budget: `go test -bench` against
-     the budget;
-   - **migration**, never waivable: static online-safety checks, plus up and down on a
-     throwaway PostgreSQL 17 (`initdb` and `pg_ctl` in a temp folder);
-   - **security-scan**, waivable only by the security owner:
-     - gosec findings that are new against the baseline;
-     - the secret patterns in added lines;
-     - `govulncheck`, only when `go.mod` or `go.sum` changed. It may reach only
-       `vuln.go.dev`, which needs an ADR 023 exception for that one command.
+1. **Task 07b** on `feat/m4-gates-security`, branched from `feat/m4-gates-mutation`:
+   **security-scan** (full stage), waivable only by the security owner (doc 06):
+   - gosec findings that are new against the baseline: run `golangci-lint` with only gosec
+     enabled, or reuse the lint output filtered to `(gosec)`;
+   - the secret patterns (M1 scrubber) in the lines added since the baseline;
+   - `govulncheck ./...`, only when `go.mod` or `go.sum` changed since the baseline. It
+     reaches `vuln.go.dev`, so it needs a narrow exception to ADR 023 (owner's Q3 approval),
+     written as a follow-up in ADR 023;
+   - classify `govulncheck` as a known tool (a remote read).
+2. **Task 07c:** migration (static online-safety checks, plus up and down on a throwaway
+   PostgreSQL 17 from `initdb` and `pg_ctl` in a temp folder; never waivable) and
+   performance (`go test -bench` against a `risk_notes` latency budget; only when one is
+   named).
 
-   Watch out: the `cli` package is at 90.4%, and its tests take about 5 minutes.
+   Watch out: the `cli` package is at 90.3% and its tests take about 5 minutes, so add a test
+   with every path.
 2. Continue the tasks in order, each its own PR stacked on the previous one.
 3. Paid evals only with the owner's go-ahead each time, smoke runs first.
 

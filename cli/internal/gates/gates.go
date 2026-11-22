@@ -34,7 +34,12 @@ const (
 	Complexity  = "complexity"   // no function newly over complexity 15 or 80 lines
 	ACTests     = "ac-tests"     // every AC the task covers is named by a changed test
 	Contract    = "contract"     // API and event changes match the planned blast radius
+	Mutation    = "mutation"     // HIGH-risk changes: ≥ 70% of changed-line mutants killed
 )
+
+// Skipped is a gate that does not apply to this task (for example mutation below HIGH risk);
+// it counts as passing.
+const Skipped = "skipped"
 
 // ProfilePlaceholder in a coverage command is replaced by the profile file the CLI reads.
 const ProfilePlaceholder = "{profile}"
@@ -73,6 +78,7 @@ var defaultGates = []Gate{
 	{ID: "contract", Stage: Full, Pass: Contract, Waivable: Never, Builtin: true},
 	{ID: "coverage", Stage: Full, Pass: Coverage, Waivable: Human},
 	{ID: "complexity", Stage: Full, Pass: Complexity, Waivable: Human},
+	{ID: "mutation", Stage: Full, Pass: Mutation, Waivable: Human},
 }
 
 var goCommands = map[string][]string{
@@ -95,7 +101,7 @@ func Defaults(lang string, scripts map[string]bool) []Gate {
 		switch lang {
 		case Go:
 			g.Command = goCommands[g.ID]
-			g.Builtin = g.Builtin || g.Pass == Complexity
+			g.Builtin = g.Builtin || g.Pass == Complexity || g.Pass == Mutation
 		case Node:
 			if s := nodeScripts[g.ID]; scripts[s] {
 				g.Command = []string{"npm", "run", "--silent", s}

@@ -15,7 +15,7 @@ func ids(gs []Gate) string {
 
 func TestDefaults(t *testing.T) {
 	g := Defaults(Go, nil)
-	if ids(g) != "format,lint,build,types,unit,ac-tests,contract,coverage,complexity" {
+	if ids(g) != "format,lint,build,types,unit,ac-tests,contract,coverage,complexity,mutation" {
 		t.Fatalf("go gates in doc 06 order: %s", ids(g))
 	}
 	for i, gate := range g {
