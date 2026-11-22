@@ -42,3 +42,9 @@ cases:
   - {name: Jira JQL search, tool: mcp__atlassian__searchJiraIssuesUsingJql, input: {jql: "project = SHOP"}, expect: {decision: allow, rule: "11"}}
   - {name: scout saves its answer from a heredoc, command: "athel --json investigation save --ask ASK-001 --summary-text x - <<'EOF'\nschema: athel/investigation@1\nEOF", agent: athel:scout, expect: {decision: allow, rule: "7x"}}
   - {name: scout reads a playbook, command: athel playbook show kubectl, agent: athel:scout, expect: {decision: allow, rule: "7x"}}
+  - {name: QA writes a test, tool: Write, input: {file_path: "{tree}/src/phone_test.go", content: x}, agent: athel:qa, expect: {decision: allow, rule: "10"}}
+  - {name: QA saves its report, command: "athel qa save CHG-001 T-01 -", agent: athel:qa, expect: {decision: allow, rule: "7x"}}
+  - {name: reviewer saves its round, command: "athel review save CHG-001 T-01 -", agent: athel:reviewer, expect: {decision: allow, rule: "7x"}}
+  - {name: security saves its report, command: "athel security save CHG-001 T-01 -", agent: athel:security, expect: {decision: allow, rule: "7x"}}
+  - {name: developer edits a planned file, tool: Edit, input: {file_path: "{tree}/src/phone.go", old_string: a, new_string: b}, agent: athel:developer, expect: {decision: allow, rule: "10"}}
+  - {name: developer saves its result, command: "athel build save CHG-001 T-01 -", agent: athel:developer, expect: {decision: allow, rule: "7x"}}

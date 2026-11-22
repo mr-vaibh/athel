@@ -61,6 +61,7 @@ const (
 	ToolUnreachable        Code = "E-TOOL-UNREACHABLE"      // M2: a remote or tool could not be reached
 	PolicyDevClone         Code = "E-POLICY-DEV-CLONE"      // M2: a git command that would change a developer's clone
 	PolicyAgentReadOnly    Code = "E-POLICY-AGENT-READONLY" // M2: a write by a read-only subagent (the scout)
+	PolicyAgentScope       Code = "E-POLICY-AGENT-SCOPE"    // M4: a build agent acting outside its role (ADR 024)
 	PolicyUseAthel         Code = "E-POLICY-USE-ATHEL"      // M4: a push or PR change that only the athel CLI may make (ADR 026)
 	ConflictVersion        Code = "E-CONFLICT-VERSION"      // M3: another PRD version landed first
 	ConflictWorktree       Code = "E-CONFLICT-WORKTREE"     // M4: the worktree path or every branch name is taken
