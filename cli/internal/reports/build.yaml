@@ -1,0 +1,7 @@
+# A build result, as the developer sends it to `athel build save CHG-NNN T-NN -` when a round's
+# code is committed. The CLI adds the changed files and tests from git, and the commit.
+commands_run:
+  - {command: go build ./..., result: pass}
+  - {command: go test ./internal/library/..., result: pass}
+  - {command: golangci-lint run, result: pass}
+notes: Loans past their due date are now charged per day, capped at the book's price (AC-2).

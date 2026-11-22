@@ -1,0 +1,15 @@
+# A security report, as the security agent sends it to `athel security save CHG-NNN T-NN -`,
+# for the task's diff and its dependency changes. List what you checked, and each problem with
+# its CWE category.
+checked:
+  - input validation at the HTTP edge
+  - authorization on every new endpoint
+  - secrets and personal data in code, logs and config
+  - new or changed dependencies
+findings:
+  - severity: blocker             # blocker | major | minor | nit
+    cwe: CWE-89
+    location: internal/library/search.go:18-24
+    rule: security.parameterised-queries
+    finding: The title filter is concatenated into the SQL text.
+    required: Pass the title as a query parameter.

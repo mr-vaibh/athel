@@ -65,6 +65,7 @@ type Finding struct {
 	Status   string `yaml:"status" json:"status"`
 	FixedIn  string `yaml:"fixed_in,omitempty" json:"fixed_in,omitempty"`
 	Dispute  string `yaml:"dispute,omitempty" json:"dispute,omitempty"`
+	From     string `yaml:"from,omitempty" json:"from,omitempty"` // the QA or security report finding
 	History  []Step `yaml:"history" json:"history"`
 }
 
@@ -186,6 +187,36 @@ func carry(prev *Round, res []Resolution, r *Round) error {
 		return invalid("no earlier finding to judge with that ID")
 	}
 	return nil
+}
+
+// Folded is a QA or security report finding as it joins a round.
+type Folded struct {
+	From, Source, Severity, Location, Rule, Finding, Required string
+}
+
+// Fold adds the report findings the round does not hold yet, as open findings numbered after
+// the round's own. QA and security work in parallel with the reviewer, so a report may come
+// before or after the round it joins; either way its findings are tracked like the reviewer's.
+func (r *Round) Fold(fs []Folded) int {
+	next := 1
+	for _, f := range r.Findings {
+		var n, i int
+		if _, err := fmt.Sscanf(f.ID, "R%d-%d", &n, &i); err == nil && n == r.Round && i >= next {
+			next = i + 1
+		}
+	}
+	added := 0
+	for _, x := range fs {
+		if slices.ContainsFunc(r.Findings, func(f Finding) bool { return f.From == x.From }) {
+			continue
+		}
+		r.Findings = append(r.Findings, Finding{ID: fmt.Sprintf("R%d-%02d", r.Round, next), Severity: x.Severity, Source: x.Source,
+			Location: x.Location, Rule: x.Rule, Finding: x.Finding, Required: x.Required, Status: Open, From: x.From,
+			History: []Step{{Round: r.Round, Status: Open, Note: "from " + x.From}}})
+		next++
+		added++
+	}
+	return added
 }
 
 // find returns a finding of the round.

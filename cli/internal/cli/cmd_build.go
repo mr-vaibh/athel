@@ -279,6 +279,13 @@ func (r *runCtx) notDone(g gateTask, head string) ([]string, string, error) {
 	if rd == nil || !rd.Done() {
 		problems = append(problems, "the review is not done")
 	}
+	missing, err := r.unfolded(g, rd)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(missing) > 0 {
+		problems = append(problems, "QA or security findings are not in a review round yet: "+strings.Join(missing, ", "))
+	}
 	dec, err := r.readDecisions(g.c.ID)
 	if err != nil {
 		return nil, "", err
