@@ -115,6 +115,7 @@ type BodyInput struct {
 	Decisions                            []Decision
 	Linked                               []Linked
 	Rollback                             []string
+	Waivers                              []string // FR-BUILD-014: every waiver appears in the PR body
 }
 
 // Body is the PR description with doc 04's sections, in order.
@@ -134,7 +135,14 @@ func Body(in BodyInput) string {
 	for _, d := range in.Decisions {
 		fmt.Fprintf(&b, "- %s %s → %s (%s)\n", d.ID, d.Question, d.Answer, d.By)
 	}
-	b.WriteString("\n## Tests and gates\n\nNo gate results yet.\n\n## Security notes\n\nNo security report yet.\n\n")
+	b.WriteString("\n## Tests and gates\n\nNo gate results yet.\n\n## Waivers\n\n")
+	if len(in.Waivers) == 0 {
+		b.WriteString("None.\n")
+	}
+	for _, w := range in.Waivers {
+		b.WriteString("- " + w + "\n")
+	}
+	b.WriteString("\n## Security notes\n\nNo security report yet.\n\n")
 	b.WriteString("## Side findings (not fixed here)\n\nNone recorded.\n\n## Linked PRs and merge order\n\n")
 	if len(in.Linked) == 0 {
 		b.WriteString("No other repo in this change.\n")

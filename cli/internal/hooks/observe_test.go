@@ -235,3 +235,21 @@ func TestSignoffGrantFromHumanPrompt(t *testing.T) {
 		t.Errorf("grant = %+v %v", g, err)
 	}
 }
+
+// TestWaiveGrantFromHumanPrompt (FR-BUILD-014): the developer's /athel:waive becomes a grant bound
+// to its task, subject, expiry and reason; a subagent's never does.
+func TestWaiveGrantFromHumanPrompt(t *testing.T) {
+	d, _ := newDeps(t)
+	prompt := "/athel:waive CHG-001 T-01 lint until=2026-11-20 'legacy finding'"
+	if o := Handle(&hookio.Request{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p0", Prompt: prompt, AgentID: "agent-1"}, d); o.Rule == RuleGrant {
+		t.Errorf("a subagent's prompt made a grant: %+v", o)
+	}
+	o := Handle(&hookio.Request{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p1", Prompt: prompt}, d)
+	if o.Rule != RuleGrant || !strings.Contains(o.Response.AdditionalContext, "athel gate waive CHG-001 T-01 lint --until 2026-11-20 --reason 'legacy finding'") {
+		t.Fatalf("outcome = %+v", o)
+	}
+	w, _ := grants.ParseWaivePrompt(prompt)
+	if g, err := d.Store.Grants().Valid(grants.WaiveKey(w), grants.TargetWaive, sess); err != nil || g == nil {
+		t.Errorf("grant = %+v %v", g, err)
+	}
+}

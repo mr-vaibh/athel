@@ -40,9 +40,12 @@ const (
 	Review      = "review"       // the latest review round approves and nothing blocks
 )
 
-// Skipped is a gate that does not apply to this task (for example mutation below HIGH risk);
-// it counts as passing.
-const Skipped = "skipped"
+// Skipped is a gate that does not apply to this task (for example mutation below HIGH risk), and
+// Waived a red gate a human waiver lets through until its expiry; both count as passing.
+const (
+	Skipped = "skipped"
+	Waived  = "waived"
+)
 
 // ProfilePlaceholder in a coverage command is replaced by the profile file the CLI reads.
 const ProfilePlaceholder = "{profile}"

@@ -92,3 +92,22 @@ func TestUpdateRepo(t *testing.T) {
 		t.Errorf("another session: %v", err)
 	}
 }
+
+func TestWaivers(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := approved(t, s)
+	w := Waiver{Task: "T-01", Subject: "lint", By: ByHuman, Reason: "legacy", Until: "2026-11-30", Grant: "GR-1", At: "2026-11-01T10:00:00.000Z"}
+	got, err := s.AddWaiver(c.ID, testSession, w)
+	if err != nil || len(got.Waivers) != 1 {
+		t.Fatalf("%+v %v", got, err)
+	}
+	if !got.Waived("T-01", "lint", "2026-11-30") || got.Waived("T-01", "lint", "2026-12-01") || got.Waived("T-02", "lint", "2026-11-01") {
+		t.Error("a waiver holds through its last day, for its task and subject only")
+	}
+	if _, err := s.AddWaiver(c.ID, "", w); !aerr.HasCode(err, aerr.StateNoSession) {
+		t.Errorf("no session: %v", err)
+	}
+	if _, err := s.AddWaiver(c.ID, "other", w); !aerr.HasCode(err, aerr.StateLockHeld) {
+		t.Errorf("another session: %v", err)
+	}
+}

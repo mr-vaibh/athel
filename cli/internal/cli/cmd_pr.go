@@ -173,18 +173,35 @@ func (r *runCtx) prDraft(s *state.Store, c *state.Change, w state.RepoWork) (prD
 			in.Linked = append(in.Linked, pr.Linked{Repo: o.Name, PR: *o.PR})
 		}
 	}
-	if p, ok := s.ApprovedPlan(c); ok {
-		for _, t := range p.Tasks {
-			if t.Repo == w.Name && t.Rollback != "" {
-				in.Rollback = append(in.Rollback, t.ID+": "+t.Rollback)
-			}
-		}
-	}
+	in.Rollback, in.Waivers = planNotes(s, c, w.Name)
 	excluded := size.Excluded
 	if excluded == nil {
 		excluded = []string{}
 	}
 	return prDraft{Title: pr.Title(w.Name, c.Title), Body: pr.Body(in), Lines: size.Lines, Max: pol.Git.PR.MaxChangedLines, Excluded: excluded}, nil
+}
+
+// planNotes are the rollback steps and the waivers of the plan's tasks in repo.
+func planNotes(s *state.Store, c *state.Change, repo string) ([]string, []string) {
+	var rollback, waivers []string
+	p, ok := s.ApprovedPlan(c)
+	if !ok {
+		return nil, nil
+	}
+	for _, t := range p.Tasks {
+		if t.Repo != repo {
+			continue
+		}
+		if t.Rollback != "" {
+			rollback = append(rollback, t.ID+": "+t.Rollback)
+		}
+		for _, wv := range c.Waivers {
+			if wv.Task == t.ID {
+				waivers = append(waivers, wv.Task+" "+wv.Subject+" until "+wv.Until+" by "+wv.By+": "+wv.Reason)
+			}
+		}
+	}
+	return rollback, waivers
 }
 
 // specFor is the change's spec for repo when it has one by that name, else every spec.

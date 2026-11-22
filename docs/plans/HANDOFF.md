@@ -64,33 +64,39 @@ M4-plan §9:
 | 07c performance gate (latency budget in `risk_notes`) | `feat/m4-gates-perf` | #90 | open, gate green |
 | 07d migration gate (static checks; up, down, up on a throwaway PostgreSQL) | `feat/m4-gates-migration` | #91 | open, gate green |
 | 08 review rounds: `review@1`, carry-forward, limits, disputes, `review` gate | `feat/m4-review` | #92 | open, gate green |
-| 09 waivers: `/athel:waive`, reason, expiry, security owner | `feat/m4-waivers` | — | **next** |
-| 10–17 | see M4-plan §9 | — | not started |
+| 09 waivers: `/athel:waive`, reason, expiry (security-scan refused, G18) | `feat/m4-waivers` | #93 | open, gate green |
+| 10a `cli` coverage push (90.2% → about 93%), so later tasks have room | `feat/m4-cli-coverage` | — | **next** |
+| 10b build engine: task records, scheduler, manifests | — | — | not started |
+| 10c done check, `ready_for_pr` guard, `pr ready`, Stop hook on gates | — | — | not started |
+| 11–17 | see M4-plan §9 | — | not started |
 
 CI passed on #77–#91 (checked 2026-11-14).
 
 Next:
-1. **Task 09** on `feat/m4-waivers`, branched from `feat/m4-review`. It covers
-   FR-BUILD-014:
-   - **`/athel:waive CHG <gate|finding> --task T-NN --reason … --until YYYY-MM-DD`** is a
-     human-origin grant, the ADR 019 pattern: a new skill, the classifier marks
-     `athel gate waive` as human-only, and the hook creates the grant;
-   - **`athel gate waive`** records `change.yaml waivers[]` (`change@4` gets a typed waiver
-     record, changed in place since it is unreleased);
-   - **refused:** a never-waivable gate (build, unit, types, format, contract, migration,
-     review, ac-tests); a missing reason; an expiry in the past or more than 30 days ahead;
-     `security-scan` waived by anyone but the security owner (`config security_owner`); a
-     blocker finding;
-   - **waived gates count as passing** in `gate run` while the waiver holds; an expired
-     waiver stops counting; a waived major finding is set `waived` in the latest round;
-   - the PR body lists every waiver.
-2. Then task 10 (build engine and `pr ready`), 11 (side
-   findings), 12 (agents and policy), 13 (skills), 14 (network-deny test), 15–16 (evals: paid,
-   so ask first), 17 (report).
+1. **Task 10a** on `feat/m4-cli-coverage`, branched from `feat/m4-waivers`: test-only. List the
+   weakest `cli` functions with
+   `go test -coverprofile=c.out ./cli/internal/cli/ && go tool cover -func=c.out | sort -k3 -n`.
+   Add real tests for their error paths:
+   - `cmdCheckpointShow`, `writeRepoFiles`, `plain`, `cmdBlastSignoff`, `openAssumptions`;
+   - `cmdConventionsShow`, `hookDecide`, `cmdPlanSummary`, `cmdTrace`, `cmdPRDIndex`;
+   - `signedOff`, `cmdReposSurvey`, `cmdVersion`.
 
-Coverage: the `cli` package is at 90.4% and its tests take about 6 minutes. A focused
-coverage push is due before M4 ends; list the weakest functions with
-`go tool cover -func` and test them.
+   Aim for about 93%, and do not lower any bar.
+2. **Task 10b:** the build engine.
+   - **Task records** go in `change.yaml` (`build.tasks[]`: status, round, attempts, commits).
+     Add them to `change@4` in place, and keep `plan.yaml` untouched (G9).
+   - **`athel build next`** gives the tasks whose dependencies are done (FR-BUILD-001).
+   - **`athel build context CHG T`** writes the manifest of exactly the developer's inputs
+     (FR-BUILD-002). `athel review context` builds the reviewer's manifest, with no developer
+     transcript (FR-BUILD-006).
+   - **`athel build done`** needs green gates, done review, and no open card blocking the task.
+3. **Task 10c:** the `building → ready_for_pr` guard (every task done), `athel pr ready` (all
+   green), and the Stop hook blocking while the current task is neither done nor blocked
+   (G13: 3 blocks raise a card).
+4. Then 11 (side findings), 12 (agents and policy), 13 (skills), 14 (network-deny test),
+   15–16 (evals: paid, so ask first), 17 (report).
+
+The `cli` package's tests take about 7 minutes.
 
 ## Open questions for the owner
 
