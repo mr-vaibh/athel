@@ -146,3 +146,9 @@ Build full 4: 4 of 9 valid, $66.80 (see EVALS.md). No Athel bug found in the fai
 3 `event-name-field` runs hit the usage limit. Both pre-approved rounds are used: ask the owner
 before any more paid runs. Next: report to the owner, ask for the merge OK for #77–#110 in
 order, then task 17 (M4 report, draft in the session scratchpad).
+
+## Round 5 (2026-11-23)
+Owner approved re-running only `event-name-field` (3 runs): 2 of 3 valid, $14.79. Combined with
+round 4: 6 of 9 valid; EC-1 (every run valid) not met. The 3 failures are 2 missed planted side
+bugs (model) and 1 round-limit stop (checker scope creep, backlog). Owner's merge OK: merge
+#77–#111 in order after this re-run, checks green.
