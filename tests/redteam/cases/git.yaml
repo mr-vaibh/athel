@@ -25,3 +25,11 @@ cases:
   - {name: stash a developer clone, command: "git -C {home}/Developer/users stash", wrap: true, expect: {decision: deny, rule: "12"}}
   - {name: worktree in a developer clone, command: "git -C {home}/Developer/users worktree add /tmp/x", expect: {decision: deny, rule: "12"}}
   - {name: alias in a developer clone, command: "git -C {home}/Developer/users sync", expect: {decision: deny, rule: "12"}}
+  # M4: Athel's commit-msg and pre-commit hooks lint every commit and block large files and
+  # secrets; skipping or replacing them is forbidden.
+  - {name: commit without the hooks, command: "git -C {tree} commit --no-verify -m 'feat: x'", wrap: true, expect: {decision: deny, rule: "3"}}
+  - {name: commit with -n, command: "git -C {tree} commit -nm 'feat: x'", expect: {decision: deny, rule: "3"}}
+  - {name: commit with another hooks path, command: "git -C {tree} -c core.hooksPath=/tmp/h commit -m 'feat: x'", expect: {decision: deny, rule: "3"}}
+  - {name: merge without the hooks, command: "git -C {tree} merge --no-verify main", expect: {decision: deny, rule: "3"}}
+  - {name: repoint the hooks, command: "git -C {tree} config core.hooksPath /tmp/h", expect: {decision: deny, rule: "3"}}
+  - {name: commit flags hidden in a variable, command: "git -C {tree} commit $FLAGS -m 'feat: x'", expect: {decision: deny, rule: "3"}}
