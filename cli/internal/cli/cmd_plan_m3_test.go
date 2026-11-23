@@ -83,3 +83,19 @@ func TestPlanM3Errors(t *testing.T) {
 		}
 	}
 }
+
+// TestPlanSetNeedsCreateForNewFiles: a task naming a file the repo's base branch does not have
+// must be allowed to create it, checked on Athel's cache clone before the plan is approved.
+func TestPlanSetNeedsCreateForNewFiles(t *testing.T) {
+	h, _, _, _ := cacheFixture(t)
+	h.mustOK("state", "transition", "CHG-001", "--to", "investigating", "--by", "athel", "--reason", "r")
+	m3Spec(t, h)
+	newTest := strings.NewReplacer("repo: r,", "repo: users,", "paths: [src/**]", "paths: [main.go, main_test.go]").Replace(m3PlanDoc)
+	h.mustOK("plan", "set", "CHG-001", writeTemp(t, "nocache.yaml", newTest)) // no cache clone yet: not known, not checked
+	h.mustOK("repos", "cache", "users")
+	if code, env := h.runJSON("plan", "set", "CHG-001", writeTemp(t, "new.yaml", newTest)); code == 0 ||
+		!strings.Contains(asJSON(t, env), "T-01 names main_test.go, which users does not have yet, without the create verb") || strings.Contains(asJSON(t, env), "names main.go") {
+		t.Errorf("a new file without create: %v", env)
+	}
+	h.mustOK("plan", "set", "CHG-001", writeTemp(t, "create.yaml", strings.Replace(newTest, "verbs: [edit, test]", "verbs: [create, edit, test]", 1)))
+}

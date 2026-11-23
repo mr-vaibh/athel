@@ -97,8 +97,10 @@ or `env_actions` in the plan, not reasons to stop planning.
    A task with no `paths` (a check, or a shared action such as a ticket comment) changes no
    code. It may cover a criterion only if a task that changes code covers it too, with its
    test; its `env_actions` go to the developer in the PR body (ADR 027).
-   Give risky tasks a rollback, list shared actions in `env_actions` (never a deploy), and
-   cover every acceptance criterion. Save it with `athel plan set CHG-NNN -`.
+   A task that makes a file its repo does not have yet (a new test file too) needs `create`
+   and `edit`; the CLI checks this on the base branch. Give risky tasks a rollback, list
+   shared actions in `env_actions` (never a deploy), and cover every acceptance criterion.
+   Save it with `athel plan set CHG-NNN -`.
 3. Run `athel trace CHG-NNN` and fix every missing link. Then `athel plan summary CHG-NNN`.
 
 ## Side findings (doc 07)

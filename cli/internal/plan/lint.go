@@ -21,6 +21,9 @@ const (
 type LintContext struct {
 	Criteria []string
 	Risk     string
+	// Exists reports whether repo has path on its base branch, and whether that is known (Athel
+	// has the repo's cache clone). Nil checks nothing.
+	Exists func(repo, path string) (exists, known bool)
 }
 
 var deployRe = regexp.MustCompile(`(?i)\b(deploy|release|roll ?out|kubectl\s+(apply|rollout|set)|helm\s+(install|upgrade)|terraform\s+apply|promote)\b`)
@@ -33,6 +36,25 @@ func Lint(p *Plan, ctx LintContext) []string {
 	problems = append(problems, ordering(p)...)
 	for _, t := range p.Tasks {
 		problems = append(problems, taskRules(t, ctx.Risk)...)
+		problems = append(problems, newFiles(t, ctx.Exists)...)
+	}
+	return problems
+}
+
+// newFiles: a task naming a file its repo does not have yet needs the create verb, or the build
+// stops at the first write and the change goes back to planning. Globs are not checked.
+func newFiles(t Task, exists func(repo, path string) (bool, bool)) []string {
+	if exists == nil || slices.Contains(t.Verbs, "create") {
+		return nil
+	}
+	var problems []string
+	for _, p := range t.Paths {
+		if strings.ContainsAny(p, "*?[") {
+			continue
+		}
+		if ok, known := exists(t.Repo, p); known && !ok {
+			problems = append(problems, t.ID+" names "+p+", which "+t.Repo+" does not have yet, without the create verb; add create and edit")
+		}
 	}
 	return problems
 }
