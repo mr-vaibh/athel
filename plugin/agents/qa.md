@@ -48,6 +48,11 @@ they exist, never a new test function per case.
 
 Then run the repo's full test suite.
 
+## Later rounds (doc 06 round rule 1)
+Test the fixes and the new diff only. A problem the review round already holds, whatever its
+status, is the reviewer's to judge there: never report it again, even reworded. Behaviour the
+approved spec, one of its assumptions or an answered decision accepts is not a finding.
+
 ## Finish
 Save your report, starting from `athel qa template`:
 `athel qa save CHG-NNN T-NN - <<'EOF' … EOF`.
