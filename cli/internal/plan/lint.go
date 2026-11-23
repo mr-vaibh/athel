@@ -24,6 +24,12 @@ type LintContext struct {
 	// Exists reports whether repo has path on its base branch, and whether that is known (Athel
 	// has the repo's cache clone). Nil checks nothing.
 	Exists func(repo, path string) (exists, known bool)
+	// Contracts are the blast radius's changed contracts with their consumers in the change set
+	// (M5). SameRepo says whether a service lives in a plan repo (nil compares names);
+	// Coordinated is true after a coordinated-release card was answered (doc 04 rule 5).
+	Contracts   []Contract
+	SameRepo    func(service, repo string) bool
+	Coordinated bool
 }
 
 var deployRe = regexp.MustCompile(`(?i)\b(deploy|release|roll ?out|kubectl\s+(apply|rollout|set)|helm\s+(install|upgrade)|terraform\s+apply|promote)\b`)
@@ -34,6 +40,7 @@ func Lint(p *Plan, ctx LintContext) []string {
 	var problems []string
 	problems = append(problems, coverage(p, ctx.Criteria)...)
 	problems = append(problems, ordering(p)...)
+	problems = append(problems, setRules(p, ctx)...)
 	for _, t := range p.Tasks {
 		problems = append(problems, taskRules(t, ctx.Risk)...)
 		problems = append(problems, newFiles(t, ctx.Exists)...)

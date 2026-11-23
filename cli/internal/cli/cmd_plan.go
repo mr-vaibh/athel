@@ -5,9 +5,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/mr-vaibh/athel/cli/internal/blast"
+	"github.com/mr-vaibh/athel/cli/internal/changeset"
 	"github.com/mr-vaibh/athel/cli/internal/config"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/gitro"
@@ -122,11 +124,19 @@ func (r *runCtx) lintPlan(s *state.Store, id string, data []byte) error {
 		return aerr.New(aerr.StateInvalid, id+" has specs, so its plan must be "+plan.SchemaID+" with a kind per task").
 			WithNextAction("run athel plan template for the format")
 	}
-	risk, err := r.blastRisk(s, id)
+	rep, err := r.blastReport(s, id)
 	if err != nil {
 		return err
 	}
-	if problems := plan.Lint(p, plan.LintContext{Criteria: criteria(specs), Risk: risk, Exists: r.baseHas()}); len(problems) > 0 {
+	ctx := plan.LintContext{Criteria: criteria(specs), Risk: riskOf(rep), Exists: r.baseHas(), Contracts: contracts(rep), SameRepo: r.sameRepo}
+	problems := plan.Lint(p, ctx)
+	if _, err := changeset.Derive(p, ctx.Coordinated); err != nil {
+		var ae *aerr.Error
+		if errors.As(err, &ae) {
+			problems = append(problems, ae.Message+"; "+ae.NextAction)
+		}
+	}
+	if len(problems) > 0 {
 		return aerr.New(aerr.StateInvalid, "plan rejected: "+strings.Join(problems, "; ")).
 			WithNextAction("fix the plan and set it again")
 	}
@@ -166,18 +176,52 @@ func criteria(specs []*specpkg.Spec) []string {
 
 // blastRisk is the change's planned blast radius risk, or "" before a report exists.
 func (r *runCtx) blastRisk(s *state.Store, id string) (string, error) {
+	rep, err := r.blastReport(s, id)
+	return riskOf(rep), err
+}
+
+// blastReport is the change's current blast radius report, nil before one exists.
+func (r *runCtx) blastReport(s *state.Store, id string) (*blast.Report, error) {
 	md, err := os.ReadFile(filepath.Join(s.WS.ChangeDir(id), "blast-radius.md"))
 	if errors.Is(err, fs.ErrNotExist) {
-		return "", nil
+		return nil, nil
 	}
 	if err != nil {
-		return "", aerr.Wrap(aerr.StateIO, "read blast-radius.md", err)
+		return nil, aerr.Wrap(aerr.StateIO, "read blast-radius.md", err)
 	}
-	rep, err := blast.Extract(r.registry(), md)
-	if err != nil || rep.Risk == nil {
-		return "", err
+	return blast.Extract(r.registry(), md)
+}
+
+func riskOf(rep *blast.Report) string {
+	if rep == nil || rep.Risk == nil {
+		return ""
 	}
-	return *rep.Risk, nil
+	return *rep.Risk
+}
+
+// contracts are the report's changed contracts, each with its consumers inside the change set,
+// for the plan's multi-repo checks (M5-plan §5.2).
+func contracts(rep *blast.Report) []plan.Contract {
+	if rep == nil {
+		return nil
+	}
+	var out []plan.Contract
+	for _, d := range rep.Direct {
+		c := plan.Contract{Item: d.Item, Provider: d.Service, Change: d.Change}
+		for _, u := range rep.Consumers {
+			if u.Of == d.Item && u.InChangeSet && !slices.Contains(c.Consumers, u.Consumer) {
+				c.Consumers = append(c.Consumers, u.Consumer)
+			}
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
+// sameRepo says whether a blast radius service lives in a plan repo: the same name, or names
+// that resolve to the same remote through the repo index.
+func (r *runCtx) sameRepo(service, repo string) bool {
+	return service == repo || r.resolveRepo(service) == r.resolveRepo(repo)
 }
 
 // cmdPlanSummary is doc 05's one-screen summary before approval: tasks per repo in order,
@@ -203,7 +247,11 @@ func cmdPlanSummary(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return plan.Summarise(p, risk, open), nil
+	sum := plan.Summarise(p, risk, open)
+	if set, err := changeset.Derive(p, false); err == nil { // plan set refused a plan without one
+		sum.MergeOrder = set.Lines()
+	}
+	return sum, nil
 }
 
 // openAssumptions are what the human should see before approving: the specs' assumptions,

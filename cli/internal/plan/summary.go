@@ -31,12 +31,14 @@ type Summary struct {
 	Assumptions []string    `json:"open_assumptions"`
 	Hours       float64     `json:"estimated_hours"`
 	USD         float64     `json:"estimated_cost_usd"`
+	// MergeOrder is the change set's merge order (M5), filled by the CLI from the change set.
+	MergeOrder []string `json:"merge_order"`
 }
 
 // Summarise orders the tasks (dependencies first, then by ID, so the same plan always reads the
 // same) and adds up the gates, env actions and estimates.
 func Summarise(p *Plan, risk string, assumptions []string) Summary {
-	s := Summary{Change: p.Change, Repos: []RepoTasks{}, Gates: []string{}, EnvActions: []string{}, Risk: risk, Assumptions: assumptions}
+	s := Summary{Change: p.Change, Repos: []RepoTasks{}, Gates: []string{}, EnvActions: []string{}, Risk: risk, Assumptions: assumptions, MergeOrder: []string{}}
 	if s.Assumptions == nil {
 		s.Assumptions = []string{}
 	}
@@ -48,6 +50,10 @@ func Summarise(p *Plan, risk string, assumptions []string) Summary {
 			rt = &RepoTasks{Repo: t.Repo}
 			byRepo[t.Repo] = rt
 			repos = append(repos, t.Repo)
+		}
+		if t.Deferred { // a later change: shown, never built or estimated here (doc 04 rule 3)
+			rt.Tasks = append(rt.Tasks, t.ID+" "+t.Title+" (deferred: a later change)")
+			continue
 		}
 		rt.Tasks = append(rt.Tasks, t.ID+" "+t.Title)
 		rt.Writes = rt.Writes || len(t.Paths) > 0

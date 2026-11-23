@@ -84,9 +84,10 @@ func TestSummaryOrderAndDiff(t *testing.T) {
 		t.Errorf("order: %v", ids)
 	}
 	s := Summarise(p, "HIGH", nil)
+	// T-04 is deferred: listed, but a later change's work, so not in this change's estimate.
 	if len(s.Repos) != 2 || s.Repos[0].Repo != "users" || !s.Repos[0].Writes || len(s.Repos[0].Tasks) != 3 || s.Repos[1].Repo != "notifications" ||
 		strings.Join(s.Gates, ",") != "build,unit,contract" || s.EnvActions[0] != "T-02: comment on SHOP-12" ||
-		s.Hours != 4 || s.USD != 16 || s.Risk != "HIGH" || s.Assumptions == nil {
+		s.Hours != 3.5 || s.USD != 14 || s.Risk != "HIGH" || s.Assumptions == nil {
 		t.Errorf("summary: %+v", s)
 	}
 	checkDiff(t, p)
@@ -155,5 +156,20 @@ func TestLintNewFileNeedsCreate(t *testing.T) {
 	}
 	if strings.Join(asked, ",") != "users:main.go,users:main_test.go" {
 		t.Errorf("only literal paths of tasks without create are checked: %v", asked)
+	}
+}
+
+// TestSummaryDeferredTask: a deferred task is shown as a later change and not estimated.
+func TestSummaryDeferredTask(t *testing.T) {
+	p, err := Decode(schema.NewRegistry(), []byte(planV2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := Summarise(p, "HIGH", nil)
+	p.Tasks = append(p.Tasks, Task{ID: "T-05", Title: "Remove v1", Repo: "payments", Kind: KindContract, Paths: []string{"v1/**"}, Size: "M", Deferred: true})
+	s := Summarise(p, "HIGH", nil)
+	last := s.Repos[len(s.Repos)-1]
+	if last.Repo != "payments" || last.Writes || last.Tasks[0] != "T-05 Remove v1 (deferred: a later change)" || s.Hours != before.Hours || s.USD != before.USD || s.MergeOrder == nil {
+		t.Errorf("summary with a deferred task: %+v", s)
 	}
 }
