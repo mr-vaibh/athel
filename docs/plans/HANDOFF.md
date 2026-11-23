@@ -1,5 +1,9 @@
 # HANDOFF
 
+> **2026-11-23: M4 Build is done and accepted; everything is merged into `main`. Nothing is in
+> progress. Next: write the M5 plan (`docs/plans/M5-plan.md`) from doc 08 and the spec, and ask
+> the owner to approve it before building.** See "M4 closed" at the end.
+
 Last updated: 2026-11-20, session 5 (M4 built; first full evals run and missed; fixes in a new PR), on the owner's personal machine. Tools
 are installed system-wide with Homebrew (`docs/context/environment.md`).
 
@@ -176,3 +180,8 @@ as eval 7): 6 of 6 valid, $38.14. With eval 7's `saved-addresses` 1–3: **9 of 
 code; EC-1 met.** M4 eval spend: $524.19. M4 report (#112) updated to both criteria met. Next:
 the owner accepts M4 and merges #113, then #112 (or says what else is needed). After the merges,
 update ROADMAP and HANDOFF on main and plan M5.
+
+## M4 closed (2026-11-23)
+Owner: "you decide, just merge all needs to be merged". M4 accepted. #113 (ADR 033, 034, evals
+6–8) and #112 (M4 report, ROADMAP) merged into `main` with merge commits. Owner standing
+instruction: merging finished work with green checks is Claude's call. Next: M5 plan.
