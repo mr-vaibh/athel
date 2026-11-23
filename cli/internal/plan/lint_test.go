@@ -128,3 +128,32 @@ tasks:
 		t.Error("a plan@2 task needs a kind")
 	}
 }
+
+// TestLintNewFileNeedsCreate: a task that names a file its repo does not have yet must be allowed
+// to create it, or the build stops at the first write (the file is checked on the base branch
+// where Athel's cache clone knows it; an unknown repo or a glob is not checked).
+func TestLintNewFileNeedsCreate(t *testing.T) {
+	doc := planV2 + "  - {id: T-05, title: Gate the routes, repo: users, kind: internal, paths: [main.go, main_test.go, \"cmd/**\"], verbs: [edit, test, commit], covers: [AC-2], depends_on: [], size: S, gates: [build, unit]}\n"
+	p, err := Decode(schema.NewRegistry(), []byte(doc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var asked []string
+	exists := func(repo, path string) (bool, bool) {
+		asked = append(asked, repo+":"+path)
+		switch {
+		case repo == "notifications":
+			return false, false
+		case path == "main_test.go":
+			return false, true
+		}
+		return true, true
+	}
+	got := strings.Join(Lint(p, LintContext{Criteria: []string{"AC-1", "AC-2", "AC-3", "AC-4"}, Risk: "HIGH", Exists: exists}), "; ")
+	if !strings.Contains(got, "T-05 names main_test.go, which users does not have yet, without the create verb") || strings.Count(got, "does not have yet") != 1 {
+		t.Errorf("problems: %s", got)
+	}
+	if strings.Join(asked, ",") != "users:main.go,users:main_test.go" {
+		t.Errorf("only literal paths of tasks without create are checked: %v", asked)
+	}
+}

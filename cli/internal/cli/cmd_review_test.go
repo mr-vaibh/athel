@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -161,8 +162,8 @@ func TestReviewCommandErrors(t *testing.T) {
 	}
 }
 
-// TestIdenticalGateFailuresRaiseCard (FR-BUILD-010): three red runs that fail the same way stop
-// the loop with a card.
+// TestIdenticalGateFailuresRaiseCard (FR-BUILD-010): three fix attempts (new heads) that fail the
+// same way stop the loop with a card; running the gates again on one head is not an attempt.
 func TestIdenticalGateFailuresRaiseCard(t *testing.T) {
 	h, tree := goGates(t)
 	h.mustOK("gate", "baseline", "CHG-001", "T-01")
@@ -170,6 +171,15 @@ func TestIdenticalGateFailuresRaiseCard(t *testing.T) {
 		t.Fatalf("%v %s", err, out)
 	}
 	for range 3 {
+		h.runJSON("gate", "run", "CHG-001", "T-01")
+	}
+	if open := asJSON(t, h.mustOK("decide", "list", "CHG-001", "--open")); strings.Contains(open, "failed the same way three times") {
+		t.Fatalf("three runs on one head are one attempt: %s", open)
+	}
+	for i := range 2 {
+		if out, err := commit(t, h, tree, fmt.Sprintf("src/note%d.go", i), "package src\n", goodMsg); err != nil {
+			t.Fatalf("%v %s", err, out)
+		}
 		h.runJSON("gate", "run", "CHG-001", "T-01")
 	}
 	if open := asJSON(t, h.mustOK("decide", "list", "CHG-001", "--open")); !strings.Contains(open, "failed the same way three times") {

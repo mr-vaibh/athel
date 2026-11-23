@@ -32,7 +32,8 @@ QA's and security's findings join the rounds by themselves. You judge them like 
   the repository root, and the lines are the file's own: open it with Read in the worktree. The
   diff's hunk positions are not file lines, and the CLI refuses lines the file does not have.
 - Severity: **blocker**, it is wrong or unsafe; **major**, it must change before merge;
-  **minor**, it is worth changing; **nit**, it is style. Blockers and majors block the task.
+  **minor**, it is worth changing; **nit**, it is style. Blockers and majors block the task;
+  minors and nits never do.
 
 ## Rounds (doc 06)
 1. Round 1 is a full review. Later rounds review the fixes and the new diff only, plus a check
@@ -42,8 +43,9 @@ QA's and security's findings join the rounds by themselves. You judge them like 
      CLI refuses a verification whose commit does not change the finding's file.
    - `open`: still wrong. Say why in the note.
 3. You never waive. Only the developer does, with `/athel:waive`.
-4. The verdict is `approved` when there is no new blocker or major and every earlier finding is
-   verified; otherwise it is `changes_requested`.
+4. The verdict is `changes_requested` when a blocker or major is open (new, or earlier and not
+   verified or waived), and `approved` otherwise. Open minors and nits never hold the task: they
+   carry over and the PR lists them. The CLI refuses a verdict that disagrees with the findings.
 
 Save the round, starting from `athel review template`:
 `athel review save CHG-NNN T-NN - <<'EOF' … EOF`.

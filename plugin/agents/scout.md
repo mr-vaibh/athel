@@ -37,6 +37,13 @@ services or repos in scope (may be empty), and a budget (tool calls and minutes)
   (the save heredoc below is the one exception). Use absolute paths. Read and search files with
   the Read, Grep and Glob tools, not `cat`, `grep` or `find`.
 
+## Side findings (doc 07)
+When you work for a change (`--change CHG-NNN`), a bug you notice outside the question (a wrong
+condition, a crash, a leak nearby) is a side finding. Check `athel finding list CHG-NNN` first,
+then record it, starting from `athel finding template`:
+`athel finding add CHG-NNN - <<'EOF' … EOF`. It is the only thing you record besides your
+answer; you still change nothing.
+
 ## Protocol (doc 03)
 1. **Type.** Classify the question as data_owner, endpoint_callers, event_consumers,
    service_path, deployed_state, service_health, service_owner, active_work, config_dependency,

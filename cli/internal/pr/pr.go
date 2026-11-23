@@ -117,6 +117,7 @@ type BodyInput struct {
 	Rollback                             []string
 	Waivers                              []string // FR-BUILD-014: every waiver appears in the PR body
 	Findings                             []string // FR-FIND-003: side findings, not fixed here
+	Minor                                []string // open minor and nit review findings, listed not fixed (doc 06)
 	Actions                              []string // the plan's env_actions, for the developer (ADR 027)
 }
 
@@ -137,7 +138,9 @@ func Body(in BodyInput) string {
 	for _, d := range in.Decisions {
 		fmt.Fprintf(&b, "- %s %s → %s (%s)\n", d.ID, d.Question, d.Answer, d.By)
 	}
-	b.WriteString("\n## Tests and gates\n\nNo gate results yet.\n\n## Waivers\n\n")
+	b.WriteString("\n## Tests and gates\n\nNo gate results yet.\n")
+	writeMinor(&b, in.Minor)
+	b.WriteString("\n## Waivers\n\n")
 	if len(in.Waivers) == 0 {
 		b.WriteString("None.\n")
 	}
@@ -174,6 +177,17 @@ func Body(in BodyInput) string {
 		b.WriteString("- " + r + "\n")
 	}
 	return b.String()
+}
+
+// writeMinor lists the open minor and nit review findings, which never block a task (doc 06).
+func writeMinor(b *strings.Builder, minor []string) {
+	if len(minor) == 0 {
+		return
+	}
+	b.WriteString("\nOpen minor and nit review findings (they never block a task; doc 06):\n\n")
+	for _, m := range minor {
+		b.WriteString("- " + m + "\n")
+	}
 }
 
 // groups summarises files by top-level folder, sorted.

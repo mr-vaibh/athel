@@ -169,6 +169,17 @@ func TestPRBodyListsDecisions(t *testing.T) {
 	}
 }
 
+// TestPRBodyListsOpenMinors (doc 06 severity table): a minor finding left open never blocks the
+// task, so the PR lists it for the human reviewer.
+func TestPRBodyListsOpenMinors(t *testing.T) {
+	h, _, _, _ := building(t)
+	h.reviewRound(t, "verdict: approved\nnew:\n  - {severity: minor, source: security, location: \"src/a.go:1\", rule: security.input-validation, finding: Format characters pass., required: Reject them.}\n")
+	body := h.mustOK("pr", "body", "CHG-001", "users")["body"].(string)
+	if !strings.Contains(body, "- T-01 R1-01 (minor, open) src/a.go:1: Format characters pass.") {
+		t.Errorf("the body lacks the open minor:\n%s", body)
+	}
+}
+
 func TestPRToolFailures(t *testing.T) {
 	h, _, _, _ := building(t)
 	h.mustOK("git", "push", "CHG-001", "users")
