@@ -38,10 +38,11 @@ func done(recs []Task, id string) bool {
 }
 
 // Ready lists the tasks that may start now, in plan order: not started, every dependency done.
+// A deferred task is a separate, later change (doc 04 rule 3) and is never ready.
 func Ready(p *plan.Plan, recs []Task) []string {
 	var out []string
 	for _, t := range p.Tasks {
-		if _, started := record(recs, t.ID); started {
+		if _, started := record(recs, t.ID); started || t.Deferred {
 			continue
 		}
 		if !slices.ContainsFunc(t.DependsOn, func(d string) bool { return !done(recs, d) }) {
@@ -51,9 +52,9 @@ func Ready(p *plan.Plan, recs []Task) []string {
 	return out
 }
 
-// AllDone reports whether every task of the plan is done.
+// AllDone reports whether every task built in this change is done; deferred tasks are not.
 func AllDone(p *plan.Plan, recs []Task) bool {
-	return !slices.ContainsFunc(p.Tasks, func(t plan.Task) bool { return !done(recs, t.ID) })
+	return !slices.ContainsFunc(p.Tasks, func(t plan.Task) bool { return !t.Deferred && !done(recs, t.ID) })
 }
 
 // Start records a task as in progress. A task already in progress stays as it is; a done task
@@ -62,6 +63,9 @@ func Start(p *plan.Plan, recs []Task, id, at string) ([]Task, error) {
 	i := slices.IndexFunc(p.Tasks, func(t plan.Task) bool { return t.ID == id })
 	if i < 0 {
 		return nil, aerr.New(aerr.StateNotFound, "the plan has no task "+id)
+	}
+	if p.Tasks[i].Deferred {
+		return nil, aerr.New(aerr.StateInvalid, id+" is deferred: a separate, later change after consumers deploy (doc 04 rule 3)")
 	}
 	if j, ok := record(recs, id); ok {
 		if recs[j].Status == Done {

@@ -51,7 +51,7 @@ func cmdGitPreflight(r *runCtx, args []string) (any, error) {
 	}
 	p, _ := s.ApprovedPlan(c) // ensureWorktree checked that an approved plan writes in repo
 	var globs []string
-	for _, t := range p.Tasks {
+	for _, t := range p.Built() {
 		if t.Repo == repo {
 			globs = append(globs, t.Paths...)
 		}
@@ -160,7 +160,7 @@ func (r *runCtx) buildingGuard(s *state.Store, id string) error {
 	}
 	var problems []string
 	var seen []string
-	for _, t := range p.Tasks {
+	for _, t := range p.Built() {
 		if slices.Contains(seen, t.Repo) || !p.WritesIn(t.Repo) {
 			continue
 		}

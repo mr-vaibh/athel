@@ -28,6 +28,9 @@ func TestApprovalBindsToPlanHash(t *testing.T) {
 	if !ok || got.Approvals.Plan.Hash != *p.Hash || *got.Approvals.Plan.PromptID != "p-9" || got.Approvals.Plan.By != ByHuman {
 		t.Errorf("approval = %+v", got.Approvals.Plan)
 	}
+	if got.ChangeSet == nil || got.ChangeSet.Strategy != "single" || got.ChangeSet.Repos[0].Repo != "users" {
+		t.Errorf("approval derives the change set: %+v", got.ChangeSet)
+	}
 	last := got.History[len(got.History)-1]
 	if len(last.Evidence) != 1 || last.Evidence[0].Path != "plan.yaml" || last.Evidence[0].SHA256 == "" {
 		t.Errorf("approval evidence = %+v", last.Evidence)
@@ -47,8 +50,8 @@ func TestApprovalVoidOnPlanHashChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.State != Planned || got.Approvals.Plan != nil {
-		t.Errorf("after a plan change: state %s approval %+v", got.State, got.Approvals.Plan)
+	if got.State != Planned || got.Approvals.Plan != nil || got.ChangeSet != nil {
+		t.Errorf("after a plan change: state %s approval %+v set %+v", got.State, got.Approvals.Plan, got.ChangeSet)
 	}
 	if _, ok := s.ApprovedPlan(got); ok {
 		t.Error("ApprovedPlan true after the plan changed")
@@ -178,3 +181,26 @@ func toLegacy(current string) string {
 
 // withoutBuild drops the build records version 4 added, which older versions never had.
 func withoutBuild(current string) string { return strings.Replace(current, "build: []\n", "", 1) }
+
+// TestApprovalRefusesAnUnorderableSet: two repos that wait on each other cannot be ordered with
+// one PR each, so the plan cannot be approved (M5-plan G2).
+func TestApprovalRefusesAnUnorderableSet(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "x")
+	walk(t, s, c.ID, Investigating, Specified, AwaitingDecisions, Planned)
+	twoWay := "schema: athel/plan@1\nchange: " + c.ID + "\nhash: null\ntasks:\n" +
+		"  - {id: T-01, title: a, repo: users, paths: [a.go], verbs: [edit], covers: [AC-1], depends_on: [], size: S, gates: [build]}\n" +
+		"  - {id: T-02, title: b, repo: orders, paths: [b.go], verbs: [edit], covers: [AC-1], depends_on: [T-01], size: S, gates: [build]}\n" +
+		"  - {id: T-03, title: c, repo: users, paths: [c.go], verbs: [edit], covers: [AC-1], depends_on: [T-02], size: S, gates: [build]}\n"
+	if _, err := s.SetPlan(c.ID, testSession, []byte(twoWay)); err != nil {
+		t.Fatal(err)
+	}
+	grant(t, s, c.ID, PlanApproved)
+	_, err := s.Transition(c.ID, TransitionRequest{To: PlanApproved, By: ByHuman, Reason: "ok", Session: ptr(testSession)})
+	if !aerr.HasCode(err, aerr.StateInvalid) || !strings.Contains(err.Error(), "wait on each other") {
+		t.Fatalf("approval of a two-way plan: %v", err)
+	}
+	if got, _ := s.Get(c.ID); got.State != Planned || got.ChangeSet != nil {
+		t.Errorf("a refused approval changes nothing: %s %+v", got.State, got.ChangeSet)
+	}
+}

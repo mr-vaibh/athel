@@ -3,7 +3,10 @@
 // OS file lock and always schema-validated before the atomic write.
 package state
 
-import "github.com/mr-vaibh/athel/cli/internal/build"
+import (
+	"github.com/mr-vaibh/athel/cli/internal/build"
+	"github.com/mr-vaibh/athel/cli/internal/changeset"
+)
 
 // State is a lifecycle state (doc 02 §State model).
 type State string
@@ -27,15 +30,17 @@ const (
 )
 
 // SchemaID is the schema of change.yaml written by this version.
-const SchemaID = "athel/change@4"
+const SchemaID = "athel/change@5"
 
 // Older change schemas are read and upgraded in memory; `athel migrate` rewrites them. Version
 // 1 (M0) has no integrity seal; version 2 (M1) has one and only lacks the M2 flags; version 3
-// (M2, M3) always has empty repos, which version 4 (M4) fills.
+// (M2, M3) always has empty repos, which version 4 (M4) fills; version 4 always has an empty
+// change set, which version 5 (M5) fills.
 const (
 	SchemaV1 = "athel/change@1"
 	SchemaV2 = "athel/change@2"
 	SchemaV3 = "athel/change@3"
+	SchemaV4 = "athel/change@4"
 )
 
 // Change is the content of change.yaml. Field order is the YAML output order. Timestamps are
@@ -60,7 +65,7 @@ type Change struct {
 	Waivers      []Waiver       `yaml:"waivers" json:"waivers"`
 	Repos        []RepoWork     `yaml:"repos" json:"repos"`
 	Build        []build.Task   `yaml:"build" json:"build"`
-	ChangeSet    any            `yaml:"change_set" json:"change_set"`
+	ChangeSet    *changeset.Set `yaml:"change_set" json:"change_set"`
 	Parent       *string        `yaml:"parent" json:"parent"`
 	Flags        []Flag         `yaml:"flags" json:"flags"`
 	History      []Transition   `yaml:"history" json:"history"`

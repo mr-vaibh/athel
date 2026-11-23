@@ -61,3 +61,20 @@ func TestStartAndFinish(t *testing.T) {
 		t.Errorf("finishing a task never started: %v", err)
 	}
 }
+
+// TestDeferredTasksAreNeverBuilt: a deferred removal is a separate, later change (doc 04 rule 3,
+// M5-plan G3), so it is never ready, cannot be started, and does not hold the build open.
+func TestDeferredTasksAreNeverBuilt(t *testing.T) {
+	p := testPlan()
+	p.Tasks = append(p.Tasks, plan.Task{ID: "T-05", Title: "remove v1", Repo: p.Tasks[0].Repo, Kind: plan.KindContract, DependsOn: []string{"T-04"}, Deferred: true})
+	recs := []Task{{ID: "T-01", Status: Done}, {ID: "T-02", Status: Done}, {ID: "T-03", Status: Done}, {ID: "T-04", Status: Done}}
+	if got := Ready(p, recs); len(got) != 0 {
+		t.Errorf("a deferred task is never ready: %v", got)
+	}
+	if !AllDone(p, recs) {
+		t.Error("the build is done without its deferred tasks")
+	}
+	if _, err := Start(p, recs, "T-05", "2026-11-24T10:00:00.000Z"); !aerr.HasCode(err, aerr.StateInvalid) || !strings.Contains(err.Error(), "deferred") {
+		t.Errorf("starting a deferred task: %v", err)
+	}
+}

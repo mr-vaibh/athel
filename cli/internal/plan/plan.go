@@ -155,17 +155,29 @@ type Write struct {
 	Verb string // edit | create | delete | test | commit | push | pr | comment
 }
 
-// WritesIn reports whether any task of the plan changes files in repo. A task with no paths
-// changes no code (ADR 027), so it needs no worktree there.
-func (p *Plan) WritesIn(repo string) bool {
-	return slices.ContainsFunc(p.Tasks, func(t Task) bool { return t.Repo == repo && len(t.Paths) > 0 })
+// Built lists the tasks built in this change: every task but the deferred ones, which are a
+// separate, later change (doc 04 rule 3) and allow nothing now.
+func (p *Plan) Built() []Task {
+	out := make([]Task, 0, len(p.Tasks))
+	for _, t := range p.Tasks {
+		if !t.Deferred {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
-// Match returns the first task that allows w, or nil.
+// WritesIn reports whether any task built in this change changes files in repo. A task with no
+// paths changes no code (ADR 027), so it needs no worktree there.
+func (p *Plan) WritesIn(repo string) bool {
+	return slices.ContainsFunc(p.Built(), func(t Task) bool { return t.Repo == repo && len(t.Paths) > 0 })
+}
+
+// Match returns the first task built in this change that allows w, or nil.
 func (p *Plan) Match(w Write) *Task {
 	for i := range p.Tasks {
 		t := &p.Tasks[i]
-		if t.Repo != w.Repo || !slices.Contains(t.Verbs, w.Verb) {
+		if t.Deferred || t.Repo != w.Repo || !slices.Contains(t.Verbs, w.Verb) {
 			continue
 		}
 		if w.Path == "" {

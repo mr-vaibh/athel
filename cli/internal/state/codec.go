@@ -52,7 +52,7 @@ func unsealed(data []byte) bool {
 
 func legacyVersion(doc any) string {
 	m, _ := doc.(map[string]any)
-	if v, _ := m["schema"].(string); v == SchemaV1 || v == SchemaV2 || v == SchemaV3 {
+	if v, _ := m["schema"].(string); v == SchemaV1 || v == SchemaV2 || v == SchemaV3 || v == SchemaV4 {
 		return v
 	}
 	return ""

@@ -145,6 +145,12 @@ func TestRuleOrder(t *testing.T) {
 		{"7 shared write not planned", "Bash", b("gh pr create --title x --body y"), nil, Deny, "7", aerr.PolicyScope},
 		{"8 planned shared write needs a human", "mcp__jira__create_issue", map[string]any{"summary": "x"}, nil, Approve, "8", ""},
 		{"7 unplanned shared write", "mcp__jira__create_issue", map[string]any{"summary": "x"}, func(c *Context) { c.Plan.Tasks[1].EnvActions = nil }, Deny, "7", aerr.PolicyScope},
+		{"7 shared write of a deferred task", "mcp__jira__create_issue", map[string]any{"summary": "x"}, func(c *Context) { c.Plan.Tasks[1].Deferred = true }, Deny, "7", aerr.PolicyScope},
+		{"7 edit in a deferred task's paths", "Edit", edit(tree + "/src/a.go"), func(c *Context) {
+			for i := range c.Plan.Tasks {
+				c.Plan.Tasks[i].Deferred = true
+			}
+		}, Deny, "7", aerr.PolicyScope},
 		{"11 registered MCP read", "mcp__jira__get_issue", map[string]any{"id": "x"}, nil, Allow, "11", ""},
 		{"9 own branch only through athel", "Bash", b("git push origin athel/CHG-001-svc"), nil, Deny, "9", aerr.PolicyUseAthel},
 		{"9 own PR only through athel", "Bash", b("gh pr ready 901"), func(c *Context) {
