@@ -35,7 +35,8 @@ type args struct {
 var valueFlags = map[string]bool{"--context": true, "-n": true, "--namespace": true, "-l": true, "-o": true, "--since": true,
 	"--tail": true, "--field-selector": true, "--project": true, "--filter": true, "--format": true, "--repo": true,
 	"--state": true, "--json": true, "--owner": true, "--limit": true, "--jq": true, "--region": true, "--git": true, "--agent": true,
-	"--head": true, "--base": true, "--title": true, "--body": true, "--body-file": true}
+	"--head": true, "--base": true, "--title": true, "--body": true, "--body-file": true, "--label": true, "--add-label": true,
+	"--color": true, "--description": true}
 
 func parseArgs(words []string) args {
 	a := args{flags: map[string]string{}}
@@ -302,6 +303,10 @@ func (s Shim) gh(a args) error {
 		return s.searchCode(a.pos[2])
 	case cmd == "run list":
 		return s.json([]any{})
+	case cmd == "label list":
+		return s.labelList(a.flags["--repo"])
+	case cmd == "label create" && len(a.pos) == 3:
+		return s.labelCreate(a)
 	case len(a.pos) == 2 && a.pos[0] == "api" && strings.HasPrefix(a.pos[1], "repos/acme/"):
 		return s.api(strings.TrimPrefix(a.pos[1], "repos/acme/"))
 	}

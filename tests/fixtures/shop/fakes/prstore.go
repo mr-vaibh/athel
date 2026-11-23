@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -14,11 +15,13 @@ import (
 // The fake GitHub keeps the pull requests Athel opens in a state folder (SHOP_GH_STATE), so M4's
 // evals can check what was opened, made ready or edited. Every gh call is appended to
 // gh-calls.jsonl first, so a grader can prove no merge was ever attempted (FR-GIT-007). A merge
-// always fails: the fixture never merges, just as Athel never may.
+// through gh always fails: the fixture never merges for Athel, just as Athel never may. M5's
+// grader plays the human instead: Merge, SetReview and SetChecks are Go calls, never gh commands.
 
 const (
-	prsFile   = "prs.json"
-	callsFile = "gh-calls.jsonl"
+	prsFile    = "prs.json"
+	labelsFile = "labels.json"
+	callsFile  = "gh-calls.jsonl"
 	// firstPR keeps Athel's PR numbers clear of the seeded ones (812).
 	firstPR = 900
 )
@@ -34,6 +37,21 @@ type storedPR struct {
 	Draft  bool   `json:"isDraft"`
 	State  string `json:"state"`
 	URL    string `json:"url"`
+	// M5: the change label, the human review and CI as gh pr view --json reports them.
+	Labels         []prLabel `json:"labels"`
+	ReviewDecision string    `json:"reviewDecision"`
+	Checks         []prCheck `json:"statusCheckRollup"`
+	MergedAt       string    `json:"mergedAt,omitempty"`
+}
+
+type prLabel struct {
+	Name string `json:"name"`
+}
+
+type prCheck struct {
+	Name       string `json:"name"`
+	Status     string `json:"status"`
+	Conclusion string `json:"conclusion"`
 }
 
 // logCall appends one gh invocation to the call log.
@@ -48,27 +66,35 @@ func (s Shim) logCall(argv []string) error {
 }
 
 func (s Shim) loadPRs() ([]storedPR, error) {
-	if s.State == "" {
-		return nil, nil
-	}
-	b, err := os.ReadFile(filepath.Join(s.State, prsFile))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
 	var prs []storedPR
-	if err := json.Unmarshal(b, &prs); err != nil {
-		return nil, fmt.Errorf("the fake GitHub's %s: %w", prsFile, err)
-	}
-	return prs, nil
+	return prs, s.load(prsFile, &prs)
 }
 
-// savePRs replaces the store atomically: a temp file in the same folder, synced, then renamed.
-func (s Shim) savePRs(prs []storedPR) error {
-	b, _ := json.MarshalIndent(prs, "", "  ") // plain structs always encode
-	tmp, err := os.CreateTemp(s.State, prsFile+".*")
+// load reads one of the store's files into v; a missing file or state folder leaves v empty.
+func (s Shim) load(name string, v any) error {
+	if s.State == "" {
+		return nil
+	}
+	b, err := os.ReadFile(filepath.Join(s.State, name)) //nolint:gosec // name is one of the store's own file names
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(b, v); err != nil {
+		return fmt.Errorf("the fake GitHub's %s: %w", name, err)
+	}
+	return nil
+}
+
+func (s Shim) savePRs(prs []storedPR) error { return s.save(prsFile, prs) }
+
+// save replaces one of the store's files atomically: a temp file in the same folder, synced,
+// then renamed.
+func (s Shim) save(name string, v any) error {
+	b, _ := json.MarshalIndent(v, "", "  ") // plain values always encode
+	tmp, err := os.CreateTemp(s.State, name+".*")
 	if err != nil {
 		return err
 	}
@@ -79,7 +105,7 @@ func (s Shim) savePRs(prs []storedPR) error {
 	if err = errors.Join(err, tmp.Close()); err != nil {
 		return err
 	}
-	return os.Rename(tmp.Name(), filepath.Join(s.State, prsFile))
+	return os.Rename(tmp.Name(), filepath.Join(s.State, name))
 }
 
 // updatePRs loads the store, applies change and saves it; writes need a state folder.
@@ -106,12 +132,16 @@ func (s Shim) prCreate(a args) error {
 	if err != nil {
 		return err
 	}
+	labels, err := s.knownLabels(repo, a.flags["--label"])
+	if err != nil {
+		return err
+	}
 	var url string
 	err = s.updatePRs(func(prs []storedPR) ([]storedPR, error) {
 		n := firstPR + len(prs) + 1
 		url = "https://github.com/" + repo + "/pull/" + strconv.Itoa(n)
 		return append(prs, storedPR{Repo: repo, Number: n, Title: title, Body: body, Head: head, Base: base,
-			Draft: a.flags["--draft"] == "true", State: "open", URL: url}), nil
+			Draft: a.flags["--draft"] == "true", State: "open", URL: url, Labels: labels}), nil
 	})
 	if err != nil {
 		return err
@@ -142,9 +172,18 @@ func (s Shim) prChange(repo, number string, edit func(*storedPR) error) error {
 }
 
 func (s Shim) prEdit(a args) error {
+	labels, err := s.knownLabels(a.flags["--repo"], a.flags["--add-label"])
+	if err != nil {
+		return err
+	}
 	return s.prChange(a.flags["--repo"], a.pos[2], func(p *storedPR) error {
 		if t := a.flags["--title"]; t != "" {
 			p.Title = t
+		}
+		for _, l := range labels {
+			if !slices.Contains(p.Labels, l) {
+				p.Labels = append(p.Labels, l)
+			}
 		}
 		if a.flags["--body"] == "" && a.flags["--body-file"] == "" {
 			return nil
