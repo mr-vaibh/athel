@@ -326,9 +326,18 @@ func disputeCard(task string, f review.Finding) decisions.Draft {
 	}
 }
 
-// identicalFailures reports whether the last three runs were red with the same red gates and
-// details (FR-BUILD-010: "3 identical failures in a row").
-func identicalFailures(runs []gateRun) bool {
+// identicalFailures reports whether the last three fix attempts were red with the same red gates
+// and details (FR-BUILD-010: "3 identical failures in a row"). An attempt is a new head: runs
+// again on the same commit try nothing new, so only the latest run of each head counts.
+func identicalFailures(all []gateRun) bool {
+	var runs []gateRun
+	for _, run := range all {
+		if n := len(runs); n > 0 && runs[n-1].Head == run.Head {
+			runs[n-1] = run
+			continue
+		}
+		runs = append(runs, run)
+	}
 	if len(runs) < 3 {
 		return false
 	}
