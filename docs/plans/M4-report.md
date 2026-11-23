@@ -3,13 +3,13 @@
 Date: 2026-11-23 (session 5). Plan: `docs/plans/M4-plan.md`, approved 2026-11-14. Environment:
 macOS, Apple M3 Pro, Go 1.27.3, golangci-lint 2.15.0, Claude Code 2.1.311.
 
-**Verdict: M4 is built; EC-2 is met (91.7%); EC-1 is not met (6 of 9 build runs valid, bar: every run). The owner decides how to close M4 (§7).**
+**Verdict: M4 is built and both exit criteria are met: EC-1 with 9 of 9 build runs valid on one commit (PR #113), EC-2 with 91.7% of seeded defects caught (bar: 90%). The owner decides whether to accept M4 (§7).**
 
 ## 1. Exit criteria
 
 | # | Criterion | Proof | Result |
 |---|---|---|---|
-| EC-1 | One-repo eval changes reach a PR with all gates green | `tests/evals/m4/build` takes 3 PRDs through real `claude -p` sessions: start, spec, the developer's `/athel:decide` (recommended options), plan, `/athel:signoff` at CRITICAL, `/athel:approve`, `/athel:build`, `/athel:ship` and `/athel:triage`. A run is valid only if every deterministic check passes: `in_review`; a PR opened as a draft, then marked ready; the grader re-runs gofmt, vet, build, tests and lint (new errors only) on a fresh clone of the pushed branch; commit lint is clean; the PR is within the size limit in force; no merge anywhere; the developer's clones are unchanged; the planted nearby bug is a side finding and is not edited | **Not met.** Best full measure: 6 of 9 valid (round 4 plus the `event-name-field` re-run). `typed-client-errors` 3/3, `event-name-field` 2/3, `saved-addresses` 1/3. The 3 failures: 2 runs where no agent filed the planted nearby bug as a side finding (a model miss), and 1 run stopped by the 5-round card after the security checker raised one new minor point per round (behaving as specified; see §6) |
+| EC-1 | One-repo eval changes reach a PR with all gates green | `tests/evals/m4/build` takes 3 PRDs through real `claude -p` sessions: start, spec, the developer's `/athel:decide` (recommended options), plan, `/athel:signoff` at CRITICAL, `/athel:approve`, `/athel:build`, `/athel:ship` and `/athel:triage`. A run is valid only if every deterministic check passes: `in_review`; a PR opened as a draft, then marked ready; the grader re-runs gofmt, vet, build, tests and lint (new errors only) on a fresh clone of the pushed branch; commit lint is clean; the PR is within the size limit in force; no merge anywhere; the developer's clones are unchanged; the planted nearby bug is a side finding and is not edited | **Met.** 9 of 9 valid on PR #113's code (ADR 033 and 034): `saved-addresses` 1–3 from build full 7; `typed-client-errors` 1–3 and `event-name-field` 1–3 from build full 8. Build full 7's other 5 runs were lost to a network outage (no API access) and were re-run on the same code with the owner's OK. Every valid run filed the planted nearby bug as a side finding |
 | EC-2 | The reviewer catches 90% of seeded defects | `tests/evals/m4/defects`: 24 diffs with one planted defect each, plus 6 clean diffs. The reviewer runs from the build loop's manifest, with the security agent too for security defects. A defect is caught by a blocker or major finding on its planted lines that cites one of its rules | **Met: 91.7%** (66/72 over 3 runs; bar 90%), full run 2 on 2026-11-21. Full run 1 measured 87.5% and stays on record; two cases were corrected between the runs with the owner's OK (§3) |
 | Carried | M0–M3 gates | `scripts/check.sh` (vet, lint, race tests, coverage ≥ 90% per package), red-team and allow-list suites, scenarios, hook latency, the network-deny sandbox test (new) | Lint 0 issues. Every package ≥ 90% (lowest: `lock` 90.0%, `defects` 90.2%, `evalkit` 90.3%, `cli` 90.9%). Red-team **572/572** deny with the expected rule (M3: 505). The allow-list passes. CI is green on every PR |
 
@@ -28,10 +28,13 @@ Details for every run are in `docs/plans/EVALS.md` (M4 section). Raw results are
 | Build full 3 | 2 of 9 valid (6 runs lost to the usage limit) | $35.70 |
 | Build full 4 | 4 of 9 valid (3 runs lost to the usage limit) | $66.80 |
 | Build full 5 (`event-name-field` only) | 2 of 3 valid | $14.79 |
-| **Total** | | **$366.92** |
+| Build full 6 (after ADR 033) | 6 of 9 valid | $75.85 |
+| Build full 7 (after ADR 034) | 4 of 9 valid (5 runs lost to a network outage) | $43.28 |
+| Build full 8 (the 2 PRDs hit by the outage, same code) | **6 of 6 valid; 9 of 9 with build full 7's `saved-addresses`: met** | $38.14 |
+| **Total** | | **$524.19** |
 
-Runs lost to the usage limit (HTTP 429) count as not valid in the raw results; they say nothing
-about Athel and are reported as such.
+Runs lost to the usage limit (HTTP 429) or the network outage count as not valid in the raw
+results; they say nothing about Athel and are reported as such.
 
 ## 3. What the trials found, and what was done
 
@@ -57,6 +60,8 @@ Each gap was fixed with a test before the next trial.
 | build full 2 | A task allowed `create` but not `edit`, so review fixes to its own new files were denied | ADR 030: plan lint requires `edit` with `create`; the template has it |
 | build full 2 | A build session ended blocked on a reason with no card, so the developer had nothing to answer | ADR 031: the build step ends blocked only on an open card; the developer agent disputes findings the spec rules out |
 | build full 3 | The size card recommended "split into smaller PRs", which Athel (one PR per repo) cannot do | ADR 032: it recommends raising the limit; "re-plan" goes back to planning. Several PRs per repo is in the backlog |
+| build full 4 and 5 | The reviewer held tasks open over minor points until the round limit; agents read the planted bug but nobody filed it | ADR 033: `review save` refuses a verdict that disagrees with the findings (minors and nits never block; doc 06), open minors are listed in the PR body, and the scout and architect record side findings (doc 07) |
+| build full 6 | The identical-failure card counted 3 gate runs on one commit; a new test file was planned without `create`; the security checker re-reported a risk the spec accepted, each round | ADR 034: attempts are counted per commit; `plan set` checks new files against the base branch; later rounds of security and QA check only the fixes and the new diff |
 
 The cases' expectations and the pass bars never changed after a result was seen. The only
 grader change that affects a verdict is the size limit above. It follows the spec's "the limit
@@ -114,7 +119,9 @@ PRs #77–#111, stacked, one per task (`M4-plan.md` §9), plus the trial and ful
    - 029: corrections from full eval 1;
    - 030: `create` needs `edit`;
    - 031: the build blocks only on a card;
-   - 032: the size card recommends raising the limit.
+   - 032: the size card recommends raising the limit;
+   - 033: minors and nits never hold a task (doc 06 severity table and round rule 4);
+   - 034: attempts per commit, new files need `create`, settled risks are not findings.
 3. **Rule IDs:** doc 06 names one rule ID (`errors.no-silent-catch`). The other 38 follow its
    form, from the quality standard and the review checklist.
 4. **The scripted developer always picks the recommended option**, as in M3.
@@ -124,12 +131,9 @@ PRs #77–#111, stacked, one per task (`M4-plan.md` §9), plus the trial and ful
 
 ## 6. Not built, or still open
 
-- **EC-1 is not met** (6 of 9). Two causes remain, both in model behaviour rather than in the CLI:
-  - **Planted nearby bugs not filed** (2 runs): the spec and plan sessions read the file but no
-    agent filed the bug as a side finding.
-  - **Checker scope creep** (1 run): after every real finding was fixed, the security checker
-    raised one new minor point per round until the 5-round card stopped the task. In backlog.
-- **The usage limit** cut off 13 build runs across rounds 2–4. Long evals need an account with
+- **Checker scope creep** (seen in build full 4): ADR 033 and 034 bound it; the backlog note
+  stays for a structural fix.
+- **The usage limit** cut off 13 build runs across rounds 2–4, and a network outage 5 in round 7. Long evals need an account with
   room, or a smaller case set per day.
 - **By plan, these come later:**
   - performing a plan's `env_actions` (backlog, M5/M6);
@@ -139,14 +143,10 @@ PRs #77–#111, stacked, one per task (`M4-plan.md` §9), plus the trial and ful
 
 ## 7. Decision for the owner
 
-EC-1's bar is every run valid; the best measure is 6 of 9. Options:
+Both exit criteria are met. The owner chose option (b) of the earlier draft (one fix pass, then
+a full run); it took two fix passes (ADR 033, ADR 034) and the re-run of 6 runs lost to the
+outage. To close M4:
 
-- **(a) Accept M4 with the shortfall recorded** (as M2 was accepted): move to M5 and carry the two
-  causes above as M5 early tasks. No more spend now.
-- **(b) One more fix pass inside M4:** sharpen the side-finding duty of the spec, plan and
-  reviewer agents; let later review rounds add only new blocker or major findings (with an ADR
-  if it goes beyond doc 06's round rules). Then a full build run of 9, about $50–70.
-- **(c) Both fixes and two full runs in a row** before closing, about $100–140.
-
-**Recommendation: (b).** Both causes are understood and cheap to address; one run shows whether
-they hold, and the bar stays as written.
+1. Merge PR #113 (the fixes ADR 033 and 034, with their eval records).
+2. Merge this PR (#112, the report and ROADMAP).
+3. Accept M4; M5 planning starts next.
