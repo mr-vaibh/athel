@@ -160,3 +160,12 @@ bugs (model) and 1 round-limit stop (checker scope creep, backlog). Owner's merg
 - Next: record build full 6 in EVALS.md; if every run is valid, update the M4 report (#112) to
   EC-1 met and ask the owner to accept M4 and merge #112 and #113; if not, read the failed runs
   (free), report, and ask before any more paid runs.
+
+## Build eval 7 (2026-11-23)
+Build full 7 on #113 (ADR 034): 4 of 9 valid, $43.28. Every run that finished before a network
+outage (from about 11:00 local, DNS `ENOTFOUND` on the API) was valid, including
+`saved-addresses` 1–3, which failed in every earlier round. The 5 failed runs never got far
+enough to test Athel. Next: ask the owner whether to re-run `typed-client-errors` and
+`event-name-field` (6 runs, about $45–50) on the same code, to complete 9 runs on one commit.
+If all 6 are valid, update the M4 report (#112) to EC-1 met and ask to accept M4 and merge #112
+and #113.
