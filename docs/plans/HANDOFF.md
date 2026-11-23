@@ -169,3 +169,10 @@ enough to test Athel. Next: ask the owner whether to re-run `typed-client-errors
 `event-name-field` (6 runs, about $45–50) on the same code, to complete 9 runs on one commit.
 If all 6 are valid, update the M4 report (#112) to EC-1 met and ask to accept M4 and merge #112
 and #113.
+
+## Build eval 8 (2026-11-23)
+Owner: "Re-run the 6". Build full 8 (`typed-client-errors` and `event-name-field` × 3, same code
+as eval 7): 6 of 6 valid, $38.14. With eval 7's `saved-addresses` 1–3: **9 of 9 valid on #113's
+code; EC-1 met.** M4 eval spend: $524.19. M4 report (#112) updated to both criteria met. Next:
+the owner accepts M4 and merges #113, then #112 (or says what else is needed). After the merges,
+update ROADMAP and HANDOFF on main and plan M5.
