@@ -10,6 +10,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/blast"
 	"github.com/mr-vaibh/athel/cli/internal/config"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/gitro"
 	"github.com/mr-vaibh/athel/cli/internal/plan"
 	specpkg "github.com/mr-vaibh/athel/cli/internal/spec"
 	"github.com/mr-vaibh/athel/cli/internal/state"
@@ -125,11 +126,32 @@ func (r *runCtx) lintPlan(s *state.Store, id string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	if problems := plan.Lint(p, plan.LintContext{Criteria: criteria(specs), Risk: risk}); len(problems) > 0 {
+	if problems := plan.Lint(p, plan.LintContext{Criteria: criteria(specs), Risk: risk, Exists: r.baseHas()}); len(problems) > 0 {
 		return aerr.New(aerr.StateInvalid, "plan rejected: "+strings.Join(problems, "; ")).
 			WithNextAction("fix the plan and set it again")
 	}
 	return nil
+}
+
+// baseHas reports whether a repo has a path on the base branch of Athel's cache clone, without
+// fetching. A repo with no cache clone yet is not known, so the plan lint skips its paths.
+func (r *runCtx) baseHas() func(repo, path string) (bool, bool) {
+	pol, err := r.policySet()
+	if err != nil {
+		return nil // policy errors surface in the steps that need the policy
+	}
+	base := pol.Git.BaseBranch
+	return func(repo, path string) (bool, bool) {
+		cache, err := r.cachePath(r.resolveRepo(repo))
+		if err != nil {
+			return false, false
+		}
+		if code, _, err := gitro.Run(cache, "rev-parse", "--verify", "-q", "refs/heads/"+base); err != nil || code != 0 {
+			return false, false
+		}
+		code, _, err := gitro.Run(cache, "cat-file", "-e", "refs/heads/"+base+":"+path)
+		return err == nil && code == 0, err == nil
+	}
 }
 
 func criteria(specs []*specpkg.Spec) []string {

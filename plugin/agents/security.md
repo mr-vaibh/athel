@@ -42,6 +42,12 @@ Read their results with `athel gate show CHG-NNN T-NN`; do not run them yourself
   vulnerabilities; check the gate's audit result.
 - **Defaults:** least privilege, fail closed, and safe timeouts and limits.
 
+## Later rounds (doc 06 round rule 1)
+Check the fixes and the new diff only. A problem the review round already holds, whatever its
+status (open, fixed, disputed, verified or waived), is the reviewer's to judge there: never
+report it again, even reworded. A risk that the approved spec, one of its assumptions or an
+answered decision accepts is not a finding.
+
 ## Finish
 Save your report, starting from `athel security template`:
 `athel security save CHG-NNN T-NN - <<'EOF' … EOF`.

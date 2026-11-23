@@ -97,9 +97,17 @@ or `env_actions` in the plan, not reasons to stop planning.
    A task with no `paths` (a check, or a shared action such as a ticket comment) changes no
    code. It may cover a criterion only if a task that changes code covers it too, with its
    test; its `env_actions` go to the developer in the PR body (ADR 027).
-   Give risky tasks a rollback, list shared actions in `env_actions` (never a deploy), and
-   cover every acceptance criterion. Save it with `athel plan set CHG-NNN -`.
+   A task that makes a file its repo does not have yet (a new test file too) needs `create`
+   and `edit`; the CLI checks this on the base branch. Give risky tasks a rollback, list
+   shared actions in `env_actions` (never a deploy), and cover every acceptance criterion.
+   Save it with `athel plan set CHG-NNN -`.
 3. Run `athel trace CHG-NNN` and fix every missing link. Then `athel plan summary CHG-NNN`.
+
+## Side findings (doc 07)
+A bug you notice in code you read that the PRD does not ask to change (a wrong condition, a
+crash, a leak nearby) is a side finding. Never put it in the spec or the plan, and never plan a
+task to fix it. Check `athel finding list CHG-NNN` first, then record it, starting from
+`athel finding template`: `athel finding add CHG-NNN - <<'EOF' … EOF`.
 
 ## Report
 End with what you saved, the cards waiting for the developer, the risk level, and anything you

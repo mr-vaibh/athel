@@ -1,5 +1,9 @@
 # HANDOFF
 
+> **2026-11-23: M4 Build is done and accepted; everything is merged into `main`. Nothing is in
+> progress. Next: write the M5 plan (`docs/plans/M5-plan.md`) from doc 08 and the spec, and ask
+> the owner to approve it before building.** See "M4 closed" at the end.
+
 Last updated: 2026-11-20, session 5 (M4 built; first full evals run and missed; fixes in a new PR), on the owner's personal machine. Tools
 are installed system-wide with Homebrew (`docs/context/environment.md`).
 
@@ -152,3 +156,32 @@ Owner approved re-running only `event-name-field` (3 runs): 2 of 3 valid, $14.79
 round 4: 6 of 9 valid; EC-1 (every run valid) not met. The 3 failures are 2 missed planted side
 bugs (model) and 1 round-limit stop (checker scope creep, backlog). Owner's merge OK: merge
 #77–#111 in order after this re-run, checks green.
+
+## Fix pass (2026-11-23)
+- #77–#111 merged into main in order (owner's OK). M4 report: PR #112 (open).
+- Owner: "One fix pass + 9 runs". Fix pass: PR #113 `feat/m4-review-minors` (ADR 033), check.sh
+  green. Build full 6 (all 9 runs, $50–70 approved) running on that branch.
+- Next: record build full 6 in EVALS.md; if every run is valid, update the M4 report (#112) to
+  EC-1 met and ask the owner to accept M4 and merge #112 and #113; if not, read the failed runs
+  (free), report, and ask before any more paid runs.
+
+## Build eval 7 (2026-11-23)
+Build full 7 on #113 (ADR 034): 4 of 9 valid, $43.28. Every run that finished before a network
+outage (from about 11:00 local, DNS `ENOTFOUND` on the API) was valid, including
+`saved-addresses` 1–3, which failed in every earlier round. The 5 failed runs never got far
+enough to test Athel. Next: ask the owner whether to re-run `typed-client-errors` and
+`event-name-field` (6 runs, about $45–50) on the same code, to complete 9 runs on one commit.
+If all 6 are valid, update the M4 report (#112) to EC-1 met and ask to accept M4 and merge #112
+and #113.
+
+## Build eval 8 (2026-11-23)
+Owner: "Re-run the 6". Build full 8 (`typed-client-errors` and `event-name-field` × 3, same code
+as eval 7): 6 of 6 valid, $38.14. With eval 7's `saved-addresses` 1–3: **9 of 9 valid on #113's
+code; EC-1 met.** M4 eval spend: $524.19. M4 report (#112) updated to both criteria met. Next:
+the owner accepts M4 and merges #113, then #112 (or says what else is needed). After the merges,
+update ROADMAP and HANDOFF on main and plan M5.
+
+## M4 closed (2026-11-23)
+Owner: "you decide, just merge all needs to be merged". M4 accepted. #113 (ADR 033, 034, evals
+6–8) and #112 (M4 report, ROADMAP) merged into `main` with merge commits. Owner standing
+instruction: merging finished work with green checks is Claude's call. Next: M5 plan.

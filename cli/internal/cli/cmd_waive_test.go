@@ -74,7 +74,7 @@ func TestGateWaiverRefusals(t *testing.T) {
 // TestFindingWaiver: a major review finding can be waived by the developer, never a blocker.
 func TestFindingWaiver(t *testing.T) {
 	h, _ := goGates(t)
-	h.reviewRound(t, "verdict: approved\nnew:\n  - {severity: major, source: reviewer, location: main.go, rule: errors.typed, finding: f, required: q}\n"+
+	h.reviewRound(t, "verdict: changes_requested\nnew:\n  - {severity: major, source: reviewer, location: main.go, rule: errors.typed, finding: f, required: q}\n"+
 		"  - {severity: blocker, source: reviewer, location: main.go, rule: security.authz, finding: g, required: q}\n")
 	h.humanPrompt("/athel:waive CHG-001 T-01 R1-02 until=2026-11-20 'accepted'")
 	if _, env := h.waive("R1-02", "2026-11-20", "accepted"); errCode(env) != string(aerr.StateInvalid) || !strings.Contains(asJSON(t, env), "a blocker must be fixed") {

@@ -142,7 +142,21 @@ func Next(prev *Round, s Submission, head string, limit int) (*Round, error) {
 		r.Findings = append(r.Findings, Finding{ID: fmt.Sprintf("R%d-%02d", n, i+1), Severity: d.Severity, Source: d.Source,
 			Location: d.Location, Rule: d.Rule, Finding: d.Finding, Required: d.Required, Status: Open, History: []Step{{Round: n, Status: Open}}})
 	}
-	return r, nil
+	return r, checkVerdict(r)
+}
+
+// checkVerdict holds the verdict to doc 06 round rule 4 and the severity table: review ends when
+// no blocker or major is open, and open minors and nits never hold a task (they go to the PR).
+// A verdict that disagrees with the findings would end review too early or loop for nothing.
+func checkVerdict(r *Round) error {
+	blocking := r.Blocking()
+	switch {
+	case r.Verdict == Approved && len(blocking) > 0:
+		return invalid("the verdict is changes_requested while " + strings.Join(blocking, ", ") + " block the task")
+	case r.Verdict == ChangesRequested && len(blocking) == 0:
+		return invalid("no blocker or major finding is open, so the verdict is approved; open minor and nit findings are listed in the PR, not fixed in another round (doc 06 round rule 4)")
+	}
+	return nil
 }
 
 func checkDraft(d Draft) error {
@@ -300,6 +314,18 @@ func (r *Round) Blocking() []string {
 		closed := f.Status == Verified || (f.Severity == Major && f.Status == Waived)
 		if (f.Severity == Blocker || f.Severity == Major) && !closed {
 			out = append(out, f.ID)
+		}
+	}
+	return out
+}
+
+// Unresolved lists the minor and nit findings not verified: they never hold the task, and the PR
+// lists them instead (doc 06 severity table, "otherwise listed in the PR").
+func (r *Round) Unresolved() []Finding {
+	var out []Finding
+	for _, f := range r.Findings {
+		if (f.Severity == Minor || f.Severity == Nit) && f.Status != Verified {
+			out = append(out, f)
 		}
 	}
 	return out
