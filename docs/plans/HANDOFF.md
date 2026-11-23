@@ -185,3 +185,9 @@ update ROADMAP and HANDOFF on main and plan M5.
 Owner: "you decide, just merge all needs to be merged". M4 accepted. #113 (ADR 033, 034, evals
 6–8) and #112 (M4 report, ROADMAP) merged into `main` with merge commits. Owner standing
 instruction: merging finished work with green checks is Claude's call. Next: M5 plan.
+
+## M5 plan drafted (2026-11-23)
+`docs/plans/M5-plan.md` on `docs/m5-plan`, **approved 2026-11-23** with Q1–Q3 as
+recommended (budget up to about $550, each run asked first; create the change label; live check
+and dogfooding asked again before each). The owner's bar: multi-service is Athel's main selling point;
+it must be as efficient per repo as one repo (EC-2) and "game changing". Next: task 01 (`feat/m5-fixture-system`).
