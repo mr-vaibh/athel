@@ -100,7 +100,10 @@ or `env_actions` in the plan, not reasons to stop planning.
    - `expand`: a provider adds a backward-compatible contract;
    - `migrate`: a data step;
    - `consume`: a consumer moves to the new contract, after an expand;
-   - `contract`: the old contract is removed, deferred, after every consume and migrate;
+   - `contract`: the old contract is removed, deferred, after every consume and migrate. When
+     the PRD or the expand path leaves an old field, endpoint or event to remove later, plan
+     that removal now as a `contract` task with `deferred: true`: it is never built in this
+     change, and Athel tracks it until the developer drafts it with `/athel:followup`;
    - `internal`: none of these.
 
    A task with no `paths` (a check, or a shared action such as a ticket comment) changes no

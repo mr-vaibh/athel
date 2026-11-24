@@ -657,3 +657,58 @@ func TestGatesUnavailableWithoutABaselineCommit(t *testing.T) {
 		}
 	}
 }
+
+// TestTestArtifactsDoNotHoldTheBaseline (M5 smoke run 1): a coverage or profile file a test run
+// leaves in the worktree is ignored, so it cannot hold the next task's baseline, which no agent
+// could otherwise clear; an uncommitted source file still does.
+func TestTestArtifactsDoNotHoldTheBaseline(t *testing.T) {
+	h, tree := goGates(t)
+	for _, f := range []string{"cover.out", "src/coverage.out", "src.test", "cpu.prof", "pkg.coverprofile"} {
+		if err := os.WriteFile(filepath.Join(tree, f), []byte("mode: set\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	h.mustOK("gate", "baseline", "CHG-001", "T-01")
+	other := filepath.Join(h.root, ".athel", "changes", "CHG-001", "gates", "T-01.yaml")
+	if err := os.Remove(other); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tree, "src", "half.go"), []byte("package src\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, env := h.runJSON("gate", "baseline", "CHG-001", "T-01"); code != aerr.ExitState || !strings.Contains(asJSON(t, env), "uncommitted changes") {
+		t.Errorf("an uncommitted source file holds the baseline: %v", env)
+	}
+}
+
+func TestExcludeTestArtifacts(t *testing.T) {
+	r := &runCtx{env: Env{Getenv: os.Getenv}}
+	repo := t.TempDir()
+	if out, err := exec.Command("git", "init", "-q", "--bare", repo).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	p := filepath.Join(repo, "info", "exclude")
+	if err := os.WriteFile(p, []byte("# git's own\n*.log"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 { // the second time changes nothing
+		if err := r.excludeTestArtifacts(repo); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if b, _ := os.ReadFile(p); string(b) != "# git's own\n*.log\ncover.out\ncoverage.out\n*.coverprofile\n*.test\n*.prof\n" {
+		t.Errorf("exclude = %q", b)
+	}
+	if err := os.Remove(p); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(p, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.excludeTestArtifacts(repo); err == nil {
+		t.Error("an unreadable exclude file is an error")
+	}
+	if err := r.excludeTestArtifacts(filepath.Join(t.TempDir(), "none")); err == nil {
+		t.Error("a folder that is no repo is an error")
+	}
+}
