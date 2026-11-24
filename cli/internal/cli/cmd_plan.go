@@ -128,9 +128,13 @@ func (r *runCtx) lintPlan(s *state.Store, id string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	ctx := plan.LintContext{Criteria: criteria(specs), Risk: riskOf(rep), Exists: r.baseHas(), Contracts: contracts(rep), SameRepo: r.sameRepo}
+	coordinated, err := r.coordinated(id)
+	if err != nil {
+		return err
+	}
+	ctx := plan.LintContext{Criteria: criteria(specs), Risk: riskOf(rep), Exists: r.baseHas(), Contracts: contracts(rep), SameRepo: r.sameRepo, Coordinated: coordinated}
 	problems := plan.Lint(p, ctx)
-	if _, err := changeset.Derive(p, ctx.Coordinated); err != nil {
+	if _, err := changeset.Derive(p, coordinated); err != nil {
 		var ae *aerr.Error
 		if errors.As(err, &ae) {
 			problems = append(problems, ae.Message+"; "+ae.NextAction)
@@ -248,7 +252,11 @@ func cmdPlanSummary(r *runCtx, args []string) (any, error) {
 		return nil, err
 	}
 	sum := plan.Summarise(p, risk, open)
-	if set, err := changeset.Derive(p, false); err == nil { // plan set refused a plan without one
+	coordinated, err := r.coordinated(p.Change)
+	if err != nil {
+		return nil, err
+	}
+	if set, err := changeset.Derive(p, coordinated); err == nil { // plan set refused a plan without one
 		sum.MergeOrder = set.Lines()
 	}
 	return sum, nil

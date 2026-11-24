@@ -54,7 +54,7 @@ func (s *Store) approvePlan(c *Change, req TransitionRequest) error {
 	if p.Hash == nil || *p.Hash != h {
 		return aerr.New(aerr.IntegrityState, "plan.yaml of "+c.ID+" was edited outside the athel CLI; set it again with `athel plan set`")
 	}
-	set, err := changeset.Derive(p, false)
+	set, err := changeset.Derive(p, req.Coordinated)
 	if err != nil {
 		return err
 	}
