@@ -219,3 +219,20 @@ func ReadCalls(state string) ([]PRCall, error) {
 	}
 	return out, nil
 }
+
+// DecidePrompt is the developer's /athel:decide with each open card's recommended option, or "".
+func DecidePrompt(list map[string]any) string {
+	ds, _ := list["decisions"].([]any)
+	var answers []string
+	for _, x := range ds {
+		d, _ := x.(map[string]any)
+		rec, _ := d["recommendation"].(map[string]any)
+		if d["kind"] == "card" && rec["option"] != nil {
+			answers = append(answers, fmt.Sprintf("%v=%v", d["id"], rec["option"]))
+		}
+	}
+	if len(answers) == 0 {
+		return ""
+	}
+	return "/athel:decide " + Change + " " + strings.Join(answers, " ")
+}

@@ -94,23 +94,6 @@ func (r *runner) decide() error {
 	return nil
 }
 
-// DecidePrompt is the developer's /athel:decide with each open card's recommended option, or "".
-func DecidePrompt(list map[string]any) string {
-	ds, _ := list["decisions"].([]any)
-	var answers []string
-	for _, x := range ds {
-		d, _ := x.(map[string]any)
-		rec, _ := d["recommendation"].(map[string]any)
-		if d["kind"] == "card" && rec["option"] != nil {
-			answers = append(answers, fmt.Sprintf("%v=%v", d["id"], rec["option"]))
-		}
-	}
-	if len(answers) == 0 {
-		return ""
-	}
-	return "/athel:decide " + Change + " " + strings.Join(answers, " ")
-}
-
 func (r *runner) run(prd string) error {
 	for _, phase := range []func(string) error{r.specify, r.build, r.ship} {
 		if err := phase(prd); err != nil {

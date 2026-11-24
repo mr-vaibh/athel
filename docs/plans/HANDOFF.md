@@ -213,8 +213,9 @@ merging finished green work is Claude's call):
 | 12 /athel:followup, the deferred cleanup draft | #126 | merged |
 | 13 skills and agent prompts for sets | #127 | merged |
 | 14a system check in the gateway repo; rehearsal caches untouched repos | #128 | merged |
-| 14b scripted 3-repo journey (TestThreeRepoJourney) | #129 | open |
-| 15–16 | — | not started |
+| 14b scripted 3-repo journey (TestThreeRepoJourney) | #129 | merged |
+| 15 M5 eval harness (tests/evals/m5/set) | #130 | open |
+| 16 report | — | not started |
 
-Next: merge #129, then task 15 (M5 evals: ask the owner before the first paid run), 16 (report). `cli` coverage is 90.3%:
+Next: merge #130; ask the owner for the first paid run (a smoke run of users-v2-profile, about $25–30), then the full 3 × 3; then task 16 (report). `cli` coverage is 90.3%:
 new work must add tests that lift it.
