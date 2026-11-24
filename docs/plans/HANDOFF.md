@@ -215,8 +215,9 @@ merging finished green work is Claude's call):
 | 14a system check in the gateway repo; rehearsal caches untouched repos | #128 | merged |
 | 14b scripted 3-repo journey (TestThreeRepoJourney) | #129 | merged |
 | 15 M5 eval harness (tests/evals/m5/set) | #130 | merged |
-| smoke 1 fixes (test artifacts; deferred removal in the plan) | #131 | open |
+| smoke 1 fixes (test artifacts; deferred removal in the plan) | #131 | merged |
+| smoke 2: valid, $18.50 | #132 | open |
 | 16 report | — | not started |
 
-Next: merge #131; ask the owner for smoke run 2 (smoke 1: $15.57, not valid, Athel bug fixed in #131), then the full 3 × 3; then task 16 (report). `cli` coverage is 90.3%:
+Next: merge #132; ask the owner for the full 3 × 3 run (smoke 2 valid at $18.50; M5 spend so far $34.07); then task 16 (report). `cli` coverage is 90.3%:
 new work must add tests that lift it.
