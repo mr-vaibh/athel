@@ -107,3 +107,45 @@ func TestTaskWithoutCodeIsDoneAtOnce(t *testing.T) {
 		t.Errorf("the PR body lists the shared actions: %s", body)
 	}
 }
+
+// TestParkABlockedTask (M5-plan G12): a card holding T-01 does not stop the build; T-01 is
+// parked, T-02 (independent) goes on, and T-01 comes back first once the card is answered.
+func TestParkABlockedTask(t *testing.T) {
+	h, _ := goGates(t, "gates: []}", "gates: []}\n  - {id: T-02, title: y, repo: users, kind: internal, paths: [src/**], verbs: [edit, test, commit, push], covers: [AC-1], depends_on: [], size: S, gates: []}")
+	h.mustOK("state", "enter", "CHG-001", "build", "--task", "T-01")
+	if code, env := h.runJSON("build", "park", "CHG-001", "T-01"); code != aerr.ExitState || !strings.Contains(asJSON(t, env), "not held by an open card") {
+		t.Errorf("parking a task no card holds: %v", env)
+	}
+	h.stdin = strings.Replace(cardYAML, "blocks: [T-03]", "blocks: [T-01]", 1)
+	h.mustOK("decide", "add", "CHG-001", "-")
+	h.stdin = ""
+	if v := h.mustOK("build", "next", "CHG-001"); v["next"] != "T-02" || asJSON(t, v["blocked"]) != `["T-01"]` {
+		t.Errorf("T-02 goes on while T-01 waits: %v", v)
+	}
+	if code, env := h.runJSON("build", "park", "CHG-001", "T-02"); code != aerr.ExitState || !strings.Contains(asJSON(t, env), "not held by an open card") {
+		t.Errorf("parking T-02: %v", env)
+	}
+	v := h.mustOK("build", "park", "CHG-001", "T-01")
+	if v["state"] != "building" {
+		t.Errorf("parking keeps the change building: %v", v)
+	}
+	if code, env := h.runJSON("build", "park", "CHG-001", "T-01"); code != aerr.ExitState || !strings.Contains(asJSON(t, env), "not running on T-01") {
+		t.Errorf("parking twice: %v", env)
+	}
+	h.mustOK("state", "enter", "CHG-001", "build", "--task", "T-02")
+	h.humanPrompt("/athel:decide CHG-001 D-1=a")
+	h.mustOK("decide", "answer", "CHG-001", "D-1=a")
+	if v := h.mustOK("build", "next", "CHG-001"); v["next"] != "T-01" || asJSON(t, v["blocked"]) != `[]` {
+		t.Errorf("T-01 comes back first once answered: %v", v)
+	}
+}
+
+// TestBuildNextWhenACardHoldsTheBuild: a card on the whole build leaves nothing to do.
+func TestBuildNextWhenACardHoldsTheBuild(t *testing.T) {
+	h, _ := goGates(t)
+	h.stdin = strings.Replace(cardYAML, "blocks: [T-03]", "blocks: [build]", 1)
+	h.mustOK("decide", "add", "CHG-001", "-")
+	if v := h.mustOK("build", "next", "CHG-001"); v["next"] != "" || asJSON(t, v["blocked"]) != `["build"]` {
+		t.Errorf("nothing goes on: %v", v)
+	}
+}

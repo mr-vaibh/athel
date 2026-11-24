@@ -28,6 +28,10 @@ type buildStatus struct {
 	InProgress []string     `json:"in_progress"`
 	Done       []string     `json:"done"`
 	Tasks      []build.Task `json:"tasks"`
+	// Next is the task to work on now, "" when nothing can go on; Blocked are the tasks open
+	// cards hold, or ["build"] when a card holds the whole build (M5-plan G12).
+	Next    string   `json:"next"`
+	Blocked []string `json:"blocked"`
 }
 
 // cmdBuildNext lists the tasks that may start now and where every task stands.
@@ -48,7 +52,19 @@ func cmdBuildNext(r *runCtx, args []string) (any, error) {
 	if !ok {
 		return nil, aerr.New(aerr.StateInvalid, c.ID+" has no approved plan")
 	}
-	out := buildStatus{Ready: append([]string{}, build.Ready(p, c.Build)...), InProgress: []string{}, Done: []string{}, Tasks: append([]build.Task{}, c.Build...)}
+	blocked, err := r.blockedTasks(c.ID)
+	if err != nil {
+		return nil, err
+	}
+	out := buildStatus{Ready: append([]string{}, build.Ready(p, c.Build)...), InProgress: []string{}, Done: []string{}, Tasks: append([]build.Task{}, c.Build...),
+		Blocked: []string{}}
+	for id := range blocked {
+		out.Blocked = append(out.Blocked, id)
+	}
+	sort.Strings(out.Blocked)
+	if !blocked["build"] {
+		out.Next = build.Next(p, c.Build, blocked)
+	}
 	for _, t := range c.Build {
 		switch t.Status {
 		case build.Done:
@@ -323,6 +339,57 @@ func (r *runCtx) notDone(g gateTask, head string) ([]string, string, error) {
 }
 
 // blockingCards are the unanswered cards that block the task or the build step.
+// blockedTasks are the task IDs open cards block, and "build" when one blocks the whole build.
+func (r *runCtx) blockedTasks(id string) (map[string]bool, error) {
+	dec, err := r.readDecisions(id)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]bool{}
+	for _, card := range dec.Open("") {
+		for _, b := range card.Blocks {
+			if b == "build" || strings.HasPrefix(b, "T-") {
+				out[b] = true
+			}
+		}
+	}
+	return out, nil
+}
+
+// cmdBuildPark ends the build step on a task an open card blocks, without blocking the change,
+// so the build goes on with tasks the card does not hold, in other repos too (doc 08: work
+// continues on unblocked tasks; M5-plan G12). The task stays in progress and comes back first
+// once the card is answered.
+func cmdBuildPark(r *runCtx, args []string) (any, error) {
+	pos, err := parse(r.newFlags("build park"), args, 2)
+	if err != nil {
+		return nil, err
+	}
+	s, session, err := r.mutating()
+	if err != nil {
+		return nil, err
+	}
+	blocked, err := r.blockedTasks(pos[0])
+	if err != nil {
+		return nil, err
+	}
+	if !blocked[pos[1]] {
+		return nil, aerr.New(aerr.StateInvalid, pos[1]+" is not held by an open card; only a task waiting on the developer is parked").
+			WithNextAction("finish the task, or end the step blocked on a card that holds the build")
+	}
+	c, err := s.Get(pos[0])
+	if err != nil {
+		return nil, err
+	}
+	if c.Step == nil || c.Step.Status != state.StepRunning || c.Step.Name != "build" || c.Step.Task == nil || *c.Step.Task != pos[1] {
+		return nil, aerr.New(aerr.StateInvalid, "the build step of "+c.ID+" is not running on "+pos[1])
+	}
+	if c, err = s.ExitStep(c.ID, session, "build", state.StepOK, pos[1]+" parked: it waits on a card"); err != nil {
+		return nil, err
+	}
+	return viewOf(c, r.env.Clock.Now()), nil
+}
+
 func (r *runCtx) blockingCards(g gateTask) ([]string, error) {
 	dec, err := r.readDecisions(g.c.ID)
 	if err != nil {

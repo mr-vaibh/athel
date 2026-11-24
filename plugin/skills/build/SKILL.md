@@ -35,8 +35,11 @@ gates and the git steps around them.
 
 ## Pick the task
 4. Run `athel --json build next $ARGUMENTS`.
-   - A task in `in_progress` is continued first.
-   - Otherwise take the first of `ready`.
+   - Work on `next`: the CLI picks a task in progress first, then the first ready one, and skips
+     tasks an open card holds (`blocked`). Work goes on in other tasks and repos while a card
+     waits.
+   - If `next` is empty but tasks are not all done, open cards hold everything that is left:
+     show them with the `/athel:decide` line and end blocked (step 13).
    - When every task is done, make sure each repo is pushed and has its draft PR:
      `athel --json --session ${CLAUDE_SESSION_ID} git push $ARGUMENTS <repo>`, then `pr open` (or `pr update` when
      the PR exists). Then run
@@ -84,8 +87,13 @@ gates and the git steps around them.
       or a card. Unless a card blocks it, start the next round at step 7. The developer's new
       manifest carries the open findings.
 13. **Cards stop the loop.** When `athel --json decide list $ARGUMENTS --open` shows a card for
-    this task or for `build`, end the step:
-    `athel --json --session ${CLAUDE_SESSION_ID} state exit $ARGUMENTS build --result blocked --reason "<card ID>: <question>"`.
+    this task or for `build`:
+    - If the card holds only this task and `athel --json build next $ARGUMENTS` has another
+      `next`, park this task and go on:
+      `athel --json --session ${CLAUDE_SESSION_ID} build park $ARGUMENTS <T>`, mention the card in
+      one line, and go back to step 4.
+    - Otherwise end the step:
+      `athel --json --session ${CLAUDE_SESSION_ID} state exit $ARGUMENTS build --result blocked --reason "<card ID>: <question>"`.
     These are the 5-round limit, the third identical failure, a dispute twice, an overlap, and a
     PR over the size limit (`E-GATE-PR-SIZE`, ADR 028).
     Show the card with the `/athel:decide` line, and stop.
