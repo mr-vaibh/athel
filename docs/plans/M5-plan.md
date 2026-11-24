@@ -94,7 +94,7 @@ These do not change any spec rule; they add checks the spec does not ask for, so
 
 | # | Addition | Why |
 |---|---|---|
-| A1 | **Merge-order rehearsal**, `athel set verify CHG`: for each step of the order, in throwaway local clones it merges the PRs up to that step into their bases, then runs every affected repo's build and unit gates and the workspace's optional **system check** (a command in `athel.yaml` that starts the services together and runs cross-service flows). Each gate command goes through the policy engine (ADR 023). The evidence goes to `changeset/verify.yaml`; without a system check configured, the PR bodies say so plainly. ADR 036 | The spec states the invariant; this proves it before a human merges anything |
+| A1 | **Merge-order rehearsal**, `athel set verify CHG`: for each step of the order, in throwaway local clones it merges the PRs up to that step into their bases, then runs every affected repo's build and unit gates and the workspace's optional **system check** (a command in `.athel/config/system.yaml` that starts the services together and runs cross-service flows). Each gate command goes through the policy engine (ADR 023). The evidence goes to `changeset/verify.yaml`; without a system check configured, the PR bodies say so plainly. ADR 036 | The spec states the invariant; this proves it before a human merges anything |
 | A2 | Upstream contract in the developer's and reviewer's manifests (G10) | The biggest cause of cross-repo bugs is a consumer written against the wrong idea of the provider |
 | A3 | Out-of-order merge alarm and stale-rehearsal warning in status (G8, G14) | Humans merge; Athel watches that the order is kept |
 | A4 | All-repo preflight up front (G11) | No half-built change because the third repo was busy |
@@ -243,13 +243,13 @@ change's cards.
   changeset/verify.yaml          rehearsal evidence (changeset-verify@1)
   changeset/status.json          last status read from the host, with its time
   prd/followup-CHG-NNN.md        the deferred removal, drafted on /athel:followup
-athel.yaml                       system_check: {command: […], services: {users: …}}
+.athel/config/system.yaml        system-check@1: the system check's argv, {repo} words (ADR 036)
 ```
 
 New schemas:
 - `change@5`;
 - `changeset-verify@1`;
-- `config@3` for `system_check`, with a migration.
+- `system-check@1` for `.athel/config/system.yaml` (ADR 036: a new file, not `config@3`).
 
 ## 8. CLI and plugin additions
 

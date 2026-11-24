@@ -325,5 +325,14 @@ func (s *Set) Section(change, repo string, ref func(repo string) string) []strin
 			out = append(out, "Later, a separate change: "+e.Repo+": "+*e.Note)
 		}
 	}
-	return out
+	return append(out, s.rehearsalLine())
+}
+
+// rehearsalLine says whether the merge order was rehearsed (ADR 036).
+func (s *Set) rehearsalLine() string {
+	if s.Verify == nil {
+		return "Merge-order rehearsal: not run yet."
+	}
+	return "Merge-order rehearsal: " + s.Verify.Result + " at " + s.Verify.At +
+		" (each state between merges rebuilt in throwaway clones and checked; changeset/verify.yaml in the change folder)."
 }

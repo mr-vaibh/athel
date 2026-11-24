@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mr-vaibh/athel/cli/internal/changeset"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 )
 
@@ -244,5 +245,22 @@ func TestMarkPREdges(t *testing.T) {
 	}
 	if got, err := s.MarkPR(c.ID, testSession, "users", "ready"); err != nil || got.ChangeSet != nil {
 		t.Errorf("a change without a set: %v", err)
+	}
+}
+
+func TestSetVerify(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "x")
+	v := &changeset.Verify{At: "2026-11-24T10:00:00.000Z", Result: "pass", Heads: map[string]string{"users@head": strings.Repeat("a", 40)}}
+	if _, err := s.SetVerify(c.ID, testSession, v); !aerr.HasCode(err, aerr.StateInvalid) {
+		t.Errorf("no set yet: %v", err)
+	}
+	if _, err := s.SetVerify(c.ID, "", v); err == nil {
+		t.Error("SetVerify needs a session")
+	}
+	walk(t, s, c.ID, Investigating, Specified, AwaitingDecisions, Planned, PlanApproved)
+	got, err := s.SetVerify(c.ID, testSession, v)
+	if err != nil || got.ChangeSet.Verify.Result != "pass" {
+		t.Errorf("SetVerify: %+v %v", got.ChangeSet, err)
 	}
 }

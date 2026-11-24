@@ -44,15 +44,23 @@ command. Athel never merges and never deploys: humans do.
      change ID. It goes through the same steps as any change, starting with `/athel:spec`.
    - For each `ticket`, show a ticket draft for the developer to file: a title, the evidence,
      the location and the suggested fix. Athel never creates a ticket itself.
-7. **Mark the PRs ready, per repo:**
+7. **Rehearse the merge order** when the change has more than one PR (`athel --json set show
+   $ARGUMENTS` lists more than one repo that is not deferred):
+   `athel --json --session ${CLAUDE_SESSION_ID} set verify $ARGUMENTS`. Athel merges the PRs in
+   the stated order in throwaway clones and checks every state in between; it never pushes. If
+   `result` is `fail`, show the failing step (what was merged, which gate or the system check,
+   its last lines), end the step blocked with that as the reason, and stop: the plan or the code
+   must change.
+8. **Mark the PRs ready, per repo:**
    - `athel --json --session ${CLAUDE_SESSION_ID} pr update $ARGUMENTS <repo>` refreshes the
-     body with the gates, waivers and findings;
-   - then `athel --json --session ${CLAUDE_SESSION_ID} pr ready $ARGUMENTS <repo>`.
-8. **Hand over:**
+     body with the gates, waivers, findings and the rehearsal;
+   - then `athel --json --session ${CLAUDE_SESSION_ID} pr ready $ARGUMENTS <repo>`. Athel refuses
+     until every PR of the set is open and the rehearsal passed on exactly these heads.
+9. **Hand over:**
    - `athel --json --session ${CLAUDE_SESSION_ID} state transition $ARGUMENTS --to in_review --by athel --reason "PRs ready for review"`;
    - then `athel --json --session ${CLAUDE_SESSION_ID} state exit $ARGUMENTS ship --result ok`.
-9. **Show, on one screen:**
-   - each PR link;
+10. **Show, on one screen:**
+   - each PR link, in merge order, with what each merges after;
    - the gates per task, and any waivers with their expiry;
    - the side findings and their choices.
 
