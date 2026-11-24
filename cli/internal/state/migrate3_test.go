@@ -115,7 +115,34 @@ func TestMigrateChange3To4(t *testing.T) {
 		t.Fatalf("migrate = %v %v", ids, err)
 	}
 	after, _ := os.ReadFile(s.WS.ChangeFile(c.ID))
-	if !strings.Contains(string(after), "schema: athel/change@4") || IsLegacy(after) {
+	if !strings.Contains(string(after), "schema: "+SchemaID) || IsLegacy(after) {
+		t.Errorf("not upgraded:\n%s", after)
+	}
+}
+
+// TestMigrateChange4To5: change@4 (M4) always had an empty change set, so only the schema line
+// differs.
+func TestMigrateChange4To5(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "sealed v4")
+	b, _ := os.ReadFile(s.WS.ChangeFile(c.ID))
+	v4 := strings.Replace(string(b), "schema: "+SchemaID, "schema: "+SchemaV4, 1)
+	h, err := ContentHash([]byte(v4))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(s.WS.ChangeFile(c.ID), []byte(sealHash.ReplaceAllString(v4, "  hash: "+h)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	read, err := s.Get(c.ID)
+	if err != nil || read.Schema != SchemaID || read.Tampered() || read.ChangeSet != nil {
+		t.Fatalf("sealed v4 read: %+v %v", read, err)
+	}
+	if ids, err := s.Migrate(false); err != nil || strings.Join(ids, ",") != c.ID {
+		t.Fatalf("migrate = %v %v", ids, err)
+	}
+	after, _ := os.ReadFile(s.WS.ChangeFile(c.ID))
+	if !strings.Contains(string(after), "schema: "+SchemaID) || IsLegacy(after) {
 		t.Errorf("not upgraded:\n%s", after)
 	}
 }

@@ -129,7 +129,7 @@ func (r *runCtx) stopIfForeign(tree gitw.Tree, id string, w state.RepoWork, cach
 func (r *runCtx) ownedBy(s *state.Store, c *state.Change, repo string) func(string) bool {
 	var globs []string
 	if p, ok := s.ApprovedPlan(c); ok {
-		for _, t := range p.Tasks {
+		for _, t := range p.Built() {
 			if t.Repo == repo {
 				globs = append(globs, t.Paths...)
 			}

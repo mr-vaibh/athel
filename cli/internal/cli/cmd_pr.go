@@ -260,7 +260,7 @@ func planNotes(s *state.Store, c *state.Change, repo string) ([]string, []string
 	if !ok {
 		return nil, nil, nil
 	}
-	for _, t := range p.Tasks {
+	for _, t := range p.Built() {
 		if t.Repo != repo {
 			if !p.WritesIn(t.Repo) {
 				for _, a := range t.EnvActions {
@@ -302,7 +302,7 @@ func (r *runCtx) prMinor(s *state.Store, c *state.Change, repo string) ([]string
 		return nil, nil
 	}
 	var out []string
-	for _, t := range p.Tasks {
+	for _, t := range p.Built() {
 		if t.Repo != repo {
 			continue
 		}
@@ -378,7 +378,7 @@ func (r *runCtx) taskLines(s *state.Store, c *state.Change, w state.RepoWork, ex
 	}
 	var tasks []pr.TaskLines
 	if p, ok := s.ApprovedPlan(c); ok {
-		for _, t := range p.Tasks {
+		for _, t := range p.Built() {
 			if t.Repo == w.Name {
 				tasks = append(tasks, pr.TaskLines{Task: t.ID, Lines: lines[t.ID]})
 			}

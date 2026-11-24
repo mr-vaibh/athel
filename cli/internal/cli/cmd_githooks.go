@@ -87,7 +87,7 @@ func (r *runCtx) lintRules(s *state.Store, c *state.Change, repo string) (gitlin
 	}
 	var tasks []string
 	if p, ok := s.ApprovedPlan(c); ok {
-		for _, t := range p.Tasks {
+		for _, t := range p.Built() {
 			if t.Repo == repo {
 				tasks = append(tasks, t.ID)
 			}

@@ -118,7 +118,7 @@ change_set:
   verify: {at: …, bases: {…}, heads: {…}, result: pass}
 ```
 
-Derived by `athel set derive` at plan approval (G1); read with `athel set show`. A single-repo
+Derived by the CLI when the human approves the plan (G1, ADR 035); read with `athel set show`, which shows a preview before approval. A single-repo
 change gets `strategy: single`, so M4 behaviour is unchanged.
 
 ### 5.2 Planning
@@ -253,7 +253,7 @@ New schemas:
 
 ## 8. CLI and plugin additions
 
-- **CLI:** `set derive`, `set show`, `set verify`, `set status`, `followup draft`. `pr open` and
+- **CLI:** `set show` (the set is derived at approval, ADR 035), `set verify`, `set status`, `followup draft`. `pr open` and
   `pr update` refresh every sibling, and `pr ready --set` marks the set ready. Every command has
   `--help` and `--json`.
 - **Skills:**
@@ -275,7 +275,7 @@ None: the standard library only.
 |---|---|---|---|
 | 00 | `docs/m5-plan` | This plan | — |
 | 01 | `feat/m5-fixture-system` | Runnable Go services, system check, fake `gh` labels, reviews, checks and the grader's merge helper; the needs-its-order fixture test | `TestSystemCheckAcrossServices`, `TestWrongOrderBreaksTheSystem` |
-| 02 | `feat/m5-change-set` | `change@5`, migration, `set derive` and `set show`, recompute on plan change; ADR 035 | `TestDeriveRolesAndOrder`, `TestTwoConsumersShareAnOrder`, `TestDeferredCleanupNotBuilt` |
+| 02 | `feat/m5-change-set` | `change@5`, migration, derivation at approval, `set show`, cleared when a plan change voids the approval; deferred tasks allow nothing; ADR 035 | `TestDeriveRolesAndOrder`, `TestTwoConsumersShareAnOrder`, `TestDeferredCleanupNotBuilt` |
 | 03 | `feat/m5-plan-lints` | Two-way dependencies, breaking change without expand or card, consume-to-provider pairing, consumers without tasks; the plan summary's merge order | `TestTwoWayReposRefused`, `TestBreakingNeedsExpandOrCard`, `TestConsumeNeedsProviderExpand` |
 | 04 | `feat/m5-coordinated` | Coordinated-release card and strategy, PR wording; ADR 037 | `TestCoordinatedCardSetsStrategy` |
 | 05 | `feat/m5-preflight-all` | All-repo preflight before the first write; scheduling past a blocked repo | `TestThirdRepoOverlapFoundFirst`, `TestBlockedRepoDoesNotStopOthers` |

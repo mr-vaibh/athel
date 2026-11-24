@@ -87,6 +87,7 @@ func commands() map[string]command {
 		"plan show":              cmdPlanShow,
 		"plan summary":           cmdPlanSummary,
 		"plan diff":              cmdPlanDiff,
+		"set show":               cmdSetShow,
 		"trace":                  cmdTrace,
 		"spec template":          cmdSpecTemplate,
 		"decide template":        cmdDecideTemplate,

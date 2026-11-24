@@ -416,6 +416,9 @@ var repoLevel = map[string]bool{"push": true, "commit": true, "test": true, "pr"
 func (ctx Context) resourceTask(a classify.Action) (*plan.Task, string) {
 	for i := range ctx.Plan.Tasks {
 		t := &ctx.Plan.Tasks[i]
+		if t.Deferred { // a later change's actions are approved with that change
+			continue
+		}
 		for _, name := range []string{a.Tool, a.ToolID} {
 			if name != "" && (slices.Contains(t.Resources, name) || slices.Contains(t.EnvActions, name)) {
 				return t, ""

@@ -147,3 +147,37 @@ func TestDecodeErrors(t *testing.T) {
 		t.Errorf("bad yaml: %v", err)
 	}
 }
+
+// TestDeferredTaskGrantsNothing: a deferred task is a later change (doc 04 rule 3), so in this
+// change its paths allow no write (rule 7) and do not make a repo one the plan writes in.
+func TestDeferredTaskGrantsNothing(t *testing.T) {
+	p := &Plan{Tasks: []Task{
+		{ID: "T-01", Repo: "users", Paths: []string{"api/**"}, Verbs: []string{"edit", "commit"}},
+		{ID: "T-02", Repo: "users", Paths: []string{"legacy/**"}, Verbs: []string{"edit", "delete"}, Kind: KindContract, Deferred: true},
+		{ID: "T-03", Repo: "orders", Paths: []string{"clients/**"}, Verbs: []string{"edit"}, Kind: KindContract, Deferred: true},
+	}}
+	tests := []struct {
+		w    Write
+		want string
+	}{
+		{Write{Repo: "users", Path: "api/user.go", Verb: "edit"}, "T-01"},
+		{Write{Repo: "users", Path: "legacy/v1.go", Verb: "edit"}, ""},
+		{Write{Repo: "users", Path: "legacy/v1.go", Verb: "delete"}, ""},
+		{Write{Repo: "orders", Path: "clients/users.go", Verb: "edit"}, ""},
+	}
+	for _, tt := range tests {
+		got := ""
+		if m := p.Match(tt.w); m != nil {
+			got = m.ID
+		}
+		if got != tt.want {
+			t.Errorf("Match(%+v) = %q, want %q", tt.w, got, tt.want)
+		}
+	}
+	if !p.WritesIn("users") || p.WritesIn("orders") {
+		t.Error("only built tasks make a repo one the plan writes in")
+	}
+	if got := len(p.Built()); got != 1 {
+		t.Errorf("Built() has %d tasks, want 1", got)
+	}
+}

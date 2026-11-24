@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mr-vaibh/athel/cli/internal/changeset"
 	"github.com/mr-vaibh/athel/cli/internal/clock"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/fsutil"
@@ -42,7 +43,8 @@ func (s *Store) ApprovedPlan(c *Change) (*plan.Plan, bool) {
 	return p, true
 }
 
-// approvePlan binds the plan_approved transition to the current plan's hash.
+// approvePlan binds the plan_approved transition to the current plan's hash, and derives the
+// change set from that plan (ADR 035): the order is fixed when the human approves it.
 func (s *Store) approvePlan(c *Change, req TransitionRequest) error {
 	p, err := s.LoadPlan(c.ID)
 	if err != nil {
@@ -52,7 +54,12 @@ func (s *Store) approvePlan(c *Change, req TransitionRequest) error {
 	if p.Hash == nil || *p.Hash != h {
 		return aerr.New(aerr.IntegrityState, "plan.yaml of "+c.ID+" was edited outside the athel CLI; set it again with `athel plan set`")
 	}
+	set, err := changeset.Derive(p, false)
+	if err != nil {
+		return err
+	}
 	c.Approvals.Plan = &PlanApproval{Hash: h, By: ByHuman, At: s.now(), Session: req.Session, PromptID: req.PromptID}
+	c.ChangeSet = set
 	return nil
 }
 
@@ -87,7 +94,7 @@ func (s *Store) SetPlan(id, session string, data []byte) (*Change, error) {
 			return err
 		}
 		if c.Approvals.Plan != nil && c.Approvals.Plan.Hash != *p.Hash {
-			c.Approvals.Plan, voided = nil, true
+			c.Approvals.Plan, c.ChangeSet, voided = nil, nil, true
 			if c.State == PlanApproved || c.State == Building || c.State == ReadyForPR {
 				applyTransition(c, TransitionRequest{To: Planned, By: ByAthel, Reason: "plan changed after approval; approval void", Session: &session},
 					[]Evidence{}, clock.Format(now))
