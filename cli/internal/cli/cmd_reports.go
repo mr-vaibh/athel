@@ -10,7 +10,6 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
-	"github.com/mr-vaibh/athel/cli/internal/gates"
 	"github.com/mr-vaibh/athel/cli/internal/reports"
 	"github.com/mr-vaibh/athel/cli/internal/review"
 )
@@ -153,7 +152,7 @@ func cmdBuildSave(r *runCtx, args []string) (any, error) {
 	res := reports.Build{Schema: reports.BuildSchema, Change: g.c.ID, Task: g.task.ID, N: n, Head: head,
 		FilesChanged: changed, TestsAdded: []string{}, CommandsRun: d.CommandsRun, Notes: d.Notes}
 	for _, f := range changed {
-		if gates.IsTestFile(f) {
+		if r.testMatcher(g.task.Repo)(f) {
 			res.TestsAdded = append(res.TestsAdded, f)
 		}
 	}
@@ -171,7 +170,7 @@ func cmdQASave(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := reports.CheckQA(d, gates.IsTestFile, changed); err != nil {
+	if err := reports.CheckQA(d, r.testMatcher(g.task.Repo), changed); err != nil {
 		return nil, err
 	}
 	if err := checkLocations(g, reportLocations(d.Findings)...); err != nil {

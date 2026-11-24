@@ -84,3 +84,13 @@ only commands their role may run.
 - Doc 04: rule 3 (always denied), §Injection defence layer 4.
 - FR-BUILD-004, FR-BUILD-005, FR-BUILD-006.
 - M4-plan G3.
+
+## Follow-up (M5 task 10, 2026-11-24)
+A repo can now name its own test locations: `athel conventions tests <repo> <glob>...` writes
+`.athel/repos/<repo>/tests.yaml` (`test-patterns@1`). Because the patterns widen QA's write
+scope, the CLI accepts one only if a part of it names a test location (a test folder such as
+`e2e/` or `it/`, or a test file name such as `*.check.test.ts` or `*IT.java`) and it matches a
+file of the repo's base branch; `src/**` or `latest/**` are refused. The patterns add to the
+language defaults, which now also cover JVM (`*Test.java`, `*Spec.kt`, `src/test/`), .NET
+(`*Tests.cs`, `*.Tests/`) and Ruby (`_spec.rb`, `spec/`). QA's scope, the QA report check, the
+build report's test list and the `ac-tests` gate all use the same per-repo rule.

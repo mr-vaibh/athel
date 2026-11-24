@@ -9,6 +9,10 @@ func TestIsTestFile(t *testing.T) {
 	for path, want := range map[string]bool{
 		"src/a_test.go": true, "src/a.go": false, "web/x.test.ts": true, "web/x.spec.tsx": true,
 		"tests/test_api.py": true, "pkg/api_test.py": true, "test/helpers.js": true, "src/latest.go": false, "README.md": false,
+		// JVM, .NET and Ruby services (M5-plan G15): their own naming and folders.
+		"src/test/java/com/acme/UserServiceTest.java": true, "src/main/java/com/acme/UserService.java": false,
+		"src/test/kotlin/OrdersSpec.kt": true, "app/OrdersIT.java": true, "Users.Tests/UserTests.cs": true,
+		"spec/models/user_spec.rb": true, "app/models/user.rb": false, "src/main/java/Contest.java": false,
 	} {
 		if IsTestFile(path) != want {
 			t.Errorf("%s: %v", path, !want)
@@ -65,5 +69,18 @@ func TestOverride(t *testing.T) {
 		if _, err := Override(base, []Gate{g}); err == nil {
 			t.Errorf("%s: want an error", name)
 		}
+	}
+}
+
+// TestMatcher: a repo's own test patterns add to the defaults, never replace them.
+func TestTestMatcher(t *testing.T) {
+	m := TestMatcher([]string{"qa/**/*.check.ts"})
+	for path, want := range map[string]bool{"qa/orders/flow.check.ts": true, "src/a_test.go": true, "src/flow.check.ts": false, "src/a.go": false} {
+		if m(path) != want {
+			t.Errorf("%s: %v", path, !want)
+		}
+	}
+	if !TestMatcher(nil)("src/a_test.go") {
+		t.Error("no patterns: the defaults")
 	}
 }

@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mr-vaibh/athel/cli/internal/gates"
 )
 
 // Git runs git in a repo; injected so tests and the CLI choose how.
@@ -66,16 +68,9 @@ func kindOf(p string) string {
 	return ""
 }
 
-// isTest reports a test file by the common naming of Go, JS/TS, Python, Java and Ruby.
-func isTest(p string) bool {
-	base := path.Base(p)
-	for _, s := range []string{"_test.go", ".test.ts", ".test.tsx", ".test.js", ".spec.ts", ".spec.tsx", ".spec.js", "_test.py", "Test.java", "_spec.rb"} {
-		if strings.HasSuffix(base, s) {
-			return true
-		}
-	}
-	return strings.HasPrefix(base, "test_") && strings.HasSuffix(base, ".py")
-}
+// isTest reports a test file the way the gates and QA's write scope do, so the survey lists the
+// tests QA may touch.
+func isTest(p string) bool { return gates.IsTestFile(p) }
 
 func skipped(p string) bool {
 	for _, part := range strings.Split(p, "/") {

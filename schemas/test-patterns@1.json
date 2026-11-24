@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/test-patterns@1.json",
+  "title": "athel/test-patterns@1",
+  "description": "A repo's own test locations (.athel/repos/<repo>/tests.yaml; M5-plan G15): globs, as in plan paths, that add to the language defaults where QA may write tests and the gates look for them. Each names a test location and matched a real file of the repo when it was saved.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repo",
+    "patterns"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/test-patterns@1"
+    },
+    "repo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "patterns": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
+    }
+  }
+}
