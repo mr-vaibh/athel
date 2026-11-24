@@ -91,6 +91,9 @@ type TransitionRequest struct {
 	Evidence []string // paths relative to the change directory
 	Session  *string
 	PromptID *string
+	// Coordinated is true when the developer chose a coordinated release on a card (doc 04
+	// rule 5); plan approval then derives the change set with that strategy (ADR 037).
+	Coordinated bool
 }
 
 // Transition moves change id to req.To if the fixed table allows it, appending a history

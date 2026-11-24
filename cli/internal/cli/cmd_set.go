@@ -33,7 +33,11 @@ func cmdSetShow(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	set, err := changeset.Derive(p, false)
+	coordinated, err := r.coordinated(c.ID)
+	if err != nil {
+		return nil, err
+	}
+	set, err := changeset.Derive(p, coordinated)
 	if err != nil {
 		return nil, err
 	}
