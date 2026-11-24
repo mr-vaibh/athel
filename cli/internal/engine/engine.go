@@ -212,9 +212,14 @@ func (ctx Context) agentScope(a classify.Action) (aerr.Code, string) {
 	return "", ""
 }
 
-// RoleCommands are the writing athel commands each build role may run; every other writing
-// command is the build skill's, in the main session (ADR 024). Reads are open to all.
+// RoleCommands are the writing athel commands each agent may run; every other writing command
+// is the skills', in the main session (ADR 024). Reads are open to all.
 var RoleCommands = map[string][]string{
+	// The scout investigates and records what it found; the architect writes the PRD review,
+	// specs, cards, the planned blast radius and the plan (M5-plan task 11, ADR 024 follow-up).
+	hookio.ScoutAgent: {"investigation save", "fact add", "fact use", "fact verify", "repos cache", "finding add"},
+	hookio.ArchitectAgent: {"conventions save", "conventions tests", "repos survey", "prd review save", "spec save", "spec remove",
+		"decide add", "decide record", "blast save", "plan set", "set coordinate", "trace", "finding add"},
 	hookio.DeveloperAgent: {"build save", "review fix", "review dispute", "finding add"},
 	hookio.QAAgent:        {"qa save", "finding add"},
 	hookio.SecurityAgent:  {"security save", "finding add"},

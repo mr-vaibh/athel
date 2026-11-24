@@ -138,3 +138,24 @@ func TestScoutAndArchitectRecordSideFindings(t *testing.T) {
 		})
 	}
 }
+
+// TestScoutCommandTable (M5-plan task 11): the scout records its investigation and facts, and
+// nothing that moves the change; the architect writes specs, cards, the blast radius and the
+// plan, and nothing that builds, pushes or opens PRs.
+func TestScoutCommandTable(t *testing.T) {
+	cmd := func(line string) map[string]any { _, in := bash(line); return in }
+	run(t, []ruleCase{
+		{"scout: its investigation", "Bash", cmd("athel investigation save CHG-001 -"), as(hookio.ScoutAgent), Allow, "7x", ""},
+		{"scout: a fact", "Bash", cmd("athel fact add -"), as(hookio.ScoutAgent), Allow, "7x", ""},
+		{"scout: a plan", "Bash", cmd("athel plan set CHG-001 -"), as(hookio.ScoutAgent), Deny, "3", aerr.PolicyAgentScope},
+		{"scout: a card", "Bash", cmd("athel decide add CHG-001 -"), as(hookio.ScoutAgent), Deny, "3", aerr.PolicyAgentScope},
+		{"architect: a plan", "Bash", cmd("athel plan set CHG-001 -"), as(hookio.ArchitectAgent), Allow, "7x", ""},
+		{"architect: the PRD review", "Bash", cmd("athel prd review save CHG-001 -"), as(hookio.ArchitectAgent), Allow, "7x", ""},
+		{"architect: the coordinated card", "Bash", cmd("athel set coordinate CHG-001 --reason x"), as(hookio.ArchitectAgent), Allow, "7x", ""},
+		{"architect: the trace", "Bash", cmd("athel trace CHG-001"), as(hookio.ArchitectAgent), Allow, "7x", ""},
+		{"architect: a build result", "Bash", cmd("athel build save CHG-001 T-01 -"), as(hookio.ArchitectAgent), Deny, "3", aerr.PolicyAgentScope},
+		{"architect: a push", "Bash", cmd("athel git push CHG-001 users"), as(hookio.ArchitectAgent), Deny, "3", aerr.PolicyAgentScope},
+		{"architect: a PR", "Bash", cmd("athel pr open CHG-001 users"), as(hookio.ArchitectAgent), Deny, "3", aerr.PolicyAgentScope},
+		{"architect: moving the change", "Bash", cmd("athel state enter CHG-001 build --task T-01"), as(hookio.ArchitectAgent), Deny, "3", aerr.PolicyAgentScope},
+	})
+}

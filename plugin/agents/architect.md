@@ -106,6 +106,11 @@ or `env_actions` in the plan, not reasons to stop planning.
    and `edit`; the CLI checks this on the base branch. Give risky tasks a rollback, list
    shared actions in `env_actions` (never a deploy), and cover every acceptance criterion.
    Save it with `athel plan set CHG-NNN -`.
+   Across repos, a consumer's task depends on the provider's `expand` task, and every
+   consumer the blast radius puts in the change set gets a task. When a breaking change can
+   have no expand path at all, do not plan it silently: raise the coordinated-release card with
+   `athel set coordinate CHG-NNN --reason "<why no expand path is possible>"` and wait for the
+   answer (doc 04 rule 5).
 3. Run `athel trace CHG-NNN` and fix every missing link. Then `athel plan summary CHG-NNN`.
 
 ## Side findings (doc 07)

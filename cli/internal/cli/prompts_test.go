@@ -16,7 +16,7 @@ import (
 // that exist and that its role may run (ADR 024), so the prompt never leads it into a denial.
 func TestAgentPromptsNameOnlyTheirCommands(t *testing.T) {
 	cmds := commands()
-	word := regexp.MustCompile("`athel ([a-z]+)(?: ([a-z]+))?")
+	word := regexp.MustCompile("`athel (?:--json )?([a-z]+)(?: ([a-z]+))?(?: ([a-z]+))?")
 	for role := range engine.RoleCommands {
 		name := strings.TrimPrefix(role, "athel:")
 		b, err := os.ReadFile("../../../plugin/agents/" + name + ".md")
@@ -29,6 +29,11 @@ func TestAgentPromptsNameOnlyTheirCommands(t *testing.T) {
 		seen := 0
 		for _, m := range word.FindAllStringSubmatch(string(b), -1) {
 			cmd := strings.TrimSpace(m[1] + " " + m[2])
+			if three := cmd + " " + m[3]; m[3] != "" {
+				if _, ok := cmds[three]; ok {
+					cmd = three
+				}
+			}
 			if _, ok := cmds[cmd]; !ok {
 				t.Errorf("%s.md names athel %s, which does not exist", name, cmd)
 				continue
@@ -39,7 +44,7 @@ func TestAgentPromptsNameOnlyTheirCommands(t *testing.T) {
 			}
 		}
 		for _, cmd := range engine.RoleCommands[role] {
-			if !strings.Contains(string(b), "athel "+cmd) {
+			if !strings.Contains(string(b), "athel "+cmd) && !strings.Contains(string(b), "athel --json "+cmd) {
 				t.Errorf("%s.md never says how to run athel %s", name, cmd)
 			}
 		}

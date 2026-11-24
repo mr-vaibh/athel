@@ -94,3 +94,14 @@ file of the repo's base branch; `src/**` or `latest/**` are refused. The pattern
 language defaults, which now also cover JVM (`*Test.java`, `*Spec.kt`, `src/test/`), .NET
 (`*Tests.cs`, `*.Tests/`) and Ruby (`_spec.rb`, `spec/`). QA's scope, the QA report check, the
 build report's test list and the `ac-tests` gate all use the same per-repo rule.
+
+## Follow-up (M5 task 11, 2026-11-24)
+The scout and the architect now have command tables too. The scout may run `investigation save`,
+`fact add`, `fact use`, `fact verify`, `repos cache` and `finding add`; the architect the PRD
+review, conventions, specs, cards, the planned blast radius, the plan, `set coordinate`, `trace`
+and `finding add`. Every other writing command (build, gates, pushes, PRs, state moves) is the
+skills', in the main session. Making the tables exact showed that the classifier named one-word
+commands with their first argument (`trace CHG-001`) and three-word commands by two words
+(`prd review`), so `prd review template` counted as a write; it now names them by the CLI's own
+command names (`classify.SingleCommands`, `ThreeWordGroups`, kept equal to the CLI by a test),
+and `investigation template` is read-only like the other templates.
