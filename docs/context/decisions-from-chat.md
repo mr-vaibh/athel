@@ -84,3 +84,5 @@ Never edit or delete past entries; add a new entry that supersedes an old one in
 | 2026-11-23 | Write the M5 plan? | "yes go ahead, write the M5 plan" | `docs/plans/M5-plan.md` (draft, waiting for approval) |
 | 2026-11-23 | Approve the M5 plan and Q1–Q3? | "cool, go ahead with the plan please": plan approved with the recommendations: Q1 up to about $550, each run asked first; Q2 create the change label; Q3 live multi-repo check and dogfooding, asked again before each | M5-plan status; HANDOFF |
 | 2026-11-24 | M5 built (tasks 00–15); the paid M5 evals: smoke run first, full run now, or not yet? | "Smoke run first": one run of users-v2-profile, about $25–35; ask again before the full run | EVALS.md (M5); HANDOFF |
+| 2026-11-24 | Smoke 1 found an Athel bug (fixed in #131). Smoke run 2, full run, or not yet? | "Smoke run 2": one more users-v2-profile run on the fixed code, about $16 | EVALS.md (M5) |
+| 2026-11-24 | Smoke 1 found an Athel bug (fixed in #131). Smoke run 2, full run, or not yet? | "Smoke run 2": one more users-v2-profile run on the fixed code, about $16 | EVALS.md (M5) |
