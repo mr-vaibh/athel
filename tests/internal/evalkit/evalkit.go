@@ -129,6 +129,8 @@ type Sandbox struct {
 	// GHState is where the fake GitHub keeps the pull requests Athel opens and its call log.
 	GHState string
 	Tools   Tools
+	// Layout is the built fixture: its bare remotes and the developer's clones.
+	Layout *shop.Layout
 }
 
 // NewSandbox builds the fixture under dir and wires the fake HOME, PATH, plugin copy, MCP fakes
@@ -140,7 +142,7 @@ func NewSandbox(dir string, tl Tools) (*Sandbox, error) {
 	}
 	s := &Sandbox{Dir: dir, Home: layout.Home, AthelHome: filepath.Join(dir, "athel-home"), WS: filepath.Join(dir, "ws"),
 		Plugin: filepath.Join(dir, "plugin"), Path: filepath.Join(dir, "path"), MCP: filepath.Join(dir, "mcp.json"),
-		GHState: filepath.Join(dir, "github"), Tools: tl}
+		GHState: filepath.Join(dir, "github"), Tools: tl, Layout: layout}
 	if err := os.MkdirAll(s.GHState, 0o700); err != nil {
 		return nil, err
 	}
