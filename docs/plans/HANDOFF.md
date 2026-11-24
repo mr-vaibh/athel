@@ -191,3 +191,26 @@ instruction: merging finished work with green checks is Claude's call. Next: M5 
 recommended (budget up to about $550, each run asked first; create the change label; live check
 and dogfooding asked again before each). The owner's bar: multi-service is Athel's main selling point;
 it must be as efficient per repo as one repo (EC-2) and "game changing". Next: task 01 (`feat/m5-fixture-system`).
+
+## M5 progress (2026-11-24)
+Plan approved (#114). Tasks, one PR each, merged with merge commits once CI is green (owner:
+merging finished green work is Claude's call):
+
+| Task | PR | Status |
+|---|---|---|
+| 00 plan | #114 | merged |
+| 01 fixture system layer, system check, fake GitHub labels and human merge | #115 | merged |
+| 02 change@5, change set derived at approval (ADR 035) | #116 | merged |
+| 03 multi-repo plan checks, merge order in the summary | #117 | merged |
+| 04 coordinated-release card (ADR 037) | #118 | merged |
+| 05 every repo preflighted first; build park | #119 | merged |
+| 06 upstream patch in manifests | #120 | merged |
+| 07 linked PRs, change label, ready together | #121 | merged |
+| 08 merge-order rehearsal, athel set verify (ADR 036) | #122 | merged |
+| 09 athel set status, out-of-order alarm | #123 | open |
+| 10–16 | — | not started |
+
+Next: merge #123, then tasks 10 (QA test patterns), 11 (scout and architect
+command limits), 12 (`/athel:followup`), 13 (skills and agent prompts for sets), 14 (scripted
+3-repo journey), 15 (evals: ask the owner before the first paid run), 16 (report). `cli`
+coverage is 90.3%: new work must add tests that lift it.

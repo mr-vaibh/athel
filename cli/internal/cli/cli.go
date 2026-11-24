@@ -90,6 +90,7 @@ func commands() map[string]command {
 		"set show":               cmdSetShow,
 		"set coordinate":         cmdSetCoordinate,
 		"set verify":             cmdSetVerify,
+		"set status":             cmdSetStatus,
 		"trace":                  cmdTrace,
 		"spec template":          cmdSpecTemplate,
 		"decide template":        cmdDecideTemplate,
