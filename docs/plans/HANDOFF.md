@@ -209,8 +209,9 @@ merging finished green work is Claude's call):
 | 08 merge-order rehearsal, athel set verify (ADR 036) | #122 | merged |
 | 09 athel set status, out-of-order alarm | #123 | merged |
 | 10 per-repo test patterns; JVM, .NET, Ruby test naming | #124 | merged |
-| 11 scout and architect command tables; classifier naming fixes | #125 | open |
-| 12–16 | — | not started |
+| 11 scout and architect command tables; classifier naming fixes | #125 | merged |
+| 12 /athel:followup, the deferred cleanup draft | #126 | open |
+| 13–16 | — | not started |
 
 Next: merge #124, then tasks 11 (scout and architect
 command limits), 12 (`/athel:followup`), 13 (skills and agent prompts for sets), 14 (scripted

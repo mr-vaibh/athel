@@ -450,4 +450,7 @@ func TestRootsNeedTheDevelopersPrompt(t *testing.T) {
 	if why := ctx.humanOrigin(&classify.AthelCall{Change: key, To: grants.TargetRoots}); !strings.Contains(why, "/athel:roots") {
 		t.Errorf("reason = %q", why)
 	}
+	if why := ctx.humanOrigin(&classify.AthelCall{Change: "CHG-001", To: grants.TargetFollowup}); !strings.Contains(why, "/athel:followup CHG-001") {
+		t.Errorf("followup reason = %q", why)
+	}
 }

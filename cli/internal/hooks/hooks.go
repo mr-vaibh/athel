@@ -209,6 +209,9 @@ func userPromptSubmit(req *hookio.Request, d Deps) Outcome {
 		if target == grants.TargetSignoff {
 			hint = " Run `athel blast signoff " + change + "` now to record the sign-off."
 		}
+		if target == grants.TargetFollowup {
+			hint = " Run `athel followup draft " + change + "` now to draft the deferred cleanup."
+		}
 		recordGrant(req, d, change, target, hint, &o)
 	} else if roots, ok := grants.ParseRootsPrompt(req.Prompt); ok {
 		recordGrant(req, d, grants.RootsKey(roots), grants.TargetRoots,
