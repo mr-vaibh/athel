@@ -20,7 +20,7 @@ func recordingGH(t *testing.T, h *harness) string {
 	bin := t.TempDir()
 	log := filepath.Join(bin, "calls.log")
 	script := "#!/bin/sh\nprintf '%s' \"$*\" | tr '\\n' '~' >> '" + log + "'\necho >> '" + log + "'\ncase \"$1 $2\" in\n" +
-		"  'pr create') echo 'https://github.com/acme/users/pull/901' ;;\n  'pr list') echo '[]' ;;\nesac\n"
+		"  'pr create') echo 'https://github.com/acme/users/pull/901' ;;\n  'pr list') echo '[]' ;;\n  'label list') echo '[]' ;;\nesac\n"
 	if err := os.WriteFile(filepath.Join(bin, "gh"), []byte(script), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -56,6 +56,7 @@ func TestPROpenAndUpdate(t *testing.T) {
 	}
 	got := calls(t, log)
 	create := got[len(got)-1]
+	labelled(t, got)
 	for _, want := range []string{"pr create --repo acme/users --head athel/CHG-001-phone-update --base main", "--title feat(users): phone update", "## Summary", "--draft"} {
 		if !strings.Contains(create, want) {
 			t.Errorf("gh pr create lacks %q: %s", want, create)
@@ -195,6 +196,10 @@ func TestPRToolFailures(t *testing.T) {
 		t.Errorf("gh failing: %v", env)
 	}
 	failing("exit 0\n")
+	if _, env := h.runJSON("pr", "open", "CHG-001", "users"); errCode(env) != string(aerr.ToolUnreachable) || !strings.Contains(asJSON(t, env), "read gh label list") {
+		t.Errorf("gh printing no labels: %v", env)
+	}
+	failing("case \"$1 $2\" in 'label list') echo '[{\"name\":\"athel:CHG-001\"}]' ;; esac\nexit 0\n")
 	if _, env := h.runJSON("pr", "open", "CHG-001", "users"); errCode(env) != string(aerr.ToolUnreachable) || !strings.Contains(asJSON(t, env), "printed no URL") {
 		t.Errorf("gh printing nothing: %v", env)
 	}
@@ -231,5 +236,15 @@ func TestSizeCardReplanGoesBackToPlanning(t *testing.T) {
 	h.mustOK("decide", "answer", "CHG-001", id+"=b")
 	if v := h.mustOK("state", "transition", "CHG-001", "--to", "planned", "--by", "athel", "--reason", id+": re-plan with a smaller scope"); v["state"] != "planned" {
 		t.Errorf("back to planning: %v", v)
+	}
+}
+
+// labelled: the change label is made in a repo that lacks it, and the PR is opened with it
+// (doc 04 §Cross-repo PR rules; M5-plan G6).
+func labelled(t *testing.T, calls []string) {
+	t.Helper()
+	all := strings.Join(calls, "\n")
+	if !strings.Contains(all, "label create athel:CHG-001 --repo acme/users") || !strings.Contains(calls[len(calls)-1], "--label athel:CHG-001") {
+		t.Errorf("the change label: %v", calls)
 	}
 }

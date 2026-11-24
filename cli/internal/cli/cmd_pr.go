@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -81,8 +82,12 @@ func cmdPROpen(r *runCtx, args []string) (any, error) {
 	if w.PR != nil {
 		return prOpened{prDraft: d, URL: *w.PR}, nil
 	}
+	label, err := r.changeLabel(c.ID, ghRepo(w.Remote))
+	if err != nil {
+		return nil, err
+	}
 	out, err := r.gh("pr", "create", "--repo", ghRepo(w.Remote), "--head", w.Branch, "--base", w.Base,
-		"--title", d.Title, "--body", d.Body, "--draft")
+		"--title", d.Title, "--body", d.Body, "--draft", "--label", label)
 	if err != nil {
 		return nil, err
 	}
@@ -91,10 +96,55 @@ func cmdPROpen(r *runCtx, args []string) (any, error) {
 		return nil, aerr.New(aerr.ToolUnreachable, "gh pr create printed no URL")
 	}
 	url := lines[len(lines)-1]
-	if _, err := s.UpdateRepo(c.ID, session, w.Name, func(rw *state.RepoWork) { rw.PR = &url }); err != nil {
+	if c, err = s.UpdateRepo(c.ID, session, w.Name, func(rw *state.RepoWork) { rw.PR = &url }); err != nil {
+		return nil, err
+	}
+	if err := r.refreshSiblings(s, c, w.Name); err != nil {
 		return nil, err
 	}
 	return prOpened{prDraft: d, URL: url, Created: true}, nil
+}
+
+// ghLabel is one label of gh label list --json name.
+type ghLabel struct {
+	Name string `json:"name"`
+}
+
+// changeLabel is the change's label, athel:CHG-NNN, made in repo first when it lacks it, so
+// every PR of the set carries the same label (doc 04 §Cross-repo PR rules; M5-plan G6, Q2).
+func (r *runCtx) changeLabel(id, repo string) (string, error) {
+	label := "athel:" + id
+	out, err := r.gh("label", "list", "--repo", repo, "--limit", "1000", "--json", "name")
+	if err != nil {
+		return "", err
+	}
+	var have []ghLabel
+	if err := json.Unmarshal(out, &have); err != nil {
+		return "", aerr.Wrap(aerr.ToolUnreachable, "read gh label list", err)
+	}
+	if slices.Contains(have, ghLabel{Name: label}) {
+		return label, nil
+	}
+	_, err = r.gh("label", "create", label, "--repo", repo, "--color", "5319e7", "--description", "Athel change "+id)
+	return label, err
+}
+
+// refreshSiblings rewrites the bodies of the change's other open PRs, so each lists the PR just
+// opened and its place in the merge order (M5-plan G5).
+func (r *runCtx) refreshSiblings(s *state.Store, c *state.Change, opened string) error {
+	for _, w := range c.Repos {
+		if w.Name == opened || w.PR == nil {
+			continue
+		}
+		d, err := r.prDraft(s, c, w)
+		if err != nil {
+			return err
+		}
+		if _, err := r.gh("pr", "edit", path.Base(*w.PR), "--repo", ghRepo(w.Remote), "--body", d.Body); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // cmdPRUpdate refreshes the open PR's description after more work was pushed.
@@ -227,20 +277,7 @@ func (r *runCtx) prDraft(s *state.Store, c *state.Change, w state.RepoWork) (prD
 	if in.Decisions, err = r.prDecisions(c.ID); err != nil {
 		return prDraft{}, err
 	}
-	for _, o := range c.Repos {
-		if o.Name != w.Name && o.PR != nil {
-			in.Linked = append(in.Linked, pr.Linked{Repo: o.Name, PR: *o.PR})
-		}
-	}
-	if c.Parent != nil { // a side-finding fix links its parent's PRs (FR-FIND-004)
-		if parent, err := s.Get(*c.Parent); err == nil {
-			for _, o := range parent.Repos {
-				if o.PR != nil {
-					in.Linked = append(in.Linked, pr.Linked{Repo: "parent " + parent.ID + " " + o.Name, PR: *o.PR})
-				}
-			}
-		}
-	}
+	prLinks(s, c, w.Name, &in)
 	in.Rollback, in.Waivers, in.Actions = planNotes(s, c, w.Name)
 	if err := r.prFindingLists(s, c, w.Name, &in); err != nil {
 		return prDraft{}, err
@@ -446,7 +483,7 @@ func cmdPRReady(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	s, _, err := r.mutating()
+	s, session, err := r.mutating()
 	if err != nil {
 		return nil, err
 	}
@@ -461,6 +498,10 @@ func cmdPRReady(r *runCtx, args []string) (any, error) {
 			WithNextAction("finish every task, then athel state transition " + c.ID + " --to ready_for_pr")
 	case !ok || w.PR == nil:
 		return nil, aerr.New(aerr.StateNotFound, c.ID+" has no PR in "+pos[1])
+	}
+	if missing := unopened(c); len(missing) > 0 {
+		return nil, aerr.New(aerr.StateInvalid, "the PRs of "+c.ID+" are marked ready together; not opened yet: "+strings.Join(missing, ", ")).
+			WithNextAction("athel pr open " + c.ID + " <repo> for each, then mark them ready")
 	}
 	dir := filepath.Join(s.WS.Root, filepath.FromSlash(w.Worktree))
 	local, err := r.gitOut(dir, "rev-parse", "HEAD")
@@ -478,5 +519,54 @@ func cmdPRReady(r *runCtx, args []string) (any, error) {
 	if _, err := r.gh("pr", "ready", path.Base(*w.PR), "--repo", ghRepo(w.Remote)); err != nil {
 		return nil, err
 	}
+	if _, err := s.MarkPR(c.ID, session, w.Name, "ready"); err != nil {
+		return nil, err
+	}
 	return prOpened{URL: *w.PR}, nil
+}
+
+// unopened are the repos of the change set built in this change that have no PR yet: a ready
+// PR whose sibling is still missing could be merged too early (M5-plan G7).
+func unopened(c *state.Change) []string {
+	if c.ChangeSet == nil {
+		return nil
+	}
+	var out []string
+	for _, e := range c.ChangeSet.Built() {
+		if w, ok := repoWork(c, e.Repo); !ok || w.PR == nil {
+			out = append(out, e.Repo)
+		}
+	}
+	return out
+}
+
+// prLinks fills the body's "Linked PRs and merge order": the change set's merge order for a
+// multi-repo change (FR-GIT-008), otherwise the other PRs; a side-finding fix also links its
+// parent's PRs (FR-FIND-004).
+func prLinks(s *state.Store, c *state.Change, repo string, in *pr.BodyInput) {
+	if c.ChangeSet != nil {
+		in.MergeOrder = c.ChangeSet.Section(c.ID, repo, func(other string) string { return prRef(c, other) })
+	}
+	if in.MergeOrder == nil {
+		for _, o := range c.Repos {
+			if o.Name != repo && o.PR != nil {
+				in.Linked = append(in.Linked, pr.Linked{Repo: o.Name, PR: *o.PR})
+			}
+		}
+	}
+	if c.Parent != nil { // a side-finding fix links its parent's PRs (FR-FIND-004)
+		if parent, err := s.Get(*c.Parent); err == nil {
+			for _, o := range parent.Repos {
+				if o.PR != nil {
+					in.Linked = append(in.Linked, pr.Linked{Repo: "parent " + parent.ID + " " + o.Name, PR: *o.PR})
+				}
+			}
+		}
+	}
+}
+
+// prRef is a repo's PR in the change as "owner/repo#number", "" before it is opened.
+func prRef(c *state.Change, repo string) string {
+	w, _ := repoWork(c, repo)
+	return w.PRRef()
 }

@@ -14,7 +14,7 @@ import (
 // patch of the users task it waits for, from Athel's users worktree; a no-code task has none.
 func TestConsumerManifestHasProviderDiff(t *testing.T) {
 	p := &plan.Plan{Tasks: []plan.Task{
-		{ID: "T-01", Title: "Serve v2", Repo: "users", Kind: plan.KindExpand},
+		{ID: "T-01", Title: "Serve v2", Repo: "users", Kind: plan.KindExpand, Paths: []string{"api/**"}},
 		{ID: "T-02", Title: "Ask the gateway team", Repo: "gateway", Kind: plan.KindInternal},
 		{ID: "T-03", Title: "Call v2", Repo: "orders", Kind: plan.KindConsume, DependsOn: []string{"T-01", "T-02"}},
 	}}
@@ -45,7 +45,7 @@ func TestConsumerManifestHasProviderDiff(t *testing.T) {
 }
 
 func TestUpstreamErrors(t *testing.T) {
-	p := &plan.Plan{Tasks: []plan.Task{{ID: "T-01", Repo: "users"}, {ID: "T-02", Repo: "orders", DependsOn: []string{"T-01"}}}}
+	p := &plan.Plan{Tasks: []plan.Task{{ID: "T-01", Repo: "users", Paths: []string{"api/**"}}, {ID: "T-02", Repo: "orders", DependsOn: []string{"T-01"}}}}
 	c := &state.Change{Repos: []state.RepoWork{{Name: "users", Worktree: "w"}}, Build: []build.Task{{ID: "T-01", Commits: []string{"a"}}}}
 	boom := errors.New("boom")
 	ok := func(string, []string) (string, error) { return "x", nil }

@@ -238,8 +238,9 @@ func matchSeg(pattern, seg string) bool {
 }
 
 // Upstream lists the built tasks in other repos that task id waits for: walking its dependencies
-// through tasks of its own repo, and stopping at the first task of another repo, whose own
-// upstream is that repo's concern. Deferred tasks are never waited for. Plan order.
+// through tasks of its own repo and tasks that change no code (no PR to wait for, ADR 027), and
+// stopping at the first code task of another repo, whose own upstream is that repo's concern.
+// Deferred tasks are never waited for. Plan order.
 func (p *Plan) Upstream(id string) []Task {
 	byID := map[string]Task{}
 	for _, t := range p.Tasks {
@@ -258,7 +259,7 @@ func (p *Plan) Upstream(id string) []Task {
 		switch {
 		case seen[d.ID] || d.Deferred:
 			continue
-		case d.Repo != self.Repo:
+		case d.Repo != self.Repo && len(d.Paths) > 0:
 			found[d.ID] = true
 		default:
 			stack = append(stack, d.DependsOn...)

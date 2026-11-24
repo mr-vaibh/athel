@@ -4,10 +4,12 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/mr-vaibh/athel/cli/internal/build"
 	"github.com/mr-vaibh/athel/cli/internal/digest"
@@ -169,10 +171,59 @@ func (s *Store) UpdateRepo(id, session, name string, fn func(r *RepoWork)) (*Cha
 		for i := range c.Repos {
 			if c.Repos[i].Name == name {
 				fn(&c.Repos[i])
+				c.syncSet(c.Repos[i])
 				return nil
 			}
 		}
 		return aerr.New(aerr.StateNotFound, c.ID+" has no worktree in "+name)
+	})
+}
+
+// PRRef is the repo's PR as "owner/repo#number", "" before it is opened.
+func (w RepoWork) PRRef() string {
+	if w.PR == nil {
+		return ""
+	}
+	_, repo, _ := strings.Cut(w.Remote, "/")
+	return repo + "#" + path.Base(*w.PR)
+}
+
+// syncSet copies a repo's PR into its change set entry; a PR just opened is a draft.
+func (c *Change) syncSet(w RepoWork) {
+	if c.ChangeSet == nil || w.PR == nil {
+		return
+	}
+	for i := range c.ChangeSet.Repos {
+		e := &c.ChangeSet.Repos[i]
+		if e.Repo == w.Name && !e.Deferred {
+			ref := w.PRRef()
+			e.PR = &ref
+			if e.State == nil {
+				draft := "draft"
+				e.State = &draft
+			}
+		}
+	}
+}
+
+// MarkPR records a PR's state (draft, ready, merged, closed) in the change set as Athel saw it.
+func (s *Store) MarkPR(id, session, repo, prState string) (*Change, error) {
+	if err := CheckSession(session); err != nil {
+		return nil, err
+	}
+	return s.Update(id, func(c *Change) error {
+		if err := s.claim(c, session, s.Clock.Now()); err != nil {
+			return err
+		}
+		if c.ChangeSet == nil {
+			return nil
+		}
+		for i := range c.ChangeSet.Repos {
+			if e := &c.ChangeSet.Repos[i]; e.Repo == repo && !e.Deferred {
+				e.State = &prState
+			}
+		}
+		return nil
 	})
 }
 

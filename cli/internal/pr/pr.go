@@ -119,6 +119,9 @@ type BodyInput struct {
 	Findings                             []string // FR-FIND-003: side findings, not fixed here
 	Minor                                []string // open minor and nit review findings, listed not fixed (doc 06)
 	Actions                              []string // the plan's env_actions, for the developer (ADR 027)
+	// MergeOrder is a multi-repo change's section: this PR's position, every PR in order, the
+	// deferred cleanup (FR-GIT-008). Empty for a one-repo change, which lists Linked instead.
+	MergeOrder []string
 }
 
 // Body is the PR description with doc 04's sections, in order.
@@ -155,13 +158,7 @@ func Body(in BodyInput) string {
 	for _, f := range in.Findings {
 		b.WriteString("- " + f + "\n")
 	}
-	b.WriteString("\n## Linked PRs and merge order\n\n")
-	if len(in.Linked) == 0 {
-		b.WriteString("No other repo in this change.\n")
-	}
-	for i, l := range in.Linked {
-		fmt.Fprintf(&b, "%d. %s: %s\n", i+1, l.Repo, l.PR)
-	}
+	writeLinked(&b, in)
 	b.WriteString("\n## Shared actions for the developer\n\n")
 	if len(in.Actions) == 0 {
 		b.WriteString("None in the plan.\n")
@@ -229,4 +226,22 @@ func orNone(s, none string) string {
 		return none
 	}
 	return s
+}
+
+// writeLinked is the "Linked PRs and merge order" section: the change set's merge order, or for a
+// one-repo change the other PRs it links (a side-finding fix's parent PRs).
+func writeLinked(b *strings.Builder, in BodyInput) {
+	b.WriteString("\n## Linked PRs and merge order\n\n")
+	if len(in.MergeOrder) > 0 {
+		b.WriteString(in.MergeOrder[0] + "\n\n")
+		for _, l := range in.MergeOrder[1:] {
+			b.WriteString(l + "\n")
+		}
+	}
+	if len(in.Linked) == 0 && len(in.MergeOrder) == 0 {
+		b.WriteString("No other repo in this change.\n")
+	}
+	for i, l := range in.Linked {
+		fmt.Fprintf(b, "%d. %s: %s\n", i+1, l.Repo, l.PR)
+	}
 }

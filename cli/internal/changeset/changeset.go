@@ -5,6 +5,7 @@
 package changeset
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	"strconv"
@@ -63,16 +64,18 @@ type Set struct {
 // coordinated release on a card (doc 04 rule 5). Two repos that wait on each other cannot be
 // ordered with one PR each, and are refused (M5-plan G2).
 func Derive(p *plan.Plan, coordinated bool) (*Set, error) {
-	var repos []string
-	for _, t := range p.Tasks {
-		if !t.Deferred && !slices.Contains(repos, t.Repo) {
+	var repos []string // repos with a PR: a built task there changes code (ADR 027)
+	for _, t := range p.Built() {
+		if p.WritesIn(t.Repo) && !slices.Contains(repos, t.Repo) {
 			repos = append(repos, t.Repo)
 		}
 	}
 	deps := map[string][]string{}
-	for _, t := range p.Tasks {
-		if !t.Deferred {
-			deps[t.Repo] = union(deps[t.Repo], upstream(p, t))
+	for _, t := range p.Built() {
+		for _, u := range upstream(p, t) {
+			if slices.Contains(repos, u) && slices.Contains(repos, t.Repo) {
+				deps[t.Repo] = union(deps[t.Repo], []string{u})
+			}
 		}
 	}
 	order, err := orders(repos, deps)
@@ -93,7 +96,8 @@ func Derive(p *plan.Plan, coordinated bool) (*Set, error) {
 	return s, nil
 }
 
-// upstream lists the other repos a task waits for (plan.Upstream).
+// upstream lists the other repos a task waits for (plan.Upstream); one with no PR (no code)
+// is dropped by the caller, so nothing waits for it.
 func upstream(p *plan.Plan, t plan.Task) []string {
 	var out []string
 	for _, u := range p.Upstream(t.ID) {
@@ -264,4 +268,62 @@ func roles(es []Entry) string {
 		}
 	}
 	return strings.Join(rs, ", ")
+}
+
+// Section is the "Linked PRs and merge order" text of repo's PR (doc 04 §Cross-repo PR rules,
+// FR-GIT-008): its position and what it merges after, then every step with each PR, then the
+// deferred cleanup. ref names a repo's PR ("acme/users#901"), "" before it is opened. A
+// one-repo change has no section.
+func (s *Set) Section(change, repo string, ref func(repo string) string) []string {
+	built := s.Built()
+	if s.Strategy == Single || len(built) < 2 {
+		return nil
+	}
+	name := func(r string) string {
+		if p := ref(r); p != "" {
+			return p
+		}
+		return r + " (not opened yet)"
+	}
+	last := built[len(built)-1].Order
+	var out []string
+	for _, e := range built {
+		if e.Repo != repo {
+			continue
+		}
+		head := fmt.Sprintf("This PR is step %d of %d in the merge order of %s (%d PRs).", e.Order, last, change, len(built))
+		if len(e.DependsOn) > 0 {
+			var after []string
+			for _, d := range e.DependsOn {
+				after = append(after, name(d))
+			}
+			head += " Merge after " + strings.Join(after, ", ") + "."
+		}
+		out = append(out, head)
+	}
+	if s.Strategy == Coordinated {
+		out = append(out, "Coordinated release (doc 04 rule 5): merge every PR together, in this order, in one deploy window. "+
+			"The states between merges are not supported; each PR's rollback is in its body.")
+	}
+	steps := map[int][]string{}
+	for _, e := range built {
+		label := name(e.Repo) + " (" + e.Role
+		if e.Repo == repo {
+			label += ", this PR"
+		}
+		steps[e.Order] = append(steps[e.Order], label+")")
+	}
+	for o := 1; o <= last; o++ {
+		line := fmt.Sprintf("%d. %s", o, strings.Join(steps[o], ", "))
+		if len(steps[o]) > 1 {
+			line += ": either order"
+		}
+		out = append(out, line)
+	}
+	for _, e := range s.Repos {
+		if e.Deferred {
+			out = append(out, "Later, a separate change: "+e.Repo+": "+*e.Note)
+		}
+	}
+	return out
 }
