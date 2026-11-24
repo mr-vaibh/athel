@@ -137,3 +137,25 @@ func TestTwoWayReposRefused(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestLines(t *testing.T) {
+	s, err := Derive(&plan.Plan{Tasks: []plan.Task{
+		task("T-01", "users", plan.KindExpand),
+		task("T-02", "orders", plan.KindConsume, "T-01"),
+		task("T-03", "gateway", plan.KindConsume, "T-01"),
+		task("T-04", "payments", plan.KindInternal, "T-02"),
+		deferred(task("T-05", "users", plan.KindContract, "T-02", "T-03")),
+	}}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"1. users (provider)",
+		"2. gateway, orders (consumer; after users; either order)",
+		"3. payments (internal; after orders)",
+		"later, a separate change: users — T-05: task T-05 (after consumers deploy)",
+	}
+	if got := s.Lines(); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}

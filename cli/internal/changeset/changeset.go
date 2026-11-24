@@ -7,6 +7,7 @@ package changeset
 import (
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
@@ -234,4 +235,52 @@ func nonNil(s []string) []string {
 		return []string{}
 	}
 	return s
+}
+
+// Lines are the merge order, one line per step, as the plan summary and the PR bodies show it:
+// "1. users (provider)", "2. gateway, orders (consumers; after users; either order)", and the
+// deferred cleanup as a later change.
+func (s *Set) Lines() []string {
+	steps := map[int][]Entry{}
+	var orders []int
+	for _, e := range s.Repos {
+		if _, ok := steps[e.Order]; !ok {
+			orders = append(orders, e.Order)
+		}
+		steps[e.Order] = append(steps[e.Order], e)
+	}
+	var out []string
+	for _, o := range orders {
+		es := steps[o]
+		names, after := make([]string, 0, len(es)), []string{}
+		for _, e := range es {
+			names = append(names, e.Repo)
+			after = union(after, e.DependsOn)
+		}
+		if es[0].Deferred {
+			for _, e := range es {
+				out = append(out, "later, a separate change: "+e.Repo+" — "+*e.Note)
+			}
+			continue
+		}
+		line := strings.Join(names, ", ") + " (" + roles(es)
+		if len(after) > 0 {
+			line += "; after " + strings.Join(after, ", ")
+		}
+		if len(es) > 1 {
+			line += "; either order"
+		}
+		out = append(out, strconv.Itoa(o)+". "+line+")")
+	}
+	return out
+}
+
+func roles(es []Entry) string {
+	var rs []string
+	for _, e := range es {
+		if !slices.Contains(rs, e.Role) {
+			rs = append(rs, e.Role)
+		}
+	}
+	return strings.Join(rs, ", ")
 }
