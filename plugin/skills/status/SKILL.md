@@ -28,4 +28,14 @@ Read-only. Do not change any state. Never read or edit files under `.athel/` dir
      - for the task in progress, its last gate run (`athel --json gate show <ID> <T>`): each
        gate's status, and the open review findings (`athel --json review show <ID> <T>`);
      - side findings: the `summary` of `athel --json finding list <ID>`.
+   - for a change with more than one PR (`athel --json set show <ID>` lists more than one repo
+     that is not deferred), the whole set from `athel --json set status <ID>`:
+     - each PR in merge order, with its state, review and CI;
+     - `next`: the PR or PRs to merge now;
+     - every `alarms` line, first and in full: a PR merged out of order breaks the system until
+       the one it follows is merged;
+     - the rehearsal line, the deferred `cleanup`, any `dropped` PRs, and the build minutes per
+       repo;
+     - when `source` is `recorded`, say the host could not be read and the states are the last
+       ones Athel saw.
 4. Keep it short. Do not suggest actions beyond what the data says.
