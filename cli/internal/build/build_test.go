@@ -78,3 +78,26 @@ func TestDeferredTasksAreNeverBuilt(t *testing.T) {
 		t.Errorf("starting a deferred task: %v", err)
 	}
 }
+
+func TestNextSkipsBlockedTasks(t *testing.T) {
+	p := testPlan() // T-01 and T-03 have no dependencies; T-02 needs T-01; T-04 needs T-02 and T-03
+	tests := []struct {
+		name    string
+		recs    []Task
+		blocked map[string]bool
+		want    string
+	}{
+		{"nothing started", nil, nil, "T-01"},
+		{"a task in progress first", []Task{{ID: "T-03", Status: InProgress}}, nil, "T-03"},
+		{"a blocked task in progress is passed over", []Task{{ID: "T-01", Status: InProgress}}, map[string]bool{"T-01": true}, "T-03"},
+		{"a blocked ready task is passed over", nil, map[string]bool{"T-01": true}, "T-03"},
+		{"nothing can go on", []Task{{ID: "T-01", Status: InProgress}, {ID: "T-03", Status: Done}}, map[string]bool{"T-01": true}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Next(p, tt.recs, tt.blocked); got != tt.want {
+				t.Errorf("Next = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

@@ -266,3 +266,16 @@ func TestGitPreflightToolFailures(t *testing.T) {
 		t.Errorf("the cache clone gone: %v", env)
 	}
 }
+
+// TestEveryRepoPreflightedBeforeAnyWrite (M5-plan G11): building, and so the first write in
+// any repo, waits until every repo the plan changes code in has its preflight, so an overlap in
+// the last repo is found before Athel touches the first.
+func TestEveryRepoPreflightedBeforeAnyWrite(t *testing.T) {
+	h, _, _ := approvedOnUsersRemote(t, "gates: []}", "gates: []}\n  - {id: T-02, title: y, repo: orders, kind: internal, paths: [src/**], verbs: [edit, test, commit, push], covers: [AC-1], depends_on: [], size: S, gates: []}")
+	fakeGH(t, h, `[]`)
+	h.mustOK("git", "preflight", "CHG-001", "users")
+	code, env := h.runJSON("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "r")
+	if code == 0 || !strings.Contains(asJSON(t, env), "no git preflight for orders") || strings.Contains(asJSON(t, env), "no git preflight for users") {
+		t.Errorf("building with one of two repos preflighted: %d %v", code, env)
+	}
+}
