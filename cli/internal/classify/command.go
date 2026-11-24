@@ -281,6 +281,9 @@ func humanOnly(call *AthelCall, pos []shellparse.Word, vals map[string]shellpars
 		call.Command, call.Change, call.To, call.ByHuman = "repos roots set", rootsKey(pos), grants.TargetRoots, true
 	case call.Command == "blast signoff" && len(pos) > 2:
 		call.Change, call.To, call.ByHuman = known(pos[2]), grants.TargetSignoff, true
+	case call.Command == "followup draft" && len(pos) > 2:
+		// Only the developer knows the consumers are deployed everywhere (doc 04 rule 3).
+		call.Change, call.To, call.ByHuman = known(pos[2]), grants.TargetFollowup, true
 	case call.Command == "gate waive" && len(pos) > 4:
 		// Only the developer waives a gate or a finding (FR-BUILD-014); the grant binds this
 		// exact waiver, its expiry and its reason.

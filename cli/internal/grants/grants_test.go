@@ -29,6 +29,7 @@ func TestParsePrompt(t *testing.T) {
 		{"/athel:approve chg-001", "", "", false},
 		{"/athel:approve", "", "", false},
 		{"/athel:reject CHG-001", "", "", false},
+		{"/athel:followup CHG-007", "CHG-007", TargetFollowup, true},
 	}
 	for _, tc := range tests {
 		c, tgt, ok := ParsePrompt(tc.prompt)

@@ -91,6 +91,7 @@ func commands() map[string]command {
 		"set coordinate":         cmdSetCoordinate,
 		"set verify":             cmdSetVerify,
 		"set status":             cmdSetStatus,
+		"followup draft":         cmdFollowupDraft,
 		"trace":                  cmdTrace,
 		"spec template":          cmdSpecTemplate,
 		"decide template":        cmdDecideTemplate,

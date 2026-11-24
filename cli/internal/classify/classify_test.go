@@ -377,7 +377,7 @@ func TestAthelCalls(t *testing.T) {
 		{"athel state transition CHG-001 --to plan_approved --by human --reason ok", W0, "state transition", true},
 		{"athel --session s state transition CHG-001 --to=done --by=human --reason ok", W0, "state transition", true},
 		{"athel state transition CHG-001 --to investigating --by athel --reason ok", W0, "state transition", false},
-		{"athel hook user-prompt-submit", X, "hook", false}, {"athel trace CHG-001", W0, "trace", false}, {"athel prd review template", R0, "prd review template", false},
+		{"athel hook user-prompt-submit", X, "hook", false}, {"athel trace CHG-001", W0, "trace", false}, {"athel followup draft CHG-001", W0, "followup draft", true}, {"athel prd review template", R0, "prd review template", false},
 		{"athel prd review save CHG-001 -", W0, "prd review save", false}, {"athel", R0, "", false},
 		{"athel fact find --subject users", R0, "fact find", false}, {"athel fact show F-0001", R0, "fact show", false},
 		{"athel gate show CHG-001 T-01", R0, "gate show", false}, {"athel review show CHG-001 T-01", R0, "review show", false},

@@ -236,6 +236,17 @@ func TestSignoffGrantFromHumanPrompt(t *testing.T) {
 	}
 }
 
+func TestFollowupGrantFromHumanPrompt(t *testing.T) {
+	d, _ := newDeps(t)
+	o := Handle(&hookio.Request{Event: hookio.UserPromptSubmit, SessionID: sess, PromptID: "p1", Prompt: "/athel:followup CHG-001"}, d)
+	if o.Rule != RuleGrant || !strings.Contains(o.Response.AdditionalContext, "athel followup draft CHG-001") {
+		t.Fatalf("outcome = %+v", o)
+	}
+	if g, err := d.Store.Grants().Valid("CHG-001", grants.TargetFollowup, sess); err != nil || g == nil {
+		t.Errorf("grant = %+v %v", g, err)
+	}
+}
+
 // TestWaiveGrantFromHumanPrompt (FR-BUILD-014): the developer's /athel:waive becomes a grant bound
 // to its task, subject, expiry and reason; a subagent's never does.
 func TestWaiveGrantFromHumanPrompt(t *testing.T) {
