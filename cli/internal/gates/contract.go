@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+
+	"github.com/mr-vaibh/athel/cli/internal/plan"
 )
 
 // The ac-tests and contract gates are computed by the CLI (FR-BUILD-003; doc 06 contract gate),
@@ -11,10 +13,19 @@ import (
 
 // testFile matches the test file conventions of the languages Athel has defaults for, and test
 // folders.
-var testFile = regexp.MustCompile(`(_test\.go|\.(test|spec)\.[cm]?[jt]sx?|(^|/)test_[^/]*\.py|_test\.py)$|(^|/)(test|tests|__tests__)/`)
+var testFile = regexp.MustCompile(`(_test\.go|\.(test|spec)\.[cm]?[jt]sx?|(^|/)test_[^/]*\.py|_test\.py|` +
+	`(Test|Tests|IT|Spec)\.(java|kt|scala|cs)|_spec\.rb)$|(^|/)(test|tests|__tests__|spec)/|(^|/)src/test/|(^|/)[^/]+\.Tests/`)
 
 // IsTestFile reports whether a repo path is a test file.
 func IsTestFile(p string) bool { return testFile.MatchString(p) }
+
+// TestMatcher is IsTestFile plus a repo's own test patterns (athel conventions tests; M5-plan
+// G15), globs as in plan paths. The patterns add test locations; they never remove the defaults.
+func TestMatcher(patterns []string) func(string) bool {
+	return func(p string) bool {
+		return IsTestFile(p) || slices.ContainsFunc(patterns, func(g string) bool { return plan.MatchGlob(g, p) })
+	}
+}
 
 // MissingACs lists the ACs that no test file's text names (FR-BUILD-003: "every AC ID appears in
 // at least one test"). An ID matches only as a whole word, so AC-1 is not found in AC-10.

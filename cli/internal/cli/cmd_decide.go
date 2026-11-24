@@ -78,6 +78,7 @@ func (r *runCtx) engineContext(session, agent string) (engine.Context, error) {
 		return ctx, nil // outside a workspace there is no change, so only the guard rules apply
 	}
 	ctx.WorkspaceRoot = ws.Root
+	ctx.TestFile = func(repo, rel string) bool { return r.testMatcher(repo)(rel) }
 	s, err := r.storeFor()
 	if err != nil {
 		return ctx, err

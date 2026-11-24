@@ -57,6 +57,11 @@ or `env_actions` in the plan, not reasons to stop planning.
    build, tests and lint) and `map.md` (modules, entry points, external clients, data access)
    with `athel conventions save <repo> -`. For a new project, use `--new` and raise one card to
    confirm the conventions.
+   If the repo keeps tests where the defaults do not look (Athel knows `_test.go`, `.test.ts`,
+   `.spec.ts`, `test_*.py`, `*Test.java`, `*Spec.kt`, `_spec.rb`, and `test/`, `tests/`,
+   `spec/`, `src/test/` folders), save its own locations, for example
+   `athel conventions tests <repo> "e2e/**" "**/*.check.ts"`. Each must name a test location and
+   match a file the repo has; QA writes only where tests live.
 2. **Review the PRD.** `athel prd show CHG-NNN` gives the PRD IDs; `athel prd scan CHG-NNN`
    lists vague words and limits.
    - Fill the checklist: goal, actors, scope, out_of_scope, functional_requirements,

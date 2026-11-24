@@ -68,6 +68,9 @@ type Context struct {
 	// looks for .git folders below them (os.Lstat when nil).
 	SearchRoots []string
 	Stat        func(string) (fs.FileInfo, error)
+	// TestFile reports whether rel is a test file of repo: the language defaults plus the repo's
+	// own test patterns (M5-plan G15). Nil means the defaults.
+	TestFile func(repo, rel string) bool
 }
 
 // ActionDecision is the verdict on one action.
@@ -248,9 +251,13 @@ func (ctx Context) qaScope(a classify.Action) (aerr.Code, string) {
 	case len(a.Paths) == 0:
 		return aerr.PolicyAgentScope, why
 	}
+	isTest := ctx.TestFile
+	if isTest == nil {
+		isTest = func(_, rel string) bool { return gates.IsTestFile(rel) }
+	}
 	for _, p := range a.Paths {
-		_, rel, ok := ctx.worktreeOf(path.Clean(p))
-		if !ok || !gates.IsTestFile(rel) {
+		repo, rel, ok := ctx.worktreeOf(path.Clean(p))
+		if !ok || !isTest(repo, rel) {
 			return aerr.PolicyAgentScope, why + ": " + p + " is not a test file"
 		}
 	}

@@ -337,7 +337,7 @@ func (r *runCtx) judgeACTests(g gateTask, o *gateOutcome) {
 	}
 	tests := map[string]string{}
 	for _, name := range strings.Fields(names) {
-		if !gates.IsTestFile(name) {
+		if !r.testMatcher(g.task.Repo)(name) {
 			continue
 		}
 		b, err := os.ReadFile(filepath.Join(g.dir, name)) //nolint:gosec // a changed file of the worktree

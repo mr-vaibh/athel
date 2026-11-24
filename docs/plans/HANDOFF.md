@@ -207,10 +207,11 @@ merging finished green work is Claude's call):
 | 06 upstream patch in manifests | #120 | merged |
 | 07 linked PRs, change label, ready together | #121 | merged |
 | 08 merge-order rehearsal, athel set verify (ADR 036) | #122 | merged |
-| 09 athel set status, out-of-order alarm | #123 | open |
-| 10–16 | — | not started |
+| 09 athel set status, out-of-order alarm | #123 | merged |
+| 10 per-repo test patterns; JVM, .NET, Ruby test naming | #124 | open |
+| 11–16 | — | not started |
 
-Next: merge #123, then tasks 10 (QA test patterns), 11 (scout and architect
+Next: merge #124, then tasks 11 (scout and architect
 command limits), 12 (`/athel:followup`), 13 (skills and agent prompts for sets), 14 (scripted
 3-repo journey), 15 (evals: ask the owner before the first paid run), 16 (report). `cli`
 coverage is 90.3%: new work must add tests that lift it.
