@@ -212,10 +212,9 @@ merging finished green work is Claude's call):
 | 11 scout and architect command tables; classifier naming fixes | #125 | merged |
 | 12 /athel:followup, the deferred cleanup draft | #126 | merged |
 | 13 skills and agent prompts for sets | #127 | merged |
-| 14a system check in the gateway repo; rehearsal caches untouched repos | #128 | open |
-| 14b scripted 3-repo journey | — | next |
+| 14a system check in the gateway repo; rehearsal caches untouched repos | #128 | merged |
+| 14b scripted 3-repo journey (TestThreeRepoJourney) | #129 | open |
 | 15–16 | — | not started |
 
-Next: merge #128, then task 14b (scripted 3-repo journey through the CLI, no model),
-15 (M5 evals: ask the owner before the first paid run), 16 (report). `cli` coverage is 90.3%:
+Next: merge #129, then task 15 (M5 evals: ask the owner before the first paid run), 16 (report). `cli` coverage is 90.3%:
 new work must add tests that lift it.
