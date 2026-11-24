@@ -43,7 +43,9 @@ you get:
   shell always starts at the workspace root and cannot change folder, so name the worktree in
   each command: `go -C <worktree> build ./...`, `go -C <worktree> vet ./...`,
   `go -C <worktree> fmt ./...`, `go -C <worktree> test ./...`, and `git -C <worktree> …`.
-  Lint runs in Athel's gates. Use the Read, Grep, Glob, Edit and Write tools for files.
+  Lint and coverage run in Athel's gates: never write a coverage or profile file into the
+  worktree (no `-coverprofile`, `-cpuprofile`). Use the Read, Grep, Glob, Edit and Write tools
+  for files.
 - Every `athel` command prints one JSON object. Run `athel <command> --help` for its flags;
   never guess.
 - Commit with the conventional format and both trailers, for example:

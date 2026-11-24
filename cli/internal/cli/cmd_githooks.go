@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -49,8 +52,48 @@ func (r *runCtx) installHooks(s *state.Store, cache string) error {
 			return aerr.Wrap(aerr.StateIO, "make "+p+" executable", err)
 		}
 	}
-	_, err = r.gitOut(cache, "config", "core.hooksPath", dir)
-	return err
+	if _, err := r.gitOut(cache, "config", "core.hooksPath", dir); err != nil {
+		return err
+	}
+	return r.excludeTestArtifacts(cache)
+}
+
+// testArtifacts are files a test or coverage run leaves behind. Athel's worktrees ignore them
+// (the cache clone's info/exclude, shared by every worktree): such a file is no change, and no
+// agent may delete a file outside its task's paths, so it would otherwise hold the next task's
+// baseline for good (M5 smoke run 1).
+var testArtifacts = []string{"cover.out", "coverage.out", "*.coverprofile", "*.test", "*.prof"}
+
+func (r *runCtx) excludeTestArtifacts(cache string) error {
+	common, err := r.gitOut(cache, "rev-parse", "--git-common-dir")
+	if err != nil {
+		return err
+	}
+	dir := strings.TrimSpace(common)
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(cache, dir)
+	}
+	p := filepath.Join(dir, "info", "exclude")
+	old, err := os.ReadFile(p) //nolint:gosec // the cache clone's own exclude file
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return aerr.Wrap(aerr.StateIO, "read "+p, err)
+	}
+	text := string(old)
+	for _, pat := range testArtifacts {
+		if !slices.Contains(strings.Split(text, "\n"), pat) {
+			if text != "" && !strings.HasSuffix(text, "\n") {
+				text += "\n"
+			}
+			text += pat + "\n"
+		}
+	}
+	if text == string(old) {
+		return nil
+	}
+	if err := fsutil.EnsureDir(filepath.Dir(p)); err != nil {
+		return err
+	}
+	return fsutil.WriteFileAtomic(p, []byte(text))
 }
 
 func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
