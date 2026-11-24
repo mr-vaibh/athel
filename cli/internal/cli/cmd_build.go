@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
@@ -21,7 +22,7 @@ import (
 // Doc 06's build loop, the CLI's part: which task may start (FR-BUILD-001), the exact inputs of
 // the developer and of the reviewer (FR-BUILD-002/006), and when a task is done (FR-BUILD-007/009).
 
-const manifestSchema = "athel/build-context@1"
+const manifestSchema = "athel/build-context@2"
 
 type buildStatus struct {
 	Ready      []string     `json:"ready"`
@@ -93,6 +94,18 @@ type manifest struct {
 	OpenFindings []review.Finding      `yaml:"open_findings,omitempty" json:"open_findings,omitempty"`
 	Diff         string                `yaml:"diff,omitempty" json:"diff,omitempty"`
 	Rounds       []string              `yaml:"rounds,omitempty" json:"rounds,omitempty"`
+	Upstream     []upstreamTask        `yaml:"upstream,omitempty" json:"upstream,omitempty"`
+}
+
+// upstreamTask is a task in another repo this task waits for, with the patch of its commits:
+// a consumer is written and reviewed against the provider's real contract, not a guess
+// (M5-plan G10, A2).
+type upstreamTask struct {
+	Task  string `yaml:"task" json:"task"`
+	Repo  string `yaml:"repo" json:"repo"`
+	Kind  string `yaml:"kind" json:"kind"`
+	Title string `yaml:"title" json:"title"`
+	Patch string `yaml:"patch" json:"patch"`
 }
 
 // baseManifest holds what both roles get: the task, its slice of the spec, the conventions, the
@@ -135,7 +148,50 @@ func (r *runCtx) baseManifest(g gateTask, role string) (*manifest, error) {
 		return nil, err
 	}
 	m.Conventions = conv.Dir + "/conventions.md"
-	return m, nil
+	m.Upstream, err = r.upstreamPatches(g)
+	return m, err
+}
+
+// upstreamPatches saves, for each task in another repo this task waits for, the patch of its
+// commits from Athel's worktree there, and lists them.
+func (r *runCtx) upstreamPatches(g gateTask) ([]upstreamTask, error) {
+	p, ok := g.s.ApprovedPlan(g.c)
+	if !ok {
+		return nil, nil
+	}
+	show := func(worktree string, commits []string) (string, error) {
+		dir := filepath.Join(g.s.WS.Root, filepath.FromSlash(worktree))
+		return r.gitOut(dir, append([]string{"show", "--no-color", "--no-ext-diff", "--format=commit %H%n%s%n"}, commits...)...)
+	}
+	save := func(name string, b []byte) error {
+		_, err := g.s.SaveChangeFile(g.c.ID, g.session, name, b)
+		return err
+	}
+	return upstreamOf(p, g.c, g.task.ID, show, save)
+}
+
+// upstreamOf is upstreamPatches with git and the change folder passed in. A task with no
+// commits (it changes no code) or no worktree has no patch.
+func upstreamOf(p *plan.Plan, c *state.Change, task string, show func(worktree string, commits []string) (string, error),
+	save func(name string, b []byte) error) ([]upstreamTask, error) {
+	var out []upstreamTask
+	for _, u := range p.Upstream(task) {
+		i := slices.IndexFunc(c.Build, func(t build.Task) bool { return t.ID == u.ID })
+		w, ok := repoWork(c, u.Repo)
+		if i < 0 || len(c.Build[i].Commits) == 0 || !ok {
+			continue
+		}
+		patch, err := show(w.Worktree, c.Build[i].Commits)
+		if err != nil {
+			return nil, err
+		}
+		name := "build/" + task + "/upstream-" + u.ID + ".patch"
+		if err := save(name, []byte(patch)); err != nil {
+			return nil, err
+		}
+		out = append(out, upstreamTask{Task: u.ID, Repo: u.Repo, Kind: u.Kind, Title: u.Title, Patch: name})
+	}
+	return out, nil
 }
 
 // taskDecisions are the decisions a task relies on: those its requirements cite, and cards that

@@ -17,7 +17,9 @@ your manifest, `.athel/changes/CHG-NNN/reviews/T-NN/context.yaml`. It holds:
 - the repo's `conventions.md`;
 - the decisions it relies on, and lessons;
 - the diff since the task's baseline (`reviews/T-NN/diff.patch`);
-- the earlier rounds.
+- the earlier rounds;
+- `upstream`: the patches of tasks in other repos this task waits for. A call, field or event
+  that does not match what the provider's patch defines is a `spec.fit` finding, at least major.
 
 QA's and security's findings join the rounds by themselves. You judge them like your own.
 

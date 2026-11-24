@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/build-context@2.json",
+  "title": "athel/build-context@2",
+  "description": "The exact inputs of one agent for one task (doc 06 FR-BUILD-002 for the developer, FR-BUILD-006 for the reviewer, which never gets the developer's transcript or notes): build/T-NN/manifest.yaml and reviews/T-NN/context.yaml. Version 2 (M5) adds upstream: the changes of the tasks in other repos this task waits for, so a consumer is written and reviewed against the provider's real contract (M5-plan G10, A2).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "change",
+    "task",
+    "role",
+    "task_spec",
+    "requirements",
+    "acceptance_criteria",
+    "conventions",
+    "decisions",
+    "lessons"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/build-context@2"
+    },
+    "change": {
+      "type": "string"
+    },
+    "task": {
+      "type": "string",
+      "pattern": "^T-[0-9]{2,}$"
+    },
+    "role": {
+      "enum": [
+        "developer",
+        "reviewer"
+      ]
+    },
+    "task_spec": {
+      "type": "object"
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "conventions": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lessons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "open_findings": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "diff": {
+      "type": "string"
+    },
+    "rounds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "upstream": {
+      "type": "array",
+      "description": "tasks in other repos this task waits for, each with the patch of its commits (a file in the change folder)",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task",
+          "repo",
+          "kind",
+          "title",
+          "patch"
+        ],
+        "properties": {
+          "task": {
+            "type": "string",
+            "pattern": "^T-[0-9]{2,}$"
+          },
+          "repo": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "patch": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "role": {
+            "const": "reviewer"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "files"
+              ]
+            },
+            {
+              "required": [
+                "open_findings"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "role": {
+            "const": "developer"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "diff"
+              ]
+            },
+            {
+              "required": [
+                "rounds"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

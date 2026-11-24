@@ -18,7 +18,10 @@ you get:
 - the repo's `conventions.md`;
 - the decisions it relies on, and lessons;
 - the files in its paths;
-- in later rounds, the open findings to fix.
+- in later rounds, the open findings to fix;
+- `upstream`: when the task waits for a task in another repo (a provider's new endpoint, field
+  or event), that task's patch (`build/T-NN/upstream-T-MM.patch`). Code against exactly what
+  the patch adds: the paths, names, types and status codes it defines, never a guess.
 
 ## Your rules (doc 06)
 1. Read `conventions.md`, the task, its ACs, decisions and lessons before editing anything.
