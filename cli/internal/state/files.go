@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/mr-vaibh/athel/cli/internal/build"
+	"github.com/mr-vaibh/athel/cli/internal/changeset"
 	"github.com/mr-vaibh/athel/cli/internal/digest"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/fsutil"
@@ -20,7 +21,7 @@ import (
 
 // changeFiles are the step outputs the CLI writes into a change folder for its steps; nothing
 // else may be written there this way (doc 04: .athel/changes/<id>/ is written only by the CLI).
-var changeFiles = regexp.MustCompile(`^(investigation\.md|findings\.yaml|blast-radius\.md|decisions\.yaml|traceability\.md|blast-signoff\.yaml|blast-actual-[A-Za-z0-9._-]{1,200}\.md|spec/[A-Za-z0-9._-]{1,100}\.md|prd/v[1-9][0-9]*\.index\.yaml|prd/review-v[1-9][0-9]*\.md|preflight/[A-Za-z0-9._-]{1,100}\.md|gates/T-[0-9]{2,}\.yaml|artifacts/gates/T-[0-9]{2,}/[0-9]+-[a-z-]+\.log|reviews/T-[0-9]{2,}/((round|qa|security)-[1-9][0-9]*\.yaml|context\.yaml|diff\.patch)|build/T-[0-9]{2,}/(manifest|result-[1-9][0-9]*)\.yaml)$`)
+var changeFiles = regexp.MustCompile(`^(investigation\.md|findings\.yaml|blast-radius\.md|decisions\.yaml|traceability\.md|blast-signoff\.yaml|blast-actual-[A-Za-z0-9._-]{1,200}\.md|spec/[A-Za-z0-9._-]{1,100}\.md|prd/v[1-9][0-9]*\.index\.yaml|prd/review-v[1-9][0-9]*\.md|preflight/[A-Za-z0-9._-]{1,100}\.md|gates/T-[0-9]{2,}\.yaml|artifacts/gates/T-[0-9]{2,}/[0-9]+-[a-z-]+\.log|reviews/T-[0-9]{2,}/((round|qa|security)-[1-9][0-9]*\.yaml|context\.yaml|diff\.patch)|build/T-[0-9]{2,}/(manifest|result-[1-9][0-9]*)\.yaml|build/T-[0-9]{2,}/upstream-T-[0-9]{2,}\.patch|changeset/verify\.yaml)$`)
 
 // IsChangeFile reports whether name is a step output the CLI may write into a change folder.
 func IsChangeFile(name string) bool { return changeFiles.MatchString(name) }
@@ -303,6 +304,23 @@ func (s *Store) RemoveSpec(id, session, service string) (*Change, error) {
 		if err := os.Remove(path); err != nil {
 			return aerr.Wrap(aerr.StateIO, "remove "+name, err)
 		}
+		return nil
+	})
+}
+
+// SetVerify records the change set's last merge-order rehearsal (ADR 036).
+func (s *Store) SetVerify(id, session string, v *changeset.Verify) (*Change, error) {
+	if err := CheckSession(session); err != nil {
+		return nil, err
+	}
+	return s.Update(id, func(c *Change) error {
+		if err := s.claim(c, session, s.Clock.Now()); err != nil {
+			return err
+		}
+		if c.ChangeSet == nil {
+			return aerr.New(aerr.StateInvalid, c.ID+" has no change set; it is derived when the plan is approved")
+		}
+		c.ChangeSet.Verify = v
 		return nil
 	})
 }

@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.athel.invalid/changeset-verify@1.json",
+  "title": "athel/changeset-verify@1",
+  "description": "The merge-order rehearsal of a change set (.athel/changes/CHG-NNN/changeset/verify.yaml, ADR 036): each state after a merge in the stated order, rebuilt in throwaway clones and never pushed, with the build and unit gates of the repos merged at that step and the workspace's system check.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "change",
+    "at",
+    "strategy",
+    "result",
+    "heads",
+    "steps"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athel/changeset-verify@1"
+    },
+    "change": {
+      "type": "string",
+      "pattern": "^CHG-[0-9]{3,}(-F[1-9][0-9]*)?$"
+    },
+    "at": {
+      "type": "string"
+    },
+    "strategy": {
+      "enum": [
+        "single",
+        "expand_contract",
+        "coordinated"
+      ]
+    },
+    "result": {
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "heads": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{40}$"
+      }
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "merged",
+          "checks",
+          "system"
+        ],
+        "properties": {
+          "merged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "repo",
+                "gate",
+                "status",
+                "tail"
+              ],
+              "properties": {
+                "repo": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "gate": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "enum": [
+                    "pass",
+                    "fail",
+                    "unavailable"
+                  ]
+                },
+                "tail": {
+                  "type": "array",
+                  "maxItems": 20,
+                  "items": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                }
+              }
+            }
+          },
+          "system": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "tail"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "unavailable",
+                  "not_configured"
+                ]
+              },
+              "tail": {
+                "type": "array",
+                "maxItems": 20,
+                "items": {
+                  "type": "string",
+                  "maxLength": 2000
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

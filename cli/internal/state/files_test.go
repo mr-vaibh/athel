@@ -57,6 +57,23 @@ func TestSaveChangeFileInSubfolder(t *testing.T) {
 	}
 }
 
+// TestM5ChangeFiles: the upstream patches of the developer's and reviewer's manifests (M5-plan
+// G10) and the merge-order rehearsal's evidence (ADR 036) are files the CLI writes.
+func TestM5ChangeFiles(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "x")
+	for _, name := range []string{"build/T-03/upstream-T-01.patch", "changeset/verify.yaml"} {
+		if _, err := s.SaveChangeFile(c.ID, "sess-1", name, []byte("x\n")); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	for _, name := range []string{"build/T-03/upstream-x.patch", "changeset/other.yaml"} {
+		if _, err := s.SaveChangeFile(c.ID, "sess-1", name, []byte("x\n")); err == nil {
+			t.Errorf("%s was written", name)
+		}
+	}
+}
+
 func TestAddPRDVersion(t *testing.T) {
 	s, _ := newTestStore(t)
 	c := mustCreate(t, s, "x")

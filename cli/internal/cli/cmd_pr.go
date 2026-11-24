@@ -499,9 +499,8 @@ func cmdPRReady(r *runCtx, args []string) (any, error) {
 	case !ok || w.PR == nil:
 		return nil, aerr.New(aerr.StateNotFound, c.ID+" has no PR in "+pos[1])
 	}
-	if missing := unopened(c); len(missing) > 0 {
-		return nil, aerr.New(aerr.StateInvalid, "the PRs of "+c.ID+" are marked ready together; not opened yet: "+strings.Join(missing, ", ")).
-			WithNextAction("athel pr open " + c.ID + " <repo> for each, then mark them ready")
+	if err := r.setReady(s, c); err != nil {
+		return nil, err
 	}
 	dir := filepath.Join(s.WS.Root, filepath.FromSlash(w.Worktree))
 	local, err := r.gitOut(dir, "rev-parse", "HEAD")
@@ -523,6 +522,20 @@ func cmdPRReady(r *runCtx, args []string) (any, error) {
 		return nil, err
 	}
 	return prOpened{URL: *w.PR}, nil
+}
+
+// setReady: the PRs of a set are marked ready together, every one open, and only after the
+// merge order was rehearsed on exactly these heads (M5-plan G7, G14; ADR 036).
+func (r *runCtx) setReady(s *state.Store, c *state.Change) error {
+	if missing := unopened(c); len(missing) > 0 {
+		return aerr.New(aerr.StateInvalid, "the PRs of "+c.ID+" are marked ready together; not opened yet: "+strings.Join(missing, ", ")).
+			WithNextAction("athel pr open " + c.ID + " <repo> for each, then mark them ready")
+	}
+	why, err := r.rehearsalProblem(s, c)
+	if err != nil || why == "" {
+		return err
+	}
+	return aerr.New(aerr.GateRed, why).WithNextAction("athel set verify " + c.ID)
 }
 
 // unopened are the repos of the change set built in this change that have no PR yet: a ready

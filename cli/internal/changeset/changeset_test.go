@@ -177,6 +177,7 @@ func TestSection(t *testing.T) {
 		"1. acme/users#901 (provider)",
 		"2. gateway (not opened yet) (consumer), acme/orders#902 (consumer, this PR): either order",
 		"Later, a separate change: users: T-04: task T-04 (after consumers deploy)",
+		"Merge-order rehearsal: not run yet.",
 	}
 	if got := s.Section("CHG-012", "orders", ref); strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
@@ -185,8 +186,10 @@ func TestSection(t *testing.T) {
 		t.Errorf("provider: %q", got[0])
 	}
 	s.Strategy = Coordinated
-	if got := s.Section("CHG-012", "users", ref); !strings.HasPrefix(got[1], "Coordinated release") {
-		t.Errorf("coordinated: %q", got)
+	s.Verify = &Verify{At: "2026-11-24T10:00:00.000Z", Result: "pass"}
+	got := s.Section("CHG-012", "users", ref)
+	if !strings.HasPrefix(got[1], "Coordinated release") || !strings.HasPrefix(got[len(got)-1], "Merge-order rehearsal: pass at 2026-11-24T10:00:00.000Z") {
+		t.Errorf("coordinated and rehearsed: %q", got)
 	}
 	one, _ := Derive(&plan.Plan{Tasks: []plan.Task{task("T-01", "users", plan.KindInternal)}}, false)
 	if got := one.Section("CHG-012", "users", ref); got != nil {
