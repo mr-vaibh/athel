@@ -153,3 +153,31 @@ How to run (owner's go-ahead each time):
 - `ATHEL_EVALS=1 ATHEL_EVALS_KEEP=<folder> go test -count=1 -run '^TestEvals$' -v -timeout 0 ./tests/evals/m4/defects/`
 - the same for `./tests/evals/m4/build/`
 - narrow with `ATHEL_EVALS_CASES` and `ATHEL_EVALS_RUNS`.
+
+## M5 evals (multi-service change sets)
+
+`tests/evals/m5/set` (M5-plan §1, §5.9). Three PRDs on the shop fixture with its system layer:
+`users-v2-profile` (users, orders, gateway: the exit criterion's 3-service change, with a
+deferred v1 removal), `phone-e164` (users with a migration, then orders), `rename-now` (users and
+orders; no transition allowed, so a coordinated release). Each run is the full journey in real
+sessions; the grader then re-runs every branch's gates, checks the linked, labelled PRs and the
+rehearsal, and plays the human: it merges the PRs in the stated order and runs the system check
+from main after each merge (once at the end for a coordinated release).
+
+- **EC-1:** every run valid.
+- **EC-2 (owner's efficiency goal):** median cost per changed repo ≤ $9.61 and median time per
+  repo ≤ 25 min (1.25 × M4's one-repo $7.69 and 20 min); no question asked twice in a change.
+
+The free parts run in `scripts/check.sh` (`TestPrepareAndCollect`, the grader's unit tests), and
+`TestThreeRepoJourney` (tests/scenarios/m5-set) takes a 3-repo change through the real CLI with
+no model.
+
+How to run (owner's go-ahead each time; budget approved up to about $550, M5-plan Q1):
+
+```
+ATHEL_EVALS=1 ATHEL_EVALS_KEEP=<dir> [ATHEL_EVALS_CASES=users-v2-profile] [ATHEL_EVALS_RUNS=1] \
+  go test -count=1 -run '^TestEvals$' -v -timeout 0 ./tests/evals/m5/set/
+```
+
+| Run | Date | What | Result | Cost | Notes |
+|---|---|---|---|---|---|

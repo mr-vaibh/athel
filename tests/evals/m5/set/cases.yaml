@@ -1,0 +1,81 @@
+# M5 exit criterion EC-1 (doc 08 M5 row; M5-plan §5.9): multi-service PRDs reach linked PRs that
+# merge in order with every intermediate state working. repos are the repos the change set must
+# hold (PRs); strategy and deferred are what the set must say; kinds are task kinds the plan must
+# have. Each case's seed is committed to its repo's main before the run, on top of the system
+# layer; planted is a nearby bug outside the PRD's scope: a side finding must name its file, and
+# its text must be unchanged on the pushed branch (FR-BUILD-013).
+cases:
+  - id: users-v2-profile
+    prd: prds/01-users-v2-profile.md
+    repos: [users, orders, gateway]
+    strategy: expand_contract
+    deferred: true
+    kinds: [expand, consume, contract]
+    seed:
+      orders:
+        clients/backoff.go: |
+          package clients
+
+          import "time"
+
+          // Backoff is how long to wait before retry n (0-based): 100ms, 200ms, 400ms…, at most 2s.
+          func Backoff(n int) time.Duration {
+          	d := 100 * time.Millisecond << n
+          	if d > 2*time.Second {
+          		return 2 * time.Second
+          	}
+          	return d
+          }
+    planted:
+      repo: orders
+      file: clients/backoff.go
+      text: 'd := 100 * time.Millisecond << n'
+  - id: phone-e164
+    prd: prds/02-phone-e164.md
+    repos: [users, orders]
+    strategy: expand_contract
+    deferred: false
+    kinds: [expand, consume]
+    seed:
+      users:
+        api/display.go: |
+          package api
+
+          import "strings"
+
+          // Initials shortens a profile name for receipts: "Ada Lovelace" becomes "A. L.".
+          func Initials(name string) string {
+          	parts := strings.Fields(name)
+          	out := make([]string, 0, len(parts))
+          	for _, p := range parts {
+          		out = append(out, p[:1]+".")
+          	}
+          	return strings.Join(out, " ") + " " + name[len(name)-1:]
+          }
+    planted:
+      repo: users
+      file: api/display.go
+      text: 'return strings.Join(out, " ") + " " + name[len(name)-1:]'
+  - id: rename-now
+    prd: prds/03-rename-now.md
+    repos: [users, orders]
+    strategy: coordinated
+    deferred: false
+    kinds: []
+    seed:
+      users:
+        events/retry.go: |
+          package events
+
+          // PublishWithRetry hands an event to send until it is accepted.
+          func PublishWithRetry(send func() error) {
+          	for {
+          		if err := send(); err == nil {
+          			return
+          		}
+          	}
+          }
+    planted:
+      repo: users
+      file: events/retry.go
+      text: 'if err := send(); err == nil {'

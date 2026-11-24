@@ -12,10 +12,13 @@ import (
 // playbooks) and the CLI's claim block template must never contain them: an example that matches
 // a trap would hand the scout the answer and inflate the eval (the first paid run found the
 // playbooks citing `user-svc` vs `users`, PR 812 and users.updated.v1). The last line holds the
-// M3 eval PRDs' expected answers: the architect reads the same plugin and templates.
+// M3 eval PRDs' expected answers: the architect reads the same plugin and templates; the M5 line
+// the set eval's.
 var fixtureNames = []string{"acme", "user-svc", "user-service", "users.updated", "phone", "legacy-profile",
 	"812", "SHOP-", "shopmetrics", "commerce", "identity", "notifications", "teammate",
-	"PaymentsHighErrorRate", "e164", "E.164", "phone_number", "payments", "orders"}
+	"PaymentsHighErrorRate", "e164", "E.164", "phone_number", "payments", "orders",
+	// M5: the set eval's answers and its planted bugs.
+	"/v2/users", "/profile/", "Backoff", "Initials", "PublishWithRetry", "systest"}
 
 // schemaVocabulary are field names a schema fixes, which a template must spell out; they hint at
 // nothing. Only exact keys are removed before the check, so a fixture name anywhere else still
