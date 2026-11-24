@@ -249,10 +249,13 @@ func athelCall(cmd shellparse.Command) Action {
 	}
 	group := known(pos[0])
 	sub := ""
-	if len(pos) > 1 {
+	if len(pos) > 1 && !SingleCommands[group] {
 		sub = known(pos[1])
 	}
 	call := &AthelCall{Command: strings.TrimSpace(group + " " + sub)}
+	if ThreeWordGroups[call.Command] && len(pos) > 2 {
+		call.Command += " " + known(pos[2])
+	}
 	a.Athel = call
 	switch {
 	case group == "hook":
@@ -273,7 +276,7 @@ func humanOnly(call *AthelCall, pos []shellparse.Word, vals map[string]shellpars
 	switch {
 	case call.Command == "state transition" && len(pos) > 2:
 		call.Change, call.To, call.ByHuman = known(pos[2]), flagVal(vals, "--to"), flagVal(vals, "--by") == "human"
-	case call.Command == "repos roots" && len(pos) > 3 && known(pos[2]) == "set":
+	case call.Command == "repos roots set" && len(pos) > 3:
 		// Confirmed roots widen rule 12, so saving them is the developer's act, like --by human.
 		call.Command, call.Change, call.To, call.ByHuman = "repos roots set", rootsKey(pos), grants.TargetRoots, true
 	case call.Command == "blast signoff" && len(pos) > 2:
@@ -331,6 +334,14 @@ func decideKey(pos []shellparse.Word) string {
 	return "decide:invalid"
 }
 
+// SingleCommands are the athel commands of one word; the word after one is an argument
+// (`athel trace CHG-001`), not a subcommand. A CLI test keeps this list equal to the CLI's.
+var SingleCommands = map[string]bool{"version": true, "init": true, "resume": true, "hook": true, "trace": true, "migrate": true}
+
+// ThreeWordGroups are the two-word groups whose commands have a third word (`athel prd review
+// save`); a CLI test keeps them equal to the CLI's three-word commands.
+var ThreeWordGroups = map[string]bool{"prd review": true, "repos roots": true}
+
 // athelReadGroups are athel command groups that only read; athelReads are single read-only
 // subcommands of groups that also write. Every other athel call writes .athel/ (tier W0).
 var (
@@ -342,6 +353,6 @@ var (
 		"investigation validate": true, "repos show": true, "ask show": true, "blast score": true,
 		"prd show": true, "prd scan": true, "prd diff": true, "decide list": true, "decide show": true, "spec validate": true, "spec list": true, "spec show": true, "conventions show": true, "plan summary": true, "plan diff": true, "blast diff": true, "spec template": true, "decide template": true, "plan template": true, "prd review template": true, "blast template": true,
 		"gate show": true, "review show": true, "review template": true, "git lint": true, "pr body": true, "build next": true, "finding list": true, "set show": true, "set status": true,
-		"build template": true, "qa template": true, "security template": true, "finding template": true, "review rules": true,
+		"build template": true, "qa template": true, "investigation template": true, "security template": true, "finding template": true, "review rules": true,
 	}
 )
