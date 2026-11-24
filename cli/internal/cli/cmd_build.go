@@ -394,7 +394,6 @@ func (r *runCtx) notDone(g gateTask, head string) ([]string, string, error) {
 	return problems, from, nil
 }
 
-// blockingCards are the unanswered cards that block the task or the build step.
 // blockedTasks are the task IDs open cards block, and "build" when one blocks the whole build.
 func (r *runCtx) blockedTasks(id string) (map[string]bool, error) {
 	dec, err := r.readDecisions(id)
@@ -446,6 +445,7 @@ func cmdBuildPark(r *runCtx, args []string) (any, error) {
 	return viewOf(c, r.env.Clock.Now()), nil
 }
 
+// blockingCards are the unanswered cards that block the task or the build step.
 func (r *runCtx) blockingCards(g gateTask) ([]string, error) {
 	dec, err := r.readDecisions(g.c.ID)
 	if err != nil {

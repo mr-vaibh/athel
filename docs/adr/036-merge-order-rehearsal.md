@@ -56,3 +56,13 @@ like `gates.yaml`, and a new file needs no migration of existing configs.
 ## Spec references
 Doc 04 §Multi-repo change sets (invariant, ordering rules), FR-GIT-007/008; doc 08 M5 exit
 criterion; M5-plan A1, G7, G14, §5.4.
+
+## Follow-up (M5 task 14, 2026-11-24)
+- Repos the system check names that the change does not touch are cloned into Athel's cache by
+  the rehearsal itself (status and `pr ready` only read, and never fetch).
+- The shop fixture's system check is a program in its own `gateway` repo (`gateway/systest`,
+  standard library only, flows in `systest/flows.json`), run as
+  `go -C {gateway} run ./systest --flows systest/flows.json --users {users} --orders {orders}
+  --gateway {gateway}`: inside the rehearsal folder, so ADR 023's check allows it. A command from
+  outside the workspace (`go -C <elsewhere>`) is refused, as it should be. Companies often keep
+  such end-to-end checks in a repo; the same form works for them.

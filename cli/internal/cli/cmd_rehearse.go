@@ -78,7 +78,7 @@ func cmdSetVerify(r *runCtx, args []string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	repos, err := r.rehearsalRepos(s, c, system)
+	repos, err := r.rehearsalRepos(s, c, system, true)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,9 @@ func placeholders(argv []string) []string {
 }
 
 // rehearsalRepos are the set's repos, each pushed, and the other repos the system check names.
-func (r *runCtx) rehearsalRepos(s *state.Store, c *state.Change, system []string) (map[string]rehearsalRepo, error) {
+// ensure makes or fetches the cache clones of the repos the system check names (the rehearsal);
+// a check that only reads (status, pr ready) never fetches.
+func (r *runCtx) rehearsalRepos(s *state.Store, c *state.Change, system []string, ensure bool) (map[string]rehearsalRepo, error) {
 	pol, err := r.policySet()
 	if err != nil {
 		return nil, err
@@ -159,6 +161,13 @@ func (r *runCtx) rehearsalRepos(s *state.Store, c *state.Change, system []string
 	for _, name := range placeholders(system) {
 		if _, ok := out[name]; ok {
 			continue
+		}
+		// A repo the change does not touch still runs in the system check: at its base branch, from
+		// Athel's cache clone, made or fetched now.
+		if ensure {
+			if _, err := r.cacheClone(name); err != nil {
+				return nil, err
+			}
 		}
 		rr, err := r.baseOf(r.resolveRepo(name), pol.Git.BaseBranch)
 		if err != nil {
@@ -339,7 +348,7 @@ func (r *runCtx) rehearsalProblem(s *state.Store, c *state.Change) (string, erro
 	if err != nil {
 		return "", err
 	}
-	repos, err := r.rehearsalRepos(s, c, system)
+	repos, err := r.rehearsalRepos(s, c, system, false)
 	if err != nil {
 		return "", err
 	}
