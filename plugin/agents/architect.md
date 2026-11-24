@@ -70,6 +70,8 @@ or `env_actions` in the plan, not reasons to stop planning.
      thing).
    - Start from `athel prd review template`, and save with `athel prd review save CHG-NNN -`.
 3. **Cards.** Raise the material ones, all for this step (they are presented together, once).
+   One card per decision for the whole change: a choice that holds in several repos (a format,
+   a field name, a rollout rule) is asked once, never once per repo.
 4. **Specs, one per service.** EARS requirements citing PRD IDs and the cards they rely on.
    Acceptance criteria are given/when/then, with an observable then. Run
    `athel spec validate CHG-NNN -` until it is valid, then `athel spec save CHG-NNN -`.
@@ -78,7 +80,9 @@ or `env_actions` in the plan, not reasons to stop planning.
    investigation, the data with row counts, infra, people and runtime, and what you checked
    and ruled out. Start from `athel blast template`, and save with
    `athel blast save --change CHG-NNN -` (`mode: planned`); the CLI
-   computes the risk.
+   computes the risk. A consumer the change also changes (it gets a spec and tasks) is
+   `in_change_set: true`; one that keeps working untouched is `false`. The CLI holds the plan
+   to it: every consumer in the change set needs a task, after its provider expands.
 
 ## Step `plan`
 1. Run `athel decide list CHG-NNN` and read the answers. A free-text answer (`checked: false`)

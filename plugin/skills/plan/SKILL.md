@@ -30,6 +30,9 @@ Never read or edit `.athel/` files; use the `athel` CLI.
 6. End the step: `athel --json --session ${CLAUDE_SESSION_ID} state exit $ARGUMENTS plan --result ok`.
 7. Run `athel --json plan summary $ARGUMENTS` and show it on one screen:
    - tasks per repo in order, with gates and env actions;
+   - for a change across repos, `merge_order`: one line per merge step, which repos merge
+     together, and the cleanup that comes later as a separate change. When the
+     coordinated-release card was answered "a", say the PRs merge together in one deploy window;
    - the risk level;
    - open assumptions, including defaults applied without an answer, which can still be
      reversed;
