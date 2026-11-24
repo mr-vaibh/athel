@@ -1,0 +1,6 @@
+{
+  "flows": [
+    {"name": "gateway routes to users", "service": "gateway", "method": "GET", "path": "/users/v1/users/c-1", "status": 200, "contains": "\"id\":\"c-1\""},
+    {"name": "orders reads its customer from users", "service": "orders", "method": "GET", "path": "/v1/orders/7/customer", "status": 200, "contains": "\"id\":\"c-7\""}
+  ]
+}
