@@ -63,10 +63,8 @@ type Set struct {
 // coordinated release on a card (doc 04 rule 5). Two repos that wait on each other cannot be
 // ordered with one PR each, and are refused (M5-plan G2).
 func Derive(p *plan.Plan, coordinated bool) (*Set, error) {
-	byID := map[string]plan.Task{}
 	var repos []string
 	for _, t := range p.Tasks {
-		byID[t.ID] = t
 		if !t.Deferred && !slices.Contains(repos, t.Repo) {
 			repos = append(repos, t.Repo)
 		}
@@ -74,7 +72,7 @@ func Derive(p *plan.Plan, coordinated bool) (*Set, error) {
 	deps := map[string][]string{}
 	for _, t := range p.Tasks {
 		if !t.Deferred {
-			deps[t.Repo] = union(deps[t.Repo], upstream(byID, t))
+			deps[t.Repo] = union(deps[t.Repo], upstream(p, t))
 		}
 	}
 	order, err := orders(repos, deps)
@@ -95,28 +93,11 @@ func Derive(p *plan.Plan, coordinated bool) (*Set, error) {
 	return s, nil
 }
 
-// upstream lists the other repos a task waits for: walking its dependencies through tasks of
-// its own repo, and stopping at the first task of another repo, which is that repo's concern.
-func upstream(byID map[string]plan.Task, t plan.Task) []string {
+// upstream lists the other repos a task waits for (plan.Upstream).
+func upstream(p *plan.Plan, t plan.Task) []string {
 	var out []string
-	seen := map[string]bool{}
-	stack := slices.Clone(t.DependsOn)
-	for len(stack) > 0 {
-		id := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-		if seen[id] {
-			continue
-		}
-		seen[id] = true
-		d := byID[id]
-		switch {
-		case d.Deferred: // never built here, so nothing waits for it
-			continue
-		case d.Repo != t.Repo:
-			out = union(out, []string{d.Repo})
-			continue
-		}
-		stack = append(stack, d.DependsOn...)
+	for _, u := range p.Upstream(t.ID) {
+		out = union(out, []string{u.Repo})
 	}
 	return out
 }

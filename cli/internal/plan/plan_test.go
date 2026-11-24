@@ -181,3 +181,27 @@ func TestDeferredTaskGrantsNothing(t *testing.T) {
 		t.Errorf("Built() has %d tasks, want 1", got)
 	}
 }
+
+func TestUpstream(t *testing.T) {
+	p := &Plan{Tasks: []Task{
+		{ID: "T-01", Repo: "users", Kind: KindExpand},
+		{ID: "T-02", Repo: "payments", Kind: KindExpand},
+		{ID: "T-03", Repo: "orders", Kind: KindInternal, DependsOn: []string{"T-02"}},
+		{ID: "T-04", Repo: "orders", Kind: KindConsume, DependsOn: []string{"T-03", "T-01"}},
+		{ID: "T-05", Repo: "gateway", Kind: KindConsume, DependsOn: []string{"T-04"}},
+		{ID: "T-06", Repo: "users", Kind: KindContract, Deferred: true},
+		{ID: "T-07", Repo: "orders", Kind: KindInternal, DependsOn: []string{"T-06"}},
+	}}
+	ids := func(ts []Task) string {
+		var out []string
+		for _, t := range ts {
+			out = append(out, t.ID)
+		}
+		return strings.Join(out, ",")
+	}
+	for id, want := range map[string]string{"T-04": "T-01,T-02", "T-05": "T-04", "T-01": "", "T-07": "", "T-99": ""} {
+		if got := ids(p.Upstream(id)); got != want {
+			t.Errorf("Upstream(%s) = %q, want %q", id, got, want)
+		}
+	}
+}
