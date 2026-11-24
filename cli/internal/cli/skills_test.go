@@ -105,3 +105,26 @@ func TestShipSkillHandsOverWithoutMerging(t *testing.T) {
 }
 
 const foregroundRule = "Run every subagent in the foreground and wait for its result in the same turn"
+
+// TestSkillsHandleChangeSets (M5-plan task 13): the skills run a multi-repo change as one set:
+// plan shows the merge order, build goes on past a held task, ship rehearses the merge order
+// before any PR is marked ready, status shows the whole set.
+func TestSkillsHandleChangeSets(t *testing.T) {
+	ship := skill(t, "ship")
+	if v, r := strings.Index(ship, "set verify"), strings.Index(ship, "pr ready"); v < 0 || r < 0 || v > r {
+		t.Error("ship must rehearse (set verify) before it marks PRs ready (pr ready)")
+	}
+	for name, wants := range map[string][]string{
+		"plan":     {"merge_order", "coordinated-release card"},
+		"build":    {"`next`", "build park", "blocked"},
+		"status":   {"set status", "alarms", "source"},
+		"followup": {"followup draft", "disable-model-invocation: true"},
+	} {
+		text := skill(t, name)
+		for _, w := range wants {
+			if !strings.Contains(text, w) {
+				t.Errorf("%s skill lacks %q", name, w)
+			}
+		}
+	}
+}

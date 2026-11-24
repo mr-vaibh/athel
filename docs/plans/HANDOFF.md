@@ -210,10 +210,12 @@ merging finished green work is Claude's call):
 | 09 athel set status, out-of-order alarm | #123 | merged |
 | 10 per-repo test patterns; JVM, .NET, Ruby test naming | #124 | merged |
 | 11 scout and architect command tables; classifier naming fixes | #125 | merged |
-| 12 /athel:followup, the deferred cleanup draft | #126 | open |
-| 13–16 | — | not started |
+| 12 /athel:followup, the deferred cleanup draft | #126 | merged |
+| 13 skills and agent prompts for sets | #127 | merged |
+| 14a system check in the gateway repo; rehearsal caches untouched repos | #128 | open |
+| 14b scripted 3-repo journey | — | next |
+| 15–16 | — | not started |
 
-Next: merge #124, then tasks 11 (scout and architect
-command limits), 12 (`/athel:followup`), 13 (skills and agent prompts for sets), 14 (scripted
-3-repo journey), 15 (evals: ask the owner before the first paid run), 16 (report). `cli`
-coverage is 90.3%: new work must add tests that lift it.
+Next: merge #128, then task 14b (scripted 3-repo journey through the CLI, no model),
+15 (M5 evals: ask the owner before the first paid run), 16 (report). `cli` coverage is 90.3%:
+new work must add tests that lift it.
