@@ -9,7 +9,7 @@ import (
 )
 
 func task(id, repo, kind string, deps ...string) plan.Task {
-	return plan.Task{ID: id, Title: "task " + id, Repo: repo, Kind: kind, DependsOn: deps}
+	return plan.Task{ID: id, Title: "task " + id, Repo: repo, Kind: kind, DependsOn: deps, Paths: []string{"src/**"}}
 }
 
 func deferred(t plan.Task) plan.Task { t.Deferred = true; return t }
@@ -157,5 +157,57 @@ func TestLines(t *testing.T) {
 	}
 	if got := s.Lines(); strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+func TestSection(t *testing.T) {
+	s, err := Derive(&plan.Plan{Tasks: []plan.Task{
+		task("T-01", "users", plan.KindExpand),
+		task("T-02", "orders", plan.KindConsume, "T-01"),
+		task("T-03", "gateway", plan.KindConsume, "T-01"),
+		deferred(task("T-04", "users", plan.KindContract, "T-02", "T-03")),
+	}}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	refs := map[string]string{"users": "acme/users#901", "orders": "acme/orders#902"}
+	ref := func(r string) string { return refs[r] }
+	want := []string{
+		"This PR is step 2 of 2 in the merge order of CHG-012 (3 PRs). Merge after acme/users#901.",
+		"1. acme/users#901 (provider)",
+		"2. gateway (not opened yet) (consumer), acme/orders#902 (consumer, this PR): either order",
+		"Later, a separate change: users: T-04: task T-04 (after consumers deploy)",
+	}
+	if got := s.Section("CHG-012", "orders", ref); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	if got := s.Section("CHG-012", "users", ref); got[0] != "This PR is step 1 of 2 in the merge order of CHG-012 (3 PRs)." {
+		t.Errorf("provider: %q", got[0])
+	}
+	s.Strategy = Coordinated
+	if got := s.Section("CHG-012", "users", ref); !strings.HasPrefix(got[1], "Coordinated release") {
+		t.Errorf("coordinated: %q", got)
+	}
+	one, _ := Derive(&plan.Plan{Tasks: []plan.Task{task("T-01", "users", plan.KindInternal)}}, false)
+	if got := one.Section("CHG-012", "users", ref); got != nil {
+		t.Errorf("a one-repo change has no section: %q", got)
+	}
+}
+
+// TestNoCodeRepoHasNoPR: a repo whose tasks change no code gets no PR (ADR 027), so it is not in
+// the set, and nothing waits for it.
+func TestNoCodeRepoHasNoPR(t *testing.T) {
+	noCode := task("T-01", "tickets", plan.KindInternal)
+	noCode.Paths = nil
+	s, err := Derive(&plan.Plan{Tasks: []plan.Task{
+		noCode,
+		task("T-02", "users", plan.KindExpand, "T-01"),
+		task("T-03", "orders", plan.KindConsume, "T-02"),
+	}}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := summary(s); got != "expand_contract users:provider:1 orders:consumer:2<users" {
+		t.Errorf("got %s", got)
 	}
 }

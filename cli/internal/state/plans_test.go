@@ -204,3 +204,45 @@ func TestApprovalRefusesAnUnorderableSet(t *testing.T) {
 		t.Errorf("a refused approval changes nothing: %s %+v", got.State, got.ChangeSet)
 	}
 }
+
+func TestPRsInTheChangeSet(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "x")
+	walk(t, s, c.ID, Investigating, Specified, AwaitingDecisions, Planned, PlanApproved)
+	if _, err := s.Update(c.ID, func(c *Change) error {
+		c.Repos = []RepoWork{{Name: "users", Remote: "github.com/acme/users", Base: "main", BaseHead: strings.Repeat("a", 40),
+			Branch: "athel/CHG-001-x", Worktree: "repos/users@CHG-001"}}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	url := "https://github.com/acme/users/pull/901"
+	got, err := s.UpdateRepo(c.ID, testSession, "users", func(w *RepoWork) { w.PR = &url })
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := got.ChangeSet.Repos[0]
+	if e.PR == nil || *e.PR != "acme/users#901" || e.State == nil || *e.State != "draft" || got.Repos[0].PRRef() != "acme/users#901" {
+		t.Errorf("an opened PR is a draft in the set: %+v", e)
+	}
+	if got, err = s.MarkPR(c.ID, testSession, "users", "ready"); err != nil || *got.ChangeSet.Repos[0].State != "ready" {
+		t.Errorf("MarkPR: %+v %v", got.ChangeSet.Repos[0], err)
+	}
+	if got, _ = s.UpdateRepo(c.ID, testSession, "users", func(*RepoWork) {}); *got.ChangeSet.Repos[0].State != "ready" {
+		t.Errorf("a later repo update keeps the PR's state: %+v", got.ChangeSet.Repos[0])
+	}
+}
+
+func TestMarkPREdges(t *testing.T) {
+	s, _ := newTestStore(t)
+	c := mustCreate(t, s, "x")
+	if _, err := s.MarkPR(c.ID, "", "users", "ready"); err == nil {
+		t.Error("MarkPR needs a session")
+	}
+	if (RepoWork{}).PRRef() != "" {
+		t.Error("no PR, no ref")
+	}
+	if got, err := s.MarkPR(c.ID, testSession, "users", "ready"); err != nil || got.ChangeSet != nil {
+		t.Errorf("a change without a set: %v", err)
+	}
+}
