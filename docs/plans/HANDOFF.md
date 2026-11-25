@@ -218,8 +218,8 @@ merging finished green work is Claude's call):
 | smoke 1 fixes (test artifacts; deferred removal in the plan) | #131 | merged |
 | smoke 2: valid, $18.50 | #132 | merged |
 | full 1 fixes: repos never cloned (ADR 038); rename case on Go services | #133 | merged |
-| full 2 (owner: re-run 3 × 3) | — | running |
+| full 2 (owner: re-run 3 × 3) | #134 | void: session limit, $4.62 |
 | 16 report | — | not started |
 
-Next: full 2 is running (owner approved); read its failed runs from the kept files, fix real Athel bugs, record it, then task 16 (report). After M5: M5.5 Node and TypeScript gates (owner: before any pilot). `cli` coverage is 90.3%:
+Next: full 2 was void (every run cut off by the account session limit, $4.62; M5 spend $71.60). Ask the owner to re-run the full 3 × 3 once the limit has room; then task 16 (report). After M5: M5.5 Node and TypeScript gates (owner: before any pilot). `cli` coverage is 90.3%:
 new work must add tests that lift it.
