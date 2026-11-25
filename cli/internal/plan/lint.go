@@ -30,6 +30,11 @@ type LintContext struct {
 	Contracts   []Contract
 	SameRepo    func(service, repo string) bool
 	Coordinated bool
+	// IsTest reports whether a repo path is a test file, by the repo's own test patterns (the
+	// ac-tests gate's matcher); MigrationDown is the down migration the migration gate runs for a
+	// path, with false for a path that is no up migration. Nil checks nothing (ADR 039).
+	IsTest        func(repo, path string) bool
+	MigrationDown func(path string) (down string, migration bool)
 }
 
 var deployRe = regexp.MustCompile(`(?i)\b(deploy|release|roll ?out|kubectl\s+(apply|rollout|set)|helm\s+(install|upgrade)|terraform\s+apply|promote)\b`)
@@ -41,9 +46,62 @@ func Lint(p *Plan, ctx LintContext) []string {
 	problems = append(problems, coverage(p, ctx.Criteria)...)
 	problems = append(problems, ordering(p)...)
 	problems = append(problems, setRules(p, ctx)...)
+	problems = append(problems, testable(p, ctx.IsTest)...)
 	for _, t := range p.Tasks {
 		problems = append(problems, taskRules(t, ctx.Risk)...)
 		problems = append(problems, newFiles(t, ctx.Exists)...)
+		problems = append(problems, migrations(t, ctx.MigrationDown)...)
+	}
+	return problems
+}
+
+func isGlob(p string) bool { return strings.ContainsAny(p, "*?[") }
+
+// testable: the ac-tests gate passes a code task only when a test changed in its repo names each
+// criterion it covers (FR-BUILD-003), so the task, or an earlier task of its repo covering the
+// same criterion, must hold a test file. Otherwise no build round can pass (ADR 039). A glob may
+// hold one; a deferred task is planned again in its own change.
+func testable(p *Plan, isTest func(repo, path string) bool) []string {
+	if isTest == nil {
+		return nil
+	}
+	holdsTest := func(t Task) bool {
+		return slices.ContainsFunc(t.Paths, func(path string) bool { return isGlob(path) || isTest(t.Repo, path) })
+	}
+	var problems []string
+	for _, t := range p.Tasks {
+		if len(t.Paths) == 0 || t.Deferred {
+			continue
+		}
+		before := p.ancestors(t.ID)
+		for _, ac := range t.Covers {
+			if !slices.ContainsFunc(p.Tasks, func(u Task) bool {
+				return (u.ID == t.ID || before[u.ID]) && u.Repo == t.Repo && slices.Contains(u.Covers, ac) && holdsTest(u)
+			}) {
+				problems = append(problems, fmt.Sprintf("%s covers %s, but neither it nor an earlier %s task covering %s has a test file in its paths; "+
+					"the ac-tests gate needs a test naming %s (FR-BUILD-003): add the test file to %s's paths, or drop %s from it", t.ID, ac, t.Repo, ac, ac, t.ID, ac))
+			}
+		}
+	}
+	return problems
+}
+
+// migrations: the migration gate runs each new migration up, down and up again, so a migration a
+// task adds is an up file with its down file in the same task (doc 06; ADR 039).
+func migrations(t Task, down func(string) (string, bool)) []string {
+	if down == nil || t.Deferred {
+		return nil
+	}
+	var problems []string
+	for _, path := range t.Paths {
+		d, ok := down(path)
+		switch {
+		case isGlob(path) || !ok:
+		case d == "":
+			problems = append(problems, t.ID+" names the migration "+path+", which the migration gate cannot run down: name it NNN_name.up.sql and add NNN_name.down.sql to "+t.ID+"'s paths (doc 06)")
+		case !slices.ContainsFunc(t.Paths, func(q string) bool { return q == d || (isGlob(q) && MatchGlob(q, d)) }):
+			problems = append(problems, t.ID+" names "+path+" without its down migration "+d+"; add it to "+t.ID+"'s paths (doc 06)")
+		}
 	}
 	return problems
 }
@@ -56,7 +114,7 @@ func newFiles(t Task, exists func(repo, path string) (bool, bool)) []string {
 	}
 	var problems []string
 	for _, p := range t.Paths {
-		if strings.ContainsAny(p, "*?[") {
+		if isGlob(p) {
 			continue
 		}
 		if ok, known := exists(t.Repo, p); known && !ok {

@@ -159,6 +159,77 @@ func TestLintNewFileNeedsCreate(t *testing.T) {
 	}
 }
 
+// isTest and migrationDown stand in for the gates' matchers (ADR 039).
+func isTest(_, p string) bool { return strings.HasSuffix(p, "_test.go") }
+
+func migrationDown(p string) (string, bool) {
+	if !strings.HasPrefix(p, "migrations/") || !strings.HasSuffix(p, ".sql") || strings.HasSuffix(p, ".down.sql") {
+		return "", false
+	}
+	if base, ok := strings.CutSuffix(p, ".up.sql"); ok {
+		return base + ".down.sql", true
+	}
+	return "", true
+}
+
+// The M5 full eval 3 phone-e164 plans, reduced: a migration task and the API task after it.
+const planMigration = `schema: athel/plan@2
+change: CHG-001
+hash: null
+tasks:
+  - {id: T-01, title: Add phone_e164, repo: users, kind: migrate, paths: [migrations/002_phone.up.sql, migrations/002_phone.down.sql, migrations/migrations_test.go], verbs: [create, edit, test, commit], covers: [AC-1], depends_on: [], size: S, gates: [build, unit], rollback: drop the column}
+  - {id: T-02, title: Return phone_e164, repo: users, kind: expand, paths: [api/user.go, api/user_test.go], verbs: [edit, test, commit], covers: [AC-1, AC-2], depends_on: [T-01], size: S, gates: [build, unit], rollback: revert}
+  - {id: T-03, title: Wire the route, repo: users, kind: internal, paths: [main.go], verbs: [edit, test, commit], covers: [AC-2], depends_on: [T-02], size: S, gates: [build, unit]}
+`
+
+// TestLintTestsAndMigrations (ADR 039): every criterion a code task covers can be named by a test
+// that task or an earlier one of its repo writes (the ac-tests gate), and a new migration is an
+// up file with its down file in the same task (the migration gate).
+func TestLintTestsAndMigrations(t *testing.T) {
+	lint := func(doc string, ctx LintContext) string {
+		t.Helper()
+		p, err := Decode(schema.NewRegistry(), []byte(doc))
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx.Criteria = []string{"AC-1", "AC-2"}
+		return strings.Join(Lint(p, ctx), "; ")
+	}
+	full := LintContext{IsTest: isTest, MigrationDown: migrationDown}
+	if got := lint(planMigration, full); got != "" {
+		t.Errorf("T-03's AC-2 is tested by T-02, an earlier task of users: %s", got)
+	}
+	for name, tt := range map[string]struct{ from, to, want string }{
+		"migration without its test": {", migrations/migrations_test.go]", "]",
+			"T-01 covers AC-1, but neither it nor an earlier users task covering AC-1 has a test file in its paths"},
+		"single-file migration": {"migrations/002_phone.up.sql, migrations/002_phone.down.sql", "migrations/002_phone.sql",
+			"T-01 names the migration migrations/002_phone.sql, which the migration gate cannot run down: name it NNN_name.up.sql and add NNN_name.down.sql to T-01's paths"},
+		"up without down": {"migrations/002_phone.up.sql, migrations/002_phone.down.sql", "migrations/002_phone.up.sql",
+			"T-01 names migrations/002_phone.up.sql without its down migration migrations/002_phone.down.sql"},
+		"test in a later task": {"depends_on: [T-02], size: S", "depends_on: [], size: S",
+			"T-03 covers AC-2, but neither it nor an earlier users task covering AC-2 has a test file"},
+	} {
+		doc := strings.Replace(planMigration, tt.from, tt.to, 1)
+		if doc == planMigration {
+			t.Fatalf("%s: the replacement did not apply", name)
+		}
+		if got := lint(doc, full); !strings.Contains(got, tt.want) {
+			t.Errorf("%s: %q lacks %q", name, got, tt.want)
+		}
+	}
+	globs := strings.NewReplacer("migrations/002_phone.up.sql, migrations/002_phone.down.sql, migrations/migrations_test.go", `"migrations/**"`).Replace(planMigration)
+	if got := lint(globs, full); got != "" {
+		t.Errorf("a glob may hold the test and the down file: %s", got)
+	}
+	deferred := planMigration + "  - {id: T-04, title: Drop phone, repo: users, kind: contract, deferred: true, paths: [migrations/003_drop.sql], verbs: [delete, commit], covers: [AC-2], depends_on: [T-02], size: S, gates: [build], rollback: revert}\n"
+	if got := lint(deferred, full); got != "" {
+		t.Errorf("a deferred task is planned again in its own change: %s", got)
+	}
+	if got := lint(strings.Replace(planMigration, ", migrations/migrations_test.go]", "]", 1), LintContext{}); got != "" {
+		t.Errorf("without matchers nothing is checked: %s", got)
+	}
+}
+
 // TestSummaryDeferredTask: a deferred task is shown as a later change and not estimated.
 func TestSummaryDeferredTask(t *testing.T) {
 	p, err := Decode(schema.NewRegistry(), []byte(planV2))

@@ -110,7 +110,12 @@ or `env_actions` in the plan, not reasons to stop planning.
    code. It may cover a criterion only if a task that changes code covers it too, with its
    test; its `env_actions` go to the developer in the PR body (ADR 027).
    A task that makes a file its repo does not have yet (a new test file too) needs `create`
-   and `edit`; the CLI checks this on the base branch. Give risky tasks a rollback, list
+   and `edit`; the CLI checks this on the base branch. Each criterion a code task covers must
+   be named by a test the task writes, so its paths hold a test file, unless an earlier task
+   of the same repo covering that criterion holds one. A criterion that only a later task can
+   test belongs to that later task. A new SQL migration is a pair, `NNN_name.up.sql` and
+   `NNN_name.down.sql`, both in the same task's paths, whatever the repo's older migrations
+   look like: the migration gate runs it up, down and up again (ADR 039). Give risky tasks a rollback, list
    shared actions in `env_actions` (never a deploy), and cover every acceptance criterion.
    Save it with `athel plan set CHG-NNN -`.
    Across repos, a consumer's task depends on the provider's `expand` task, and every
