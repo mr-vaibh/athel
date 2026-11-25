@@ -187,6 +187,42 @@ func TestIdenticalGateFailuresRaiseCard(t *testing.T) {
 	}
 }
 
+// TestIdenticalFailuresPerStage (ADR 039): attempts are compared within one stage, so a green
+// cheap run between two red full runs, which never runs the failing gate, does not reset the count.
+// The runs are M5 full eval 3's phone-e164 run 3, where no card was raised in 19 runs.
+func TestIdenticalFailuresPerStage(t *testing.T) {
+	red := func(stage, head string, gates ...string) gateRun {
+		run := gateRun{Stage: stage, Head: head, Green: len(gates) == 0}
+		for _, g := range gates {
+			run.Results = append(run.Results, gateOutcome{Gate: g, Status: "fail", Details: []string{g + " detail"}})
+		}
+		return run
+	}
+	for _, tc := range []struct {
+		name string
+		runs []gateRun
+		want bool
+	}{
+		{"full red three heads, cheap green between", []gateRun{
+			red("cheap", "a"), red("full", "b", "migration"), red("cheap", "c"), red("full", "d", "migration"),
+			red("cheap", "d"), red("full", "e", "migration"),
+		}, true},
+		{"cheap red three heads, full runs between", []gateRun{
+			red("cheap", "a", "ac-tests"), red("full", "a", "ac-tests", "migration"), red("cheap", "b", "ac-tests"),
+			red("full", "b", "ac-tests", "migration"), red("cheap", "c", "ac-tests"),
+		}, true},
+		{"full red twice", []gateRun{red("full", "a", "migration"), red("cheap", "b"), red("full", "c", "migration")}, false},
+		{"one head run three times", []gateRun{red("full", "a", "migration"), red("full", "a", "migration"), red("full", "a", "migration")}, false},
+		{"the failure changed", []gateRun{red("full", "a", "migration"), red("full", "b", "lint"), red("full", "c", "migration")}, false},
+		{"no runs", nil, false},
+		{"latest attempt green", []gateRun{red("full", "a", "lint"), red("full", "b", "lint"), red("full", "c")}, false},
+	} {
+		if got := identicalFailures(tc.runs); got != tc.want {
+			t.Errorf("%s: identicalFailures = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
 // TestBuildBlocksOnlyOnACard: the build step ends blocked only on an open card the developer can
 // answer; a finding the developer thinks is wrong goes to a dispute, never to a silent block.
 func TestBuildBlocksOnlyOnACard(t *testing.T) {
