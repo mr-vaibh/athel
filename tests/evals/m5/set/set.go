@@ -42,7 +42,7 @@ type Case struct {
 	PRD      string                       `yaml:"prd"`
 	Repos    []string                     `yaml:"repos"`
 	Strategy string                       `yaml:"strategy"`
-	Deferred bool                         `yaml:"deferred"`
+	Deferred *bool                        `yaml:"deferred"` // nil: either way
 	Kinds    []string                     `yaml:"kinds"`
 	Seed     map[string]map[string]string `yaml:"seed"`
 	Planted  Planted                      `yaml:"planted"`
@@ -178,8 +178,8 @@ func setChecks(c Case, a Artifacts) []string {
 	if a.Strategy != c.Strategy {
 		p = append(p, "the change set's strategy is "+a.Strategy+", want "+c.Strategy)
 	}
-	if deferred != c.Deferred {
-		p = append(p, fmt.Sprintf("the change set's deferred cleanup is %v, want %v", deferred, c.Deferred))
+	if c.Deferred != nil && deferred != *c.Deferred {
+		p = append(p, fmt.Sprintf("the change set's deferred cleanup is %v, want %v", deferred, *c.Deferred))
 	}
 	if a.Rehearsal != "pass" {
 		p = append(p, "the merge-order rehearsal did not pass ("+a.Rehearsal+")")

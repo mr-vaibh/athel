@@ -185,3 +185,30 @@ func (idx Index) Stale(now time.Time) bool {
 	at, err := clock.Parse(idx.IndexedAt)
 	return err != nil || now.Sub(at) > StaleAfter
 }
+
+// Infer is the remote a short repo name most likely means when the index has no clone of it:
+// the one host/org every indexed remote shares, plus the name. A workspace whose repos span
+// several orgs gets "" and must name the repo in full (a consumer only in another repo, doc 08's
+// fixture trap, is common in a company with many services).
+func (idx Index) Infer(name string) string {
+	if name == "" || strings.Contains(name, "/") {
+		return ""
+	}
+	org := ""
+	for _, e := range idx.Repos {
+		if e.Remote == nil {
+			continue
+		}
+		i := strings.LastIndex(*e.Remote, "/")
+		switch prefix := (*e.Remote)[:max(i, 0)]; {
+		case org == "":
+			org = prefix
+		case org != prefix:
+			return ""
+		}
+	}
+	if org == "" {
+		return ""
+	}
+	return org + "/" + name
+}

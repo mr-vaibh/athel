@@ -18,7 +18,7 @@ var fixtureNames = []string{"acme", "user-svc", "user-service", "users.updated",
 	"812", "SHOP-", "shopmetrics", "commerce", "identity", "notifications", "teammate",
 	"PaymentsHighErrorRate", "e164", "E.164", "phone_number", "payments", "orders",
 	// M5: the set eval's answers and its planted bugs.
-	"/v2/users", "/profile/", "Backoff", "Initials", "PublishWithRetry", "systest"}
+	"/v2/users", "/profile/", "Backoff", "Initials", "PublishWithRetry", "systest", "display_name"}
 
 // schemaVocabulary are field names a schema fixes, which a template must spell out; they hint at
 // nothing. Only exact keys are removed before the check, so a fixture name anywhere else still

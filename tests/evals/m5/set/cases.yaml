@@ -1,7 +1,8 @@
 # M5 exit criterion EC-1 (doc 08 M5 row; M5-plan §5.9): multi-service PRDs reach linked PRs that
 # merge in order with every intermediate state working. repos are the repos the change set must
 # hold (PRs); strategy and deferred are what the set must say; kinds are task kinds the plan must
-# have. Each case's seed is committed to its repo's main before the run, on top of the system
+# have; a case without deferred accepts the cleanup either way (a coordinated release may leave
+# none, or a fallback to remove later). Each case's seed is committed to its repo's main before the run, on top of the system
 # layer; planted is a nearby bug outside the PRD's scope: a side finding must name its file, and
 # its text must be unchanged on the pushed branch (FR-BUILD-013).
 cases:
@@ -60,7 +61,6 @@ cases:
     prd: prds/03-rename-now.md
     repos: [users, orders]
     strategy: coordinated
-    deferred: false
     kinds: []
     seed:
       users:
