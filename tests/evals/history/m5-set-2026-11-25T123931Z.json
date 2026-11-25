@@ -1,0 +1,703 @@
+{
+  "cases": {
+    "phone-e164": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the plan has no expand task",
+            "the plan has no consume task",
+            "the change set holds [], want [orders users]",
+            "the change set's strategy is , want expand_contract",
+            "the merge-order rehearsal did not pass ()",
+            "no PR in acme/users",
+            "no PR in acme/orders",
+            "no side finding names the planted bug in users/api/display.go",
+            "the planted bug in users/api/display.go was edited inside the change, or its branch is missing",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run1/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run1/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "efficiency": {
+          "repos": 2,
+          "usd_per_repo": 0,
+          "minutes_per_repo": 0.0123
+        },
+        "sessions": [
+          {
+            "session_id": "ce6ca8a8-0326-4f88-bf41-6b60b95933f5",
+            "cost_usd": 0,
+            "duration_s": 0.75,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "8291d61a-8f03-45a3-8036-5a4a51a3df1c",
+            "cost_usd": 0,
+            "duration_s": 0.726,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "strategy": "",
+          "set": null,
+          "rehearsal": "",
+          "prs": null,
+          "draft_then_ready": {},
+          "merge_called": false,
+          "gate_problems": {},
+          "lint_problems": {},
+          "merges": null,
+          "merge_problems": null,
+          "findings": null,
+          "planted_kept": false,
+          "clones_unchanged": true,
+          "cards": null
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run1/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run1/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      },
+      {
+        "run": 2,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the plan has no expand task",
+            "the plan has no consume task",
+            "the change set holds [], want [orders users]",
+            "the change set's strategy is , want expand_contract",
+            "the merge-order rehearsal did not pass ()",
+            "no PR in acme/users",
+            "no PR in acme/orders",
+            "no side finding names the planted bug in users/api/display.go",
+            "the planted bug in users/api/display.go was edited inside the change, or its branch is missing",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run2/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run2/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "efficiency": {
+          "repos": 2,
+          "usd_per_repo": 0,
+          "minutes_per_repo": 0.0121
+        },
+        "sessions": [
+          {
+            "session_id": "08ace171-6272-45e6-8b3d-1ee63e6361a2",
+            "cost_usd": 0,
+            "duration_s": 0.708,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "a098023f-f5a5-4c22-95ca-4fae7afce7ff",
+            "cost_usd": 0,
+            "duration_s": 0.744,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "strategy": "",
+          "set": null,
+          "rehearsal": "",
+          "prs": null,
+          "draft_then_ready": {},
+          "merge_called": false,
+          "gate_problems": {},
+          "lint_problems": {},
+          "merges": null,
+          "merge_problems": null,
+          "findings": null,
+          "planted_kept": false,
+          "clones_unchanged": true,
+          "cards": null
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run2/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run2/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      },
+      {
+        "run": 3,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the plan has no expand task",
+            "the plan has no consume task",
+            "the change set holds [], want [orders users]",
+            "the change set's strategy is , want expand_contract",
+            "the merge-order rehearsal did not pass ()",
+            "no PR in acme/users",
+            "no PR in acme/orders",
+            "no side finding names the planted bug in users/api/display.go",
+            "the planted bug in users/api/display.go was edited inside the change, or its branch is missing",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "efficiency": {
+          "repos": 2,
+          "usd_per_repo": 0,
+          "minutes_per_repo": 0.013541666666666667
+        },
+        "sessions": [
+          {
+            "session_id": "d17bd5b1-36e6-4a7b-ab60-8ace782a15f7",
+            "cost_usd": 0,
+            "duration_s": 0.983,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "7bb99008-282d-406d-a449-58159409a11b",
+            "cost_usd": 0,
+            "duration_s": 0.642,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "strategy": "",
+          "set": null,
+          "rehearsal": "",
+          "prs": null,
+          "draft_then_ready": {},
+          "merge_called": false,
+          "gate_problems": {},
+          "lint_problems": {},
+          "merges": null,
+          "merge_problems": null,
+          "findings": null,
+          "planted_kept": false,
+          "clones_unchanged": true,
+          "cards": null
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/phone-e164-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      }
+    ],
+    "rename-now": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the change set holds [], want [orders users]",
+            "the change set's strategy is , want coordinated",
+            "the merge-order rehearsal did not pass ()",
+            "no PR in acme/users",
+            "no PR in acme/orders",
+            "no side finding names the planted bug in users/events/retry.go",
+            "the planted bug in users/events/retry.go was edited inside the change, or its branch is missing",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run1/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run1/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "efficiency": {
+          "repos": 2,
+          "usd_per_repo": 0,
+          "minutes_per_repo": 0.011850000000000001
+        },
+        "sessions": [
+          {
+            "session_id": "8597a497-5954-4a06-8881-abab0274eaee",
+            "cost_usd": 0,
+            "duration_s": 0.667,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "dd2343bc-efc0-40f9-9ea7-fc54f11afe69",
+            "cost_usd": 0,
+            "duration_s": 0.755,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "strategy": "",
+          "set": null,
+          "rehearsal": "",
+          "prs": null,
+          "draft_then_ready": {},
+          "merge_called": false,
+          "gate_problems": {},
+          "lint_problems": {},
+          "merges": null,
+          "merge_problems": null,
+          "findings": null,
+          "planted_kept": false,
+          "clones_unchanged": true,
+          "cards": null
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run1/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run1/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      },
+      {
+        "run": 2,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the change set holds [], want [orders users]",
+            "the change set's strategy is , want coordinated",
+            "the merge-order rehearsal did not pass ()",
+            "no PR in acme/users",
+            "no PR in acme/orders",
+            "no side finding names the planted bug in users/events/retry.go",
+            "the planted bug in users/events/retry.go was edited inside the change, or its branch is missing",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run2/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run2/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "efficiency": {
+          "repos": 2,
+          "usd_per_repo": 0,
+          "minutes_per_repo": 0.012891666666666666
+        },
+        "sessions": [
+          {
+            "session_id": "53eb330d-75ff-45f2-afcc-939bc274701e",
+            "cost_usd": 0,
+            "duration_s": 0.702,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "0007b901-28e5-4afa-a334-daccc1b1659a",
+            "cost_usd": 0,
+            "duration_s": 0.845,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "strategy": "",
+          "set": null,
+          "rehearsal": "",
+          "prs": null,
+          "draft_then_ready": {},
+          "merge_called": false,
+          "gate_problems": {},
+          "lint_problems": {},
+          "merges": null,
+          "merge_problems": null,
+          "findings": null,
+          "planted_kept": false,
+          "clones_unchanged": true,
+          "cards": null
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run2/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run2/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      },
+      {
+        "run": 3,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the change set holds [], want [orders users]",
+            "the change set's strategy is , want coordinated",
+            "the merge-order rehearsal did not pass ()",
+            "no PR in acme/users",
+            "no PR in acme/orders",
+            "no side finding names the planted bug in users/events/retry.go",
+            "the planted bug in users/events/retry.go was edited inside the change, or its branch is missing",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "efficiency": {
+          "repos": 2,
+          "usd_per_repo": 0,
+          "minutes_per_repo": 0.011416666666666667
+        },
+        "sessions": [
+          {
+            "session_id": "93096fa3-7935-437d-a3ac-b50ab9ee0023",
+            "cost_usd": 0,
+            "duration_s": 0.726,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "b2eea5da-2135-4fe5-9d24-20b5b6a20353",
+            "cost_usd": 0,
+            "duration_s": 0.644,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "strategy": "",
+          "set": null,
+          "rehearsal": "",
+          "prs": null,
+          "draft_then_ready": {},
+          "merge_called": false,
+          "gate_problems": {},
+          "lint_problems": {},
+          "merges": null,
+          "merge_problems": null,
+          "findings": null,
+          "planted_kept": false,
+          "clones_unchanged": true,
+          "cards": null
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/rename-now-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      }
+    ],
+    "users-v2-profile": [
+      {
+        "run": 1,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is building, not in_review",
+            "the merge-order rehearsal did not pass ()",
+            "no PR in acme/users",
+            "no PR in acme/orders",
+            "no PR in acme/gateway",
+            "gateway: the branch was never pushed",
+            "orders: the branch was never pushed",
+            "users: the branch was never pushed",
+            "the planted bug in orders/clients/backoff.go was edited inside the change, or its branch is missing"
+          ]
+        },
+        "efficiency": {
+          "repos": 3,
+          "usd_per_repo": 1.5394264000000002,
+          "minutes_per_repo": 4.401883333333334
+        },
+        "sessions": [
+          {
+            "session_id": "d00bbcad-323a-4b46-b8e7-f6fc86ed7576",
+            "cost_usd": 0.157228,
+            "duration_s": 17.655,
+            "turns": 7,
+            "result": "I created **CHG-001 \"Customer profile v2\"**. It's in `draft`, and the PRD has been numbered into 12 items (PRD-1 to PRD-4.2) for the specs to cite.\nNext step: run `/athel:spec CHG-001` to investigate, review the PRD and write the specs."
+          },
+          {
+            "session_id": "e077acc8-301f-4367-bbb8-63b0c9dea451",
+            "cost_usd": 2.4767084000000006,
+            "duration_s": 457.204,
+            "turns": 14,
+            "result": "The spec step for CHG-001 is done: specs and the planned blast radius are saved, and the change is now waiting on two decisions from you.\n\n**Risk: MEDIUM.** Three services change (users, orders, gateway) and a new environment variable is added. There is also no traffic data for the gateway. Orders calls users about 120 times a minute, and the new gateway route makes the phone number reachable from outside, so the change is flagged for PII and security review.\n\n**Rollout order:** users first, then orders and the gateway, each on its own. Orders switches to v2 with no fallback to v1, and it can deploy only after users v2 is live in prod. To roll back, undo in reverse order. v1 stays unchanged until a later change removes it.\n\n**What the investigation couldn't confirm:**\n- Notifications calls v1 about 6 times a minute, but its code wasn't found, so the fields it reads are unknown.\n- The live gateway route table couldn't be read.\n- There are no error-rate or latency metrics for these three services, only the absence of alerts.\n\n### Decision cards (both block the plan)\n\n**D-1: How should the `/profile/v2/users/` route reach the gateway?** The live route config (`gateway-routes`) couldn't be read, and @acme/platform owns the gateway.\n- **a.** Change the repo and add a verified config step. A check task first compares the live config with `routes.yaml`. Then the gateway task adds the route in the repo, and @acme/platform is asked to add it to the live config. That's one extra task and a hand-off, but the route works whichever source the gateway actually reads.\n- **b.** Change the repo only. If the live config drives routing, the new route returns 404 after deploy until someone edits it.\n- **c.** Take the gateway out of this change. Outside callers get no v2 profile in this change.\n- **Recommended: a.** It doesn't rely on an unverified claim, and the config edit needs the gateway owners anyway. **Default if unanswered: a.**\n\n**D-2: How should v2 relate to open PR acme/users#812 (\"Normalise phone formats\")?** That PR edits the same file the v2 endpoint goes in.\n- **a.** v2 shares the v1 handler, with no ordering against #812. v1 and v2 always return the same body, including any phone format #812 adds. Whichever PR merges second needs a small rebase.\n- **b.** Same as a, but the users work waits until #812 merges. There's no rebase, but users v2 is delayed by however long #812 takes.\n- **Recommended: a.** v1 and v2 match whatever happens to #812, and nothing waits on another team. **Default if unanswered: a.**\n\n### Problems found outside this change's scope\nThese are not in the spec or the plan:\n- **Users v1 doesn't return profile data:** the handler never reads the users table, so v1 returns empty `name` and `phone`, and v2 will too because it shares that handler. This is how the users code reads in this workspace; nobody checked whether prod 1.8.2 behaves the same. If it does, the \"same fields as v1\" requirement holds but delivers empty data.\n- **Possible unauthenticated write (security):** the gateway's `/users/` route forwards PUT requests to users without any authentication in the gateway code. If nothing else in front of the gateway adds auth, an outside caller could overwrite any customer's profile. This is worth confirming with @acme/platform now.\n- **Dead code in orders:** `LegacyProfile` calls an endpoint users has already removed.\n- **Latent bug in orders:** `Backoff` overflows for large retry counts; nothing calls it yet.\n\n### Next\n```\n/athel:decide CHG-001 D-1=a D-2=a\n```"
+          },
+          {
+            "session_id": "a154c75f-5e23-4a70-abc5-78fa90c2787c",
+            "cost_usd": 0.08037079999999999,
+            "duration_s": 7.62,
+            "turns": 3,
+            "result": "I recorded both of your answers on CHG-001: **D-1 = a** and **D-2 = a**.\n\n- **Tick:** no defaults were applied and there are no reminders.\n- **Open cards:** none are left.\n\nCHG-001 was in `awaiting_decisions` when this session started. The next step is `/athel:plan CHG-001`."
+          },
+          {
+            "session_id": "914f98cd-05c5-45ad-a25d-997e1bd411b4",
+            "cost_usd": 0.5974798,
+            "duration_s": 124.161,
+            "turns": 7,
+            "result": "## CHG-001 \"Customer profile v2\" has a plan and is now `planned`\n\nThe traceability check passed: every criterion maps to a task.\n\n**Tasks by repo**\n- **users**\n  - T-01: serve `GET /v2/users/{id}` from the existing v1 `getUser` handler.\n  - T-05: remove v1. This is deferred to a later change.\n- **orders**\n  - T-02: read the customer from users v2. It depends on T-01 and must only be released once users v2 is live.\n- **gateway**\n  - T-03: the platform team (acme/platform) compares the live configmap `gateway-routes` with `routes.yaml`. No code changes.\n  - T-04: add the `/profile/v2/users/` route. It depends on T-01 and T-03.\n\n**Checks on every code task:** build, unit tests and lint.\n\n**Actions for acme/platform** (they go in the PR body):\n- T-03: confirm whether the running gateway takes its routes from the configmap or from its built-in route map. The answer goes on the gateway PR before T-04 is marked ready.\n- T-04: add `/profile/v2/users/` → `user-svc:8080` to the configmap, stripping only `/profile`.\n\n**Merge order**\n1. users\n2. gateway and orders, in either order, after users\n3. Later, as a separate change: users T-05, removing v1 once nothing calls it\n\n**Risk:** MEDIUM\n\n**Open assumptions** (no defaults were applied without an answer):\n- **A-4:** the users image running in prod (1.8.2) is built from the code that was read.\n- **A-5:** orders calls users directly at `USERS_URL`, not through the gateway.\n- **A-6:** the gateway route has the same caller authentication as `/users/` today.\n\n**Estimate:** about 3 hours, about 12 USD.\n\n**Things to know before you approve:**\n- **Rollout order isn't enforced by the tooling.** Whoever releases has to do it by hand: users v2 live in prod before orders goes out, and orders rolled back before users.\n- **Nothing stops T-04 going ahead without the platform team's answer from T-03.** T-03 changes no code, so it has no checks.\n- **T-05 needs its own criteria.** The plan maps it to AC-3 (\"v1 keeps working\") only because the CLI requires every task to cover a criterion, and AC-3 is the opposite of what T-05 does. It needs new criteria when it's drafted as its own change.\n\nNext, type: `/athel:approve CHG-001`"
+          },
+          {
+            "session_id": "1f4cc250-2771-4041-9719-3562968ad86f",
+            "cost_usd": 0.0979854,
+            "duration_s": 9.191,
+            "turns": 3,
+            "result": "**CHG-001 plan: \"Customer profile v2\"**\n- **T-01** · users · edit/test/commit/push/pr · `api/user.go`, `api/user_test.go`: serve `GET /v2/users/{id}`\n- **T-02** · orders · edit/test/commit/push/pr · `clients/users.go`, `clients/clients_test.go`, `api/customer_test.go`: switch to users v2 (after T-01)\n- **T-03** · gateway · comment, no paths: ask acme/platform whether the live `gateway-routes` configmap matches `routes.yaml`\n- **T-04** · gateway · edit/test/commit/push/pr · `main.go`, `main_test.go`, `routes.yaml`, `systest/main.go`, `systest/flows.json`: add the `/profile/v2/users/` route (after T-01 and T-03)\n- **T-05** · users · edit/test/commit · `api/user.go`, `api/user_test.go`: remove v1 (deferred, after T-02 and T-04)\n\nPlan of CHG-001 approved (hash `sha256:923c3a24108b067c6cc7fdcd4dd2e38c2f9c0d2d60c8d9d834ebfe6f25231801`).\n\nNext, run `/athel:build CHG-001`."
+          },
+          {
+            "session_id": "392e2a6b-2e78-4c0e-82bc-1d1bd6ecd28a",
+            "cost_usd": 0.14517739999999998,
+            "duration_s": 15.132,
+            "turns": 4,
+            "result": "The build of CHG-001 hasn't started, and nothing was written in any repo. Before building, Athel checked each repo for other people's open work on the same files. In `users`, a teammate's open PR #812 edits `api/user.go`, a file this plan also changes. Athel raised card **D-7** about it, and that card holds the build until you answer it. The change stays in `plan_approved`.\n\n`orders` and `gateway` have no overlapping work.\n\n**D-7: Someone else is working on files this change plans to edit in users. How should Athel go on?**\n- **a.** Wait for that work to merge or close. Athel writes nothing in `users` until the check is run again and finds no overlap. This is what happens if you don't answer.\n- **b.** Coordinate with its author. Athel drafts a message to the author for you to send, and building starts once you confirm the plan still holds. *(Athel recommends this: both pieces of work can go on without conflicting edits.)*\n- **c.** Narrow the plan. The plan changes to leave those files alone, and you'll need to approve it again.\n\nAnswer with `/athel:decide CHG-001 D-7`, then run `/athel:build CHG-001` again."
+          },
+          {
+            "session_id": "328caa89-c75c-4117-96cb-f2087ab535f3",
+            "cost_usd": 0.1260404,
+            "duration_s": 17.373,
+            "turns": 6,
+            "result": "I recorded your answer **D-7 = b (Coordinate with its author)** for CHG-001, under your grant GR-2cfee41ac378.\n\n- **Defaults:** none came due when I checked, so no default overrode your answer, and there are no reminders.\n- **Open cards:** none remain for CHG-001.\n- **State:** the change is in `plan_approved`, not `awaiting_decisions`, so `/athel:plan` isn't the next step.\n\nD-7 is a build-step card. A preflight check found that a teammate's open PR #812 in `users` touches `api/user.go`, a file this plan edits. Because you chose to coordinate, Athel will draft a message to that author for you to send. Building in `users` starts only after you confirm the plan still holds.\n\nThe next step is `/athel:build CHG-001`, which handles the drafted message and that confirmation."
+          },
+          {
+            "session_id": "6500b0b6-093e-4e28-adf0-5cd453ddee4c",
+            "cost_usd": 0.9372889999999999,
+            "duration_s": 137.072,
+            "turns": 13,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "ce68a9a8-3ed1-407e-9fa3-484ab6bde8b8",
+            "cost_usd": 0,
+            "duration_s": 0.604,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "f6db7119-e135-49d8-8687-8179f80f304d",
+            "cost_usd": 0,
+            "duration_s": 0.957,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "bef9d40d-6329-4e75-864d-cc6183e529b8",
+            "cost_usd": 0,
+            "duration_s": 0.68,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "0c35720a-5a17-4d0f-af5e-f4fc9972d1e7",
+            "cost_usd": 0,
+            "duration_s": 0.651,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "ff0c3fc4-0f77-4aaf-9f44-5f6001c28a52",
+            "cost_usd": 0,
+            "duration_s": 0.719,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "7027e3f9-bd5c-4dc3-9094-daf96d3e8269",
+            "cost_usd": 0,
+            "duration_s": 0.72,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "71d92b33-2b2b-46c3-b198-1b8876d2c3cc",
+            "cost_usd": 0,
+            "duration_s": 0.703,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "aeab546b-b65d-4a1b-a8fe-48602a52ff4b",
+            "cost_usd": 0,
+            "duration_s": 1.13,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "6e635ade-ce72-4c2a-a9cf-05bd2378c9e4",
+            "cost_usd": 0,
+            "duration_s": 0.767,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "building",
+          "kinds": [
+            "expand",
+            "consume",
+            "internal",
+            "expand",
+            "contract"
+          ],
+          "strategy": "expand_contract",
+          "set": [
+            {
+              "repo": "users",
+              "order": 1,
+              "pr": "",
+              "deferred": false
+            },
+            {
+              "repo": "gateway",
+              "order": 2,
+              "pr": "",
+              "deferred": false
+            },
+            {
+              "repo": "orders",
+              "order": 2,
+              "pr": "",
+              "deferred": false
+            },
+            {
+              "repo": "users",
+              "order": 3,
+              "pr": "",
+              "deferred": true
+            }
+          ],
+          "rehearsal": "",
+          "prs": null,
+          "draft_then_ready": {},
+          "merge_called": false,
+          "gate_problems": {
+            "gateway": [
+              "the branch was never pushed"
+            ],
+            "orders": [
+              "the branch was never pushed"
+            ],
+            "users": [
+              "the branch was never pushed"
+            ]
+          },
+          "lint_problems": {},
+          "merges": null,
+          "merge_problems": null,
+          "findings": [
+            "orders/clients/backoff.go:6-12",
+            "users/api/user.go:24-26",
+            "orders/clients/users.go:14-17",
+            "gateway/main.go:14-23"
+          ],
+          "planted_kept": false,
+          "clones_unchanged": true,
+          "cards": [
+            "The live gateway route table could not be read, and gateway belongs to @acme/platform. How should the plan add the /profile/v2/users/ route?",
+            "Open PR acme/users PR 812 (Normalise phone formats, @acme/identity) touches users api/user.go, the same file the v2 endpoint goes in. How should the v2 endpoint relate to it?",
+            "Someone else is working on files this change plans to edit in users. How should Athel go on?"
+          ]
+        }
+      },
+      {
+        "run": 2,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the plan has no expand task",
+            "the plan has no consume task",
+            "the plan has no contract task",
+            "the change set holds [], want [gateway orders users]",
+            "the change set's strategy is , want expand_contract",
+            "the change set's deferred cleanup is false, want true",
+            "the merge-order rehearsal did not pass ()",
+            "no PR in acme/users",
+            "no PR in acme/orders",
+            "no PR in acme/gateway",
+            "no side finding names the planted bug in orders/clients/backoff.go",
+            "the planted bug in orders/clients/backoff.go was edited inside the change, or its branch is missing",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/users-v2-profile-run2/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/users-v2-profile-run2/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "efficiency": {
+          "repos": 3,
+          "usd_per_repo": 0,
+          "minutes_per_repo": 0.009433333333333334
+        },
+        "sessions": [
+          {
+            "session_id": "ad6301e2-60b9-4745-b912-5803ad71cdf8",
+            "cost_usd": 0,
+            "duration_s": 0.76,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "ce5c95d5-e162-47fc-8cb4-235a381a93a0",
+            "cost_usd": 0,
+            "duration_s": 0.938,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "strategy": "",
+          "set": null,
+          "rehearsal": "",
+          "prs": null,
+          "draft_then_ready": {},
+          "merge_called": false,
+          "gate_problems": {},
+          "lint_problems": {},
+          "merges": null,
+          "merge_problems": null,
+          "findings": null,
+          "planted_kept": false,
+          "clones_unchanged": true,
+          "cards": null
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/users-v2-profile-run2/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/users-v2-profile-run2/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      },
+      {
+        "run": 3,
+        "grade": {
+          "valid": false,
+          "problems": [
+            "the change is , not in_review",
+            "the plan has no expand task",
+            "the plan has no consume task",
+            "the plan has no contract task",
+            "the change set holds [], want [gateway orders users]",
+            "the change set's strategy is , want expand_contract",
+            "the change set's deferred cleanup is false, want true",
+            "the merge-order rehearsal did not pass ()",
+            "no PR in acme/users",
+            "no PR in acme/orders",
+            "no PR in acme/gateway",
+            "no side finding names the planted bug in orders/clients/backoff.go",
+            "the planted bug in orders/clients/backoff.go was edited inside the change, or its branch is missing",
+            "run failed: athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/users-v2-profile-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/users-v2-profile-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+          ]
+        },
+        "efficiency": {
+          "repos": 3,
+          "usd_per_repo": 0,
+          "minutes_per_repo": 0.008805555555555554
+        },
+        "sessions": [
+          {
+            "session_id": "0e3f6e19-b6f5-421f-be13-d82224feabf2",
+            "cost_usd": 0,
+            "duration_s": 0.602,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          },
+          {
+            "session_id": "394df279-12c6-46d1-8466-891655d7d05f",
+            "cost_usd": 0,
+            "duration_s": 0.983,
+            "turns": 1,
+            "result": "You've hit your session limit · resets 8pm (Asia/Calcutta)"
+          }
+        ],
+        "artifacts": {
+          "state": "",
+          "kinds": null,
+          "strategy": "",
+          "set": null,
+          "rehearsal": "",
+          "prs": null,
+          "draft_then_ready": {},
+          "merge_called": false,
+          "gate_problems": {},
+          "lint_problems": {},
+          "merges": null,
+          "merge_problems": null,
+          "findings": null,
+          "planted_kept": false,
+          "clones_unchanged": true,
+          "cards": null
+        },
+        "error": "athel [--json decide list CHG-001 --open]: exit status 13: {\"ok\":false,\"error\":{\"code\":\"E-STATE-NOT-FOUND\",\"message\":\"no change file at /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/users-v2-profile-run3/ws/.athel/changes/CHG-001/change.yaml\",\"next_action\":\"stop the step; never auto-fix state\",\"cause\":\"open /private/tmp/claude-502/-Users-vaibhav-shukla-Developer-athel/7f391ef1-6911-4d96-a10c-09be4cb63242/scratchpad/m5full2/users-v2-profile-run3/ws/.athel/changes/CHG-001/change.yaml: no such file or directory\"}}\n "
+      }
+    ]
+  },
+  "claude": "2.1.311 (Claude Code)",
+  "commit": "2ffbcf7c16c7734caecb4bed44633fb6e012313e",
+  "cost_usd": 4.618279200000001,
+  "efficiency_problems": null,
+  "model": "",
+  "runs": 9,
+  "runs_per_case": 3,
+  "schema": "athel-evals/m5-set@1",
+  "started": "2026-11-25T12:39:31Z",
+  "valid": 0
+}
