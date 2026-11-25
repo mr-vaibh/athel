@@ -97,6 +97,46 @@ type Tools struct {
 // toolchain are the Go tools linked onto the session PATH; go is required, the others optional.
 var toolchain = []string{"go", "gofmt", "golangci-lint", "govulncheck"}
 
+// goInstallDir is where `go install` puts tools (GOBIN, else GOPATH/bin), which need not be on
+// PATH: govulncheck lives there (M5 full eval 3 ran without it, so dependency audits stopped).
+func goInstallDir(goPath string) string {
+	out, err := exec.Command(goPath, "env", "GOBIN", "GOPATH").Output()
+	if err != nil {
+		return ""
+	}
+	return installDir(string(out))
+}
+
+// installDir reads `go env GOBIN GOPATH`: one line each, GOBIN often empty.
+func installDir(env string) string {
+	lines := strings.Split(env, "\n")
+	if len(lines) < 2 {
+		return ""
+	}
+	if gobin := strings.TrimSpace(lines[0]); gobin != "" {
+		return gobin
+	}
+	if gopath := strings.TrimSpace(lines[1]); gopath != "" {
+		return filepath.Join(strings.Split(gopath, string(os.PathListSeparator))[0], "bin")
+	}
+	return ""
+}
+
+// findTool is name on PATH, else in Go's install folder, or "".
+func findTool(installed, name string) string {
+	if p, err := exec.LookPath(name); err == nil {
+		return p
+	}
+	if installed == "" {
+		return ""
+	}
+	p := filepath.Join(installed, name)
+	if st, err := os.Stat(p); err == nil && !st.IsDir() && st.Mode()&0o111 != 0 {
+		return p
+	}
+	return ""
+}
+
 // BuildTools builds the CLI and the fixture's fakes from the repository at repo into dir.
 func BuildTools(repo, dir string) (Tools, error) {
 	tl := Tools{Repo: repo}
@@ -111,14 +151,16 @@ func BuildTools(repo, dir string) (Tools, error) {
 			return tl, fmt.Errorf("build %s: %w\n%s", b.pkg, err, out)
 		}
 	}
+	goPath, err := exec.LookPath("go")
+	if err != nil {
+		return tl, err
+	}
+	installed := goInstallDir(goPath)
 	for _, name := range toolchain {
-		if p, err := exec.LookPath(name); err == nil {
+		if p := findTool(installed, name); p != "" {
 			tl.Toolchain = append(tl.Toolchain, p)
-		} else if name == "go" {
-			return tl, err
 		}
 	}
-	var err error
 	tl.Git, err = exec.LookPath("git")
 	return tl, err
 }

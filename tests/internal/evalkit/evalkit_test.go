@@ -284,3 +284,33 @@ func TestEndSession(t *testing.T) {
 		t.Errorf("the next session takes the change: %v %s", err, out)
 	}
 }
+
+// TestGoInstallDir: Go's tools are found where `go install` puts them, off PATH too.
+func TestGoInstallDir(t *testing.T) {
+	sep := string(os.PathListSeparator)
+	for env, want := range map[string]string{
+		"/gobin\n/gopath\n":            "/gobin",
+		"\n/gopath\n":                  filepath.Join("/gopath", "bin"),
+		"\n/first" + sep + "/second\n": filepath.Join("/first", "bin"),
+		"\n\n":                         "",
+		"":                             "",
+	} {
+		if got := installDir(env); got != want {
+			t.Errorf("installDir(%q) = %q, want %q", env, got, want)
+		}
+	}
+	dir := t.TempDir()
+	tool := filepath.Join(dir, "athel-no-such-tool")
+	if err := os.WriteFile(tool, []byte("#!/bin/sh\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if got := findTool(dir, "athel-no-such-tool"); got != tool {
+		t.Errorf("a tool in Go's install folder: %q", got)
+	}
+	if findTool("", "athel-no-such-tool") != "" || findTool(dir, "missing") != "" || findTool(filepath.Dir(dir), filepath.Base(dir)) != "" {
+		t.Error("not on PATH and not an executable file in the install folder: not found")
+	}
+	if findTool("", "go") == "" {
+		t.Error("go is on PATH")
+	}
+}
