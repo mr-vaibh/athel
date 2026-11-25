@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mr-vaibh/athel/cli/internal/decisions"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
 	"github.com/mr-vaibh/athel/cli/internal/pr"
 )
@@ -122,7 +124,7 @@ func TestPROversizedProposesSplit(t *testing.T) {
 	// ADR 028: the refusal is a card for the developer, never a dead end. One task alone is over
 	// the limit, so raising it is recommended; once answered, the PR opens.
 	open := asJSON(t, h.mustOK("decide", "list", "CHG-001", "--open"))
-	if !strings.Contains(open, "The users PR is over git.yaml's limit of 2 changed lines") || !strings.Contains(open, "Allow up to 50 changed lines in this PR") ||
+	if !strings.Contains(open, "The users PR is over git.yaml's limit of 2 changed lines") || !strings.Contains(open, "Allow up to 50 changed lines in each PR of this change") ||
 		!strings.Contains(open, `"recommendation":{"option":"a"`) || !strings.Contains(asJSON(t, env), "answers card D-") {
 		t.Fatalf("size card: %s %v", open, env)
 	}
@@ -144,11 +146,37 @@ func TestPROversizedProposesSplit(t *testing.T) {
 // default and names the split.
 func TestSizeCardRecommendsRaisingTheLimit(t *testing.T) {
 	d := sizeCard("users", 500, 400, []pr.Group{{Tasks: []string{"T-01"}, Lines: 300}, {Tasks: []string{"T-02"}, Lines: 200}})
-	if d.Recommendation.Option != "a" || d.Options[0].Label != "Allow up to 650 changed lines in this PR" || d.Default != "b" {
+	if d.Recommendation.Option != "a" || d.Options[0].Label != "Allow up to 650 changed lines in each PR of this change" || d.Default != "b" {
 		t.Errorf("%+v", d)
 	}
 	if !strings.Contains(d.Options[1].Consequence, "follow-up change") || !strings.Contains(d.Recommendation.Reason, "one PR per repo") {
 		t.Errorf("option b and the reason say what re-planning means: %+v", d)
+	}
+}
+
+// TestSizeAllowanceCoversTheChange (ADR 039): a raised limit holds for every PR of the change, so
+// a second repo's PR within it is not asked about again (M5 full eval 3, users-v2-profile run 1).
+func TestSizeAllowanceCoversTheChange(t *testing.T) {
+	card := func(repo, option string, lines int) decisions.Entry {
+		d := sizeCard(repo, lines, 400, nil)
+		return decisions.Entry{Card: &decisions.Card{Question: d.Question, Options: d.Options, Answer: &decisions.Answer{Option: option}}}
+	}
+	other := decisions.Entry{Card: &decisions.Card{Question: "Which log level?", Options: []decisions.Option{{Key: "a", Label: fmt.Sprintf(sizeOption, 900)}}, Answer: &decisions.Answer{Option: "a"}}}
+	for _, tt := range []struct {
+		name string
+		f    decisions.File
+		want int
+	}{
+		{"none", decisions.File{}, 0},
+		{"gateway raised, read for any repo", decisions.File{Decisions: []decisions.Entry{card("gateway", "a", 478)}}, 600},
+		{"the largest of two", decisions.File{Decisions: []decisions.Entry{card("gateway", "a", 478), card("orders", "a", 900)}}, 1150},
+		{"re-plan chosen", decisions.File{Decisions: []decisions.Entry{card("gateway", "b", 478)}}, 0},
+		{"unanswered", decisions.File{Decisions: []decisions.Entry{{Card: &decisions.Card{Question: card("users", "a", 478).Card.Question}}}}, 0},
+		{"not a size card", decisions.File{Decisions: []decisions.Entry{other, {}}}, 0},
+	} {
+		if got := sizeAllowed(&tt.f); got != tt.want {
+			t.Errorf("%s: %d, want %d", tt.name, got, tt.want)
+		}
 	}
 }
 
