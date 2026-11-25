@@ -12,6 +12,7 @@ import (
 	"github.com/mr-vaibh/athel/cli/internal/changeset"
 	"github.com/mr-vaibh/athel/cli/internal/config"
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/gates"
 	"github.com/mr-vaibh/athel/cli/internal/gitro"
 	"github.com/mr-vaibh/athel/cli/internal/plan"
 	specpkg "github.com/mr-vaibh/athel/cli/internal/spec"
@@ -132,7 +133,8 @@ func (r *runCtx) lintPlan(s *state.Store, id string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	ctx := plan.LintContext{Criteria: criteria(specs), Risk: riskOf(rep), Exists: r.baseHas(), Contracts: contracts(rep), SameRepo: r.sameRepo, Coordinated: coordinated}
+	ctx := plan.LintContext{Criteria: criteria(specs), Risk: riskOf(rep), Exists: r.baseHas(), Contracts: contracts(rep), SameRepo: r.sameRepo, Coordinated: coordinated,
+		IsTest: func(repo, path string) bool { return r.testMatcher(repo)(path) }, MigrationDown: migrationDown}
 	problems := plan.Lint(p, ctx)
 	if _, err := changeset.Derive(p, coordinated); err != nil {
 		var ae *aerr.Error
@@ -145,6 +147,14 @@ func (r *runCtx) lintPlan(s *state.Store, id string, data []byte) error {
 			WithNextAction("fix the plan and set it again")
 	}
 	return nil
+}
+
+// migrationDown is the down migration the migration gate runs for an up migration (ADR 039).
+func migrationDown(path string) (string, bool) {
+	if !gates.IsMigration(path) || strings.HasSuffix(path, ".down.sql") {
+		return "", false
+	}
+	return gates.DownFor(path), true
 }
 
 // baseHas reports whether a repo has a path on the base branch of Athel's cache clone, without

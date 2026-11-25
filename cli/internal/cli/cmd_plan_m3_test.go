@@ -99,3 +99,17 @@ func TestPlanSetNeedsCreateForNewFiles(t *testing.T) {
 	}
 	h.mustOK("plan", "set", "CHG-001", writeTemp(t, "create.yaml", strings.Replace(newTest, "verbs: [edit, test]", "verbs: [create, edit, test]", 1)))
 }
+
+// TestPlanSetNeedsTestsAndMigrationPairs (ADR 039): plan set refuses a task whose criterion no test
+// in its paths can name, and a migration the migration gate cannot run down.
+func TestPlanSetNeedsTestsAndMigrationPairs(t *testing.T) {
+	h := planSetup(t)
+	single := strings.Replace(planV2Doc, `paths: ["api/**"]`, "paths: [migrations/002_phone.sql]", 1)
+	code, env := h.runJSON("plan", "set", "CHG-001", writeTemp(t, "single.yaml", single))
+	if got := asJSON(t, env); code == 0 || !strings.Contains(got, "T-01 covers AC-1, but neither it nor an earlier users task covering AC-1 has a test file") ||
+		!strings.Contains(got, "T-01 names the migration migrations/002_phone.sql, which the migration gate cannot run down") {
+		t.Errorf("a single-file migration with no test: %v", env)
+	}
+	paired := strings.Replace(planV2Doc, `paths: ["api/**"]`, "paths: [migrations/002_phone.up.sql, migrations/002_phone.down.sql, migrations/migrations_test.go]", 1)
+	h.mustOK("plan", "set", "CHG-001", writeTemp(t, "paired.yaml", paired))
+}

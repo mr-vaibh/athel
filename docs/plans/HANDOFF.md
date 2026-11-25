@@ -1,8 +1,9 @@
 # HANDOFF
 
-> **2026-11-23: M4 Build is done and accepted; everything is merged into `main`. Nothing is in
-> progress. Next: write the M5 plan (`docs/plans/M5-plan.md`) from doc 08 and the spec, and ask
-> the owner to approve it before building.** See "M4 closed" at the end.
+> **2026-11-26: M5 Multi-service is built (tasks 00–15 merged); its exit criterion EC-1 is not
+> yet met. Full eval 3: 3 of 9 runs valid; the four Athel bugs it found are fixed in the PR from
+> `fix/m5-full-3` (ADR 039). The M5 report (`docs/plans/M5-report.md`) asks the owner to choose
+> a full run 4 (recommended), a partial re-run, or accepting now.** See "M5 progress" at the end.
 
 Last updated: 2026-11-20, session 5 (M4 built; first full evals run and missed; fixes in a new PR), on the owner's personal machine. Tools
 are installed system-wide with Homebrew (`docs/context/environment.md`).
@@ -219,7 +220,12 @@ merging finished green work is Claude's call):
 | smoke 2: valid, $18.50 | #132 | merged |
 | full 1 fixes: repos never cloned (ADR 038); rename case on Go services | #133 | merged |
 | full 2 (owner: re-run 3 × 3) | #134 | void: session limit, $4.62 |
-| 16 report | — | not started |
+| full 3 (owner: start it now) | `fix/m5-full-3` | 3 of 9 valid, $108.84; four Athel bugs fixed (ADR 039), harness `govulncheck` fix |
+| 16 report | `fix/m5-full-3` | written; §7 waits for the owner |
 
-Next: full 2 was void (every run cut off by the account session limit, $4.62; M5 spend $71.60). Ask the owner to re-run the full 3 × 3 once the limit has room; then task 16 (report). After M5: M5.5 Node and TypeScript gates (owner: before any pilot). `cli` coverage is 90.3%:
+Next: merge the `fix/m5-full-3` PR once CI is green (it carries the fixes, the report, the
+full-3 history and the owner's full-3 approval from `docs/m5-full-3`, which needs no PR of its
+own). Then ask the owner the M5 report's §7 question: full run 4 (3 × 3, about $110–180,
+recommended), re-run only the two failed cases, or accept now. M5 eval spend: $180.44 of about
+$550. Kept workspaces of full 3 are in the session scratchpad (not in the repo). After M5: M5.5 Node and TypeScript gates (owner: before any pilot). `cli` coverage is 90.3%:
 new work must add tests that lift it.

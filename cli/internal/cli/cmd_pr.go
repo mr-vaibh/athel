@@ -187,8 +187,8 @@ func (r *runCtx) sizedDraft(s *state.Store, c *state.Change, w state.RepoWork) (
 	if p := gitlint.Title(d.Title, pol.Git.Commit.Format); len(p) > 0 {
 		return d, lintFailure("PR title refused", p)
 	}
-	allowed, err := r.sizeAllowed(c.ID, w.Name)
-	if err != nil || d.Lines <= max(d.Max, allowed) {
+	f, err := r.readDecisions(c.ID)
+	if err != nil || d.Lines <= max(d.Max, sizeAllowed(f)) {
 		return d, err
 	}
 	if d.Split, err = r.taskLines(s, c, w, pol.Git.PR.ExcludeFromSize, d.Max); err != nil {
@@ -208,11 +208,12 @@ func (r *runCtx) sizedDraft(s *state.Store, c *state.Change, w state.RepoWork) (
 }
 
 // sizeOption is the label of the size card's "raise" option; sizeAllowed reads the number back.
-const sizeOption = "Allow up to %d changed lines in this PR"
+const sizeOption = "Allow up to %d changed lines in each PR of this change"
 
 // sizeCard asks the developer about a PR over git.yaml's limit (FR-GIT-009; ADR 028). Athel opens
 // one PR per repo per change, so raising the limit is recommended (ADR 032); re-planning, the safe
-// default, moves part of the work to a follow-up change.
+// default, moves part of the work to a follow-up change. The raised limit holds for every PR of the
+// change, so a multi-repo change asks once, not once per repo (ADR 039).
 func sizeCard(repo string, lines, limit int, split []pr.Group) decisions.Draft {
 	allow := (lines*5/4 + 49) / 50 * 50 // room for fix rounds, in steps of 50
 	rec := decisions.Recommendation{Option: "a", Reason: "Athel opens one PR per repo per change, so a split means moving tasks to a follow-up change"}
@@ -223,25 +224,20 @@ func sizeCard(repo string, lines, limit int, split []pr.Group) decisions.Draft {
 		Rule: "A6", Step: "build", Question: "The " + repo + " PR is over git.yaml's limit of " + strconv.Itoa(limit) + " changed lines. How should Athel go on?",
 		Context: fmt.Sprintf("FR-GIT-009: a PR is at most %d changed lines, without generated files and lockfiles. This one is %d.", limit, lines),
 		Options: []decisions.Option{
-			{Key: "a", Label: fmt.Sprintf(sizeOption, allow), Consequence: "Athel opens the PR as it is; reviewers get a larger diff"},
+			{Key: "a", Label: fmt.Sprintf(sizeOption, allow), Consequence: "Athel opens this PR as it is, and any other PR of this change up to that size; reviewers get larger diffs"},
 			{Key: "b", Label: "Re-plan this change with a smaller scope", Consequence: "the change goes back to planning; the plan moves part of the work to a follow-up change and needs your approval again before the PR opens"},
 		},
 		Recommendation: rec, Default: "b", DefaultSafe: true, Blocks: []string{"build"},
 	}
 }
 
-// sizeAllowed is the PR size the developer allowed for repo by answering its size card with
-// "a", or 0.
-func (r *runCtx) sizeAllowed(id, repo string) (int, error) {
-	f, err := r.readDecisions(id)
-	if err != nil {
-		return 0, err
-	}
-	q := "The " + repo + " PR is over git.yaml's limit of "
+// sizeAllowed is the PR size the developer allowed for the change by answering a size card, for
+// any of its repos, with "a"; or 0.
+func sizeAllowed(f *decisions.File) int {
 	allowed := 0
 	for _, e := range f.Decisions {
 		c := e.Card
-		if c == nil || c.Answer == nil || c.Answer.Option != "a" || !strings.HasPrefix(c.Question, q) {
+		if c == nil || c.Answer == nil || c.Answer.Option != "a" || !strings.Contains(c.Question, " PR is over git.yaml's limit of ") {
 			continue
 		}
 		for _, o := range c.Options {
@@ -251,7 +247,7 @@ func (r *runCtx) sizeAllowed(id, repo string) (int, error) {
 			}
 		}
 	}
-	return allowed, nil
+	return allowed
 }
 
 // prDraft builds the title and body from the change's files and the branch's diff.

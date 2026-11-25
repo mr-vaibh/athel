@@ -7,3 +7,5 @@
 coverage.*
 !/plugin/bin/README.md
 /athel
+*.test
+*.prof
