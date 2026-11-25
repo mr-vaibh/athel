@@ -216,8 +216,9 @@ merging finished green work is Claude's call):
 | 14b scripted 3-repo journey (TestThreeRepoJourney) | #129 | merged |
 | 15 M5 eval harness (tests/evals/m5/set) | #130 | merged |
 | smoke 1 fixes (test artifacts; deferred removal in the plan) | #131 | merged |
-| smoke 2: valid, $18.50 | #132 | open |
+| smoke 2: valid, $18.50 | #132 | merged |
+| full 1 fixes: repos never cloned (ADR 038); rename case on Go services | #133 | open |
 | 16 report | — | not started |
 
-Next: merge #132; ask the owner for the full 3 × 3 run (smoke 2 valid at $18.50; M5 spend so far $34.07); then task 16 (report). `cli` coverage is 90.3%:
+Next: merge #133; ask the owner to re-run the full 3 × 3 (full 1: 7 of 9 runs lost to the network and the usage limit; M5 spend so far $66.98). Raise the TypeScript gap (backlog, 2026-11-25) with the owner. Then task 16 (report). `cli` coverage is 90.3%:
 new work must add tests that lift it.

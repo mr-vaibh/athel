@@ -275,3 +275,26 @@ func TestLookup(t *testing.T) {
 		t.Errorf("a remote with no local clone: %v", err)
 	}
 }
+
+// TestInfer (M5 full run 1): a repo the developer never cloned is named by its short name in the
+// plan; when every indexed repo lives under one host/org, that is where it is.
+func TestInfer(t *testing.T) {
+	users, orders, other := "github.com/acme/users", "github.com/acme/orders", "gitlab.example/tools/cli"
+	one := Index{Repos: []Entry{{Remote: &users}, {Remote: &orders}, {Path: "/d/no-remote"}}}
+	two := Index{Repos: []Entry{{Remote: &users}, {Remote: &other}}}
+	tests := []struct {
+		idx        Index
+		name, want string
+	}{
+		{one, "notifications", "github.com/acme/notifications"},
+		{one, "github.com/acme/notifications", ""},
+		{one, "", ""},
+		{two, "notifications", ""},
+		{Index{}, "notifications", ""},
+	}
+	for _, tt := range tests {
+		if got := tt.idx.Infer(tt.name); got != tt.want {
+			t.Errorf("Infer(%q) = %q, want %q", tt.name, got, tt.want)
+		}
+	}
+}

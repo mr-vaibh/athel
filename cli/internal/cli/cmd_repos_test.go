@@ -323,15 +323,17 @@ func TestReposCacheCommand(t *testing.T) {
 	if code, env := h.runJSON("repos", "cache", "github.com/acme/private"); code != aerr.ExitTool {
 		t.Errorf("unreachable repo: exit %d %v", code, env)
 	}
-	// A repo with no local clone has no short name; the error says how to name it (M3 smoke 3).
-	if _, env := h.runJSON("repos", "cache", "notifications"); !strings.Contains(asJSON(t, env), "name it as host/org/repo") {
-		t.Errorf("an unknown short name says how to name the repo: %v", env)
+	// A repo with no local clone is looked for under the org of every indexed repo (M5 full run 1;
+	// M3 smoke 3 asked for the full name instead); this fixture has no such remote, so the clone
+	// fails and names the remote it tried.
+	if code, env := h.runJSON("repos", "cache", "notifications"); code != aerr.ExitTool || !strings.Contains(asJSON(t, env), "clone github.com/acme/notifications") {
+		t.Errorf("an unknown short name is looked for under the one org: %d %v", code, env)
 	}
 }
 
 func TestReposCacheErrors(t *testing.T) {
 	h, home, src, git := cacheFixture(t)
-	for args, code := range map[string]int{"repos cache": aerr.ExitUsage, "repos cache orders-x": aerr.ExitState} {
+	for args, code := range map[string]int{"repos cache": aerr.ExitUsage, "repos cache orders-x": aerr.ExitTool} {
 		if got, _ := h.runJSON(strings.Fields(args)...); got != code {
 			t.Errorf("%s: exit %d, want %d", args, got, code)
 		}
@@ -351,5 +353,24 @@ func TestReposCacheErrors(t *testing.T) {
 	}
 	if code, _ := h.runJSON("repos", "cache", "users"); code != aerr.ExitState {
 		t.Errorf("corrupt index: exit %d", code)
+	}
+}
+
+// TestCacheARepoNeverCloned (M5 full run 1): a plan names notifications, which the developer has
+// no clone of; Athel caches it from the remote under the org of every indexed repo, so its
+// preflight and worktree work like any other repo's.
+func TestCacheARepoNeverCloned(t *testing.T) {
+	h, _, src, git := cacheFixture(t)
+	work := filepath.Join(t.TempDir(), "notifications")
+	git(filepath.Dir(work), "init", "-q", "-b", "main", work)
+	if err := os.WriteFile(filepath.Join(work, "index.ts"), []byte("export {}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	git(work, "add", "-A")
+	git(work, "-c", "user.name=Mate", "-c", "user.email=mate@example.invalid", "commit", "-q", "-m", "init")
+	git(src, "clone", "-q", "--bare", work, filepath.Join(src, "notifications.git"))
+	v := h.mustOK("repos", "cache", "notifications")
+	if v["remote"] != "github.com/acme/notifications" || v["cloned"] != true || v["seeded_from"] != nil {
+		t.Errorf("cache = %v", v)
 	}
 }

@@ -210,6 +210,9 @@ func (r *runCtx) cacheClone(name string) (cacheReady, error) {
 		return cacheReady{}, err
 	}
 	if remote == "" {
+		remote = idx.Infer(name) // a repo the developer never cloned, under the org of all the others
+	}
+	if remote == "" {
 		return cacheReady{}, aerr.New(aerr.StateNotFound, name+" is neither an indexed repo nor a host/org/repo remote").
 			WithNextAction("name it as host/org/repo, for example github.com/<org>/" + name + "; athel repos show lists the indexed repos")
 	}

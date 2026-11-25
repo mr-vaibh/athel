@@ -30,6 +30,9 @@ func (r *runCtx) resolveRepo(name string) string {
 			if remote, _, err := idx.Lookup(name); err == nil && remote != "" {
 				return remote
 			}
+			if remote := idx.Infer(name); remote != "" {
+				return remote
+			}
 		}
 	}
 	return conventions.Remote(name, gitro.NormaliseRemote)

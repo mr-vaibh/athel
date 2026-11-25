@@ -38,7 +38,8 @@ func label(name string) []struct {
 }
 
 func good() (Case, Artifacts) {
-	c := Case{ID: "x", Repos: []string{"users", "orders"}, Strategy: "expand_contract", Deferred: true, Kinds: []string{"expand", "consume"},
+	yes := true
+	c := Case{ID: "x", Repos: []string{"users", "orders"}, Strategy: "expand_contract", Deferred: &yes, Kinds: []string{"expand", "consume"},
 		Planted: Planted{Repo: "orders", File: "clients/backoff.go"}}
 	body := func(other string) string {
 		return "This PR is step 1 of 2 in the merge order of CHG-001 (2 PRs). " + other
@@ -57,6 +58,11 @@ func good() (Case, Artifacts) {
 func TestGradeRun(t *testing.T) {
 	if g := GradeRun(good()); !g.Valid {
 		t.Fatalf("a good run: %v", g.Problems)
+	}
+	c, a := good()
+	c.Deferred, a.Set = nil, a.Set[:2]
+	if g := GradeRun(c, a); !g.Valid {
+		t.Errorf("a case that takes the cleanup either way: %v", g.Problems)
 	}
 	tests := []struct {
 		name   string
