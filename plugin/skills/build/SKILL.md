@@ -38,8 +38,12 @@ gates and the git steps around them.
    - Work on `next`: the CLI picks a task in progress first, then the first ready one, and skips
      tasks an open card holds (`blocked`). Work goes on in other tasks and repos while a card
      waits.
-   - If `next` is empty but tasks are not all done, open cards hold everything that is left:
-     show them with the `/athel:decide` line and end blocked (step 13).
+   - A task the developer stopped (a card answered "Stop …") is held too: it is in `blocked`,
+     and `stopped` names the card and how to resume it. Never work on a stopped task; only the
+     developer's new answer to that card resumes it (ADR 040).
+   - If `next` is empty but tasks are not all done, open or stopped cards hold everything that
+     is left: show the open ones with the `/athel:decide` line and each `stopped` line, and end
+     blocked (step 13).
    - When every task is done, make sure each repo is pushed and has its draft PR:
      `athel --json --session ${CLAUDE_SESSION_ID} git push $ARGUMENTS <repo>`, then `pr open` (or `pr update` when
      the PR exists). Then run
@@ -95,7 +99,8 @@ gates and the git steps around them.
     - Otherwise end the step:
       `athel --json --session ${CLAUDE_SESSION_ID} state exit $ARGUMENTS build --result blocked --reason "<card ID>: <question>"`.
     These are the 5-round limit, the third identical failure, a dispute twice, an overlap, and a
-    PR over the size limit (`E-GATE-PR-SIZE`, ADR 028).
+    PR over the size limit (`E-GATE-PR-SIZE`, ADR 028). A card the developer answered "Stop …"
+    holds the task the same way, until the developer answers it again.
     Show the card with the `/athel:decide` line, and stop.
 
 ## Rules

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	aerr "github.com/mr-vaibh/athel/cli/internal/errors"
+	"github.com/mr-vaibh/athel/cli/internal/review"
 )
 
 func (h *harness) reviewRound(t *testing.T, sub string) map[string]any {
@@ -238,4 +239,66 @@ func TestBuildBlocksOnlyOnACard(t *testing.T) {
 		h.reviewRound(t, again)
 	}
 	h.mustOK("state", "exit", "CHG-001", "build", "--result", "blocked", "--reason", "the round-limit card")
+}
+
+// TestRoundLimitRecommendation (M5 full eval 4, users-v2-profile run 1): at the round limit, a
+// loop whose blocking findings are all new this round is still making progress, so the card
+// recommends more rounds; a finding carried over from an earlier round means it is stuck.
+func TestRoundLimitRecommendation(t *testing.T) {
+	finding := func(id string, first int, status string) review.Finding {
+		return review.Finding{ID: id, Severity: review.Major, Status: status, History: []review.Step{{Round: first, Status: review.Open}}}
+	}
+	tests := []struct {
+		name     string
+		findings []review.Finding
+		want     string
+	}{
+		{"new this round, fix waiting", []review.Finding{finding("R5-01", 5, review.Fixed)}, "b"},
+		{"carried over", []review.Finding{finding("R5-01", 5, review.Open), finding("R1-04", 1, review.Open)}, "a"},
+		{"carried over, verified", []review.Finding{finding("R5-01", 5, review.Open), finding("R1-04", 1, review.Verified)}, "b"},
+		{"nothing blocks", nil, "a"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := roundLimitCard("T-04", &review.Round{Round: 5, Findings: tt.findings})
+			if d.Recommendation.Option != tt.want || d.Default != "a" {
+				t.Errorf("recommends %s (default %s), want %s (default a)", d.Recommendation.Option, d.Default, tt.want)
+			}
+		})
+	}
+}
+
+// TestStopHoldsTheTask (M5 full eval 4, ADR 040): a round-limit card answered "stop" holds the
+// task. Build next does not offer it, the same question is not asked again, and the step may end
+// blocked on it. Answering the card again with another option resumes the task.
+func TestStopHoldsTheTask(t *testing.T) {
+	h, _ := goGates(t)
+	h.mustOK("state", "enter", "CHG-001", "build", "--task", "T-01")
+	again := "verdict: changes_requested\nprevious: [{id: R1-01, status: open}]\n"
+	h.reviewRound(t, majorFinding)
+	for range 4 {
+		h.reviewRound(t, again)
+	}
+	h.humanPrompt("/athel:decide CHG-001 D-1=a")
+	h.mustOK("decide", "answer", "CHG-001", "D-1=a")
+	next := asJSON(t, h.mustOK("build", "next", "CHG-001"))
+	if !strings.Contains(next, `"next":""`) || !strings.Contains(next, "D-1 holds T-01: you chose to stop; to resume, answer it again with /athel:decide CHG-001 D-1=") {
+		t.Errorf("a stopped task is not offered: %s", next)
+	}
+	h.stdin = again
+	if _, env := h.runJSON("review", "save", "CHG-001", "T-01", "-"); errCode(env) != string(aerr.BudgetRounds) {
+		t.Errorf("a sixth round: %v", env)
+	}
+	h.stdin = ""
+	if n := strings.Count(asJSON(t, h.mustOK("decide", "list", "CHG-001")), "review rounds"); n != 1 {
+		t.Errorf("the question is asked once, not %d times", n)
+	}
+	h.mustOK("state", "exit", "CHG-001", "build", "--result", "blocked", "--reason", "D-1: the developer stopped T-01")
+	h.humanPrompt("/athel:decide CHG-001 D-1=b")
+	h.mustOK("decide", "answer", "CHG-001", "D-1=b")
+	if next := asJSON(t, h.mustOK("build", "next", "CHG-001")); !strings.Contains(next, `"next":"T-01"`) || !strings.Contains(next, `"stopped":[]`) {
+		t.Errorf("answered again, the task goes on: %s", next)
+	}
+	h.mustOK("state", "transition", "CHG-001", "--to", "building", "--by", "athel", "--reason", "card answered")
+	h.reviewRound(t, again)
 }

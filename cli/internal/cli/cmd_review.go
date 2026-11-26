@@ -302,9 +302,27 @@ func roundLimitCard(task string, last *review.Round) decisions.Draft {
 			{Key: "a", Label: "Stop the task and look at it yourself", Consequence: "Athel writes nothing more for " + task + " until you answer again"},
 			{Key: "b", Label: "Allow more rounds", Consequence: "the loop continues; the open findings stay as they are"},
 		},
-		Recommendation: decisions.Recommendation{Option: "a", Reason: "five rounds without agreement usually means the task or the spec needs a human"},
+		Recommendation: roundLimitAdvice(last),
 		Default:        "a", DefaultSafe: true, Blocks: []string{task},
 	}
+}
+
+// roundLimitAdvice recommends more rounds while the loop makes progress: every finding that
+// still blocks was first raised in the last round, so each earlier one was fixed and verified.
+// A finding open since an earlier round means the loop is stuck, and a human should look
+// (ADR 040). The default stays "stop", the safe choice.
+func roundLimitAdvice(last *review.Round) decisions.Recommendation {
+	blocking := last.Blocking()
+	progress := len(blocking) > 0
+	for _, f := range last.Findings {
+		if slices.Contains(blocking, f.ID) && (len(f.History) == 0 || f.History[0].Round < last.Round) {
+			progress = false
+		}
+	}
+	if progress {
+		return decisions.Recommendation{Option: "b", Reason: "every finding still open is new in round " + fmt.Sprint(last.Round) + ", and each earlier one was fixed and verified: the loop is making progress"}
+	}
+	return decisions.Recommendation{Option: "a", Reason: "a finding has stayed open across rounds: the task or the spec likely needs a human"}
 }
 
 func disputeCard(task string, f review.Finding) decisions.Draft {

@@ -123,7 +123,7 @@ func cmdStateExit(r *runCtx, args []string) (any, error) {
 }
 
 // buildCardOpen: the build step ends blocked only on an open card for the build, which the
-// developer answers with /athel:decide. A block with nothing to answer leaves the change stuck
+// developer answers with /athel:decide, or on one the developer answered "stop" (ADR 040). A block with nothing to answer leaves the change stuck
 // (ADR 031); a finding the developer thinks is wrong goes to a dispute, whose second round raises
 // a card.
 func (r *runCtx) buildCardOpen(id string) error {
@@ -131,7 +131,7 @@ func (r *runCtx) buildCardOpen(id string) error {
 	if err != nil {
 		return err
 	}
-	for _, card := range dec.Open("") {
+	for _, card := range append(dec.Open(""), dec.Held()...) {
 		if card.Step == "build" || slices.Contains(card.Blocks, "build") {
 			return nil
 		}

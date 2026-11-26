@@ -183,6 +183,48 @@ func checkApplyRejects(t *testing.T, f *File) {
 	}
 }
 
+// TestStopHolds: a build card answered "stop" holds what it blocks until the developer answers
+// it again with another option (ADR 040); any other answer is final.
+func TestStopHolds(t *testing.T) {
+	f := New("CHG-001")
+	stop := Draft{Rule: "A6", Step: "build", Question: "Task T-04 reached 5 review rounds. How should Athel go on?", Context: "FR-BUILD-010.",
+		Options:        []Option{{"a", "Stop the task and look at it yourself", "Athel writes nothing more for T-04 until you answer again"}, {"b", "Allow more rounds", "the loop continues"}},
+		Recommendation: Recommendation{"a", "r"}, Default: "a", DefaultSafe: true, Blocks: []string{"T-04"}}
+	spec := card("Which phone formats?")
+	spec.Options[0].Label = "Stop accepting local formats"
+	for _, d := range []Draft{stop, spec} {
+		if _, err := f.Add(d); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := f.Apply([]Reply{{Card: "D-1", Option: "a"}, {Card: "D-2", Option: "a"}}, "GR-1", at); err != nil {
+		t.Fatal(err)
+	}
+	held := f.Held()
+	if len(held) != 1 || held[0].ID != "D-1" {
+		t.Fatalf("only the answered build stop holds: %v", held)
+	}
+	steps := []struct {
+		name  string
+		reply Reply
+		want  string
+	}{
+		{"the same answer again", Reply{Card: "D-1", Option: "a"}, "D-1 is already answered"},
+		{"free text", Reply{Card: "D-1", Text: "go on"}, "D-1 is already answered"},
+		{"another option resumes", Reply{Card: "D-1", Option: "b"}, ""},
+		{"then the answer is final", Reply{Card: "D-1", Option: "a"}, "D-1 is already answered"},
+	}
+	for _, tt := range steps {
+		err := f.Apply([]Reply{tt.reply}, "GR-2", "2026-11-10T12:00:00.000Z")
+		if (tt.want == "" && err != nil) || (tt.want != "" && (err == nil || !strings.Contains(err.Error(), tt.want))) {
+			t.Errorf("%s: %v", tt.name, err)
+		}
+	}
+	if c, _ := f.Card("D-1"); c.Answer.Option != "b" || c.Answer.Grant != "GR-2" || len(f.Held()) != 0 {
+		t.Errorf("resumed: %+v %v", c.Answer, f.Held())
+	}
+}
+
 func TestTick(t *testing.T) {
 	f := New("CHG-001")
 	safe, _ := f.Add(card("Safe?"))
