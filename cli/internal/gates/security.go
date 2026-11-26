@@ -32,6 +32,12 @@ func DependencyChanged(changed []string) bool {
 	return slices.ContainsFunc(changed, func(p string) bool { return slices.Contains(manifests, path.Base(p)) })
 }
 
+// MayChangeDependencies reports whether a task with these paths may change a dependency
+// manifest: it names one, or holds a glob, which may match one.
+func MayChangeDependencies(paths []string) bool {
+	return DependencyChanged(paths) || slices.ContainsFunc(paths, func(p string) bool { return strings.ContainsAny(p, "*?[") })
+}
+
 // SecretsIn lists, by file and kind, what looks like a secret in each file's added lines.
 // The value itself is never repeated.
 func SecretsIn(added map[string]string) []string {
@@ -50,12 +56,51 @@ func SecretsIn(added map[string]string) []string {
 	return out
 }
 
-// Vulnerabilities lists govulncheck's findings, one line each.
-func Vulnerabilities(out string) []string {
-	var got []string
+// Vuln is one of govulncheck's findings.
+type Vuln struct {
+	ID       string
+	FoundIn  string
+	FixedIn  string
+	Standard bool // in Go's standard library: only a newer toolchain fixes it
+}
+
+// String names the finding with where it is and what fixes it, so the developer can act on
+// the gate's detail alone.
+func (v Vuln) String() string {
+	s := v.ID
+	if v.FoundIn == "" {
+		return s
+	}
+	s += " in " + v.FoundIn
+	if v.Standard {
+		s += " (the Go toolchain)"
+	}
+	if v.FixedIn == "" || v.FixedIn == "N/A" {
+		return s + ", with no fixed version"
+	}
+	return s + ", fixed in " + v.FixedIn
+}
+
+// Vulnerabilities lists govulncheck's findings, in its order.
+func Vulnerabilities(out string) []Vuln {
+	var got []Vuln
 	for _, l := range strings.Split(out, "\n") {
-		if strings.HasPrefix(l, "Vulnerability #") {
-			got = append(got, strings.TrimSpace(l))
+		t := strings.TrimSpace(l)
+		if _, id, ok := strings.Cut(t, ": "); ok && strings.HasPrefix(t, "Vulnerability #") {
+			got = append(got, Vuln{ID: id})
+			continue
+		}
+		if len(got) == 0 {
+			continue
+		}
+		v := &got[len(got)-1]
+		switch {
+		case t == "Standard library":
+			v.Standard = true
+		case strings.HasPrefix(t, "Found in: ") && v.FoundIn == "":
+			v.FoundIn = strings.TrimPrefix(t, "Found in: ")
+		case strings.HasPrefix(t, "Fixed in: ") && v.FixedIn == "":
+			v.FixedIn = strings.TrimPrefix(t, "Fixed in: ")
 		}
 	}
 	return got

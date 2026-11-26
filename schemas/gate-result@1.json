@@ -97,6 +97,13 @@
         "security": {
           "type": "string",
           "description": "gosec findings on base"
+        },
+        "vulns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "govulncheck findings on base, by ID; absent when the audit did not run there"
         }
       }
     },

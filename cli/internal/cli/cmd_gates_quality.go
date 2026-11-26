@@ -395,7 +395,7 @@ func (r *runCtx) judgeSecurity(g gateTask, base *gateBaseline, out string, o *ga
 		return
 	}
 	if gates.DependencyChanged(strings.Fields(names)) {
-		if why := r.auditDependencies(g, o); why != "" {
+		if why := r.auditDependencies(g, base, o); why != "" {
 			o.Status, o.Summary = "unavailable", "a dependency changed and the audit could not run: "+why
 			return
 		}
@@ -405,21 +405,58 @@ func (r *runCtx) judgeSecurity(g gateTask, base *gateBaseline, out string, o *ga
 	}
 }
 
-// auditDependencies runs govulncheck and adds its findings; it returns why it could not run.
-func (r *runCtx) auditDependencies(g gateTask, o *gateOutcome) string {
-	argv := []string{"govulncheck", "./..."}
-	if why := r.gateRefusal(g.dir, argv); why != "" {
+// auditDependencies runs govulncheck and adds the findings not already on base; it returns why
+// it could not run. A finding on base, such as one in the Go toolchain, is not this change's
+// (doc 06: "no new vulnerable dependency"), so it is noted and does not fail the gate.
+func (r *runCtx) auditDependencies(g gateTask, base *gateBaseline, o *gateOutcome) string {
+	found, why := r.govulncheck(g)
+	if why != "" {
 		return why
 	}
-	exit, out, _, err := r.runGateCommand(g.dir, argv)
-	switch {
-	case err != nil:
-		return err.Error()
-	case exit != 0 && len(gates.Vulnerabilities(out)) == 0:
-		return "govulncheck exited " + fmt.Sprint(exit) + ": " + strings.Join(tail(out), " ")
+	var old []string
+	for _, v := range found {
+		if base.Vulns != nil && slices.Contains(base.Vulns, v.ID) {
+			old = append(old, v.String())
+			continue
+		}
+		o.Details = append(o.Details, "vulnerable dependency: "+v.String())
 	}
-	for _, v := range gates.Vulnerabilities(out) {
-		o.Details = append(o.Details, "vulnerable dependency: "+v)
+	if len(old) > 0 {
+		o.Summary = "already on base, not this change's: " + strings.Join(old, "; ")
 	}
 	return ""
+}
+
+// govulncheck runs the audit in the task's worktree: its findings, or why it could not run.
+func (r *runCtx) govulncheck(g gateTask) ([]gates.Vuln, string) {
+	argv := []string{"govulncheck", "./..."}
+	if why := r.gateRefusal(g.dir, argv); why != "" {
+		return nil, why
+	}
+	exit, out, _, err := r.runGateCommand(g.dir, argv)
+	found := gates.Vulnerabilities(out)
+	switch {
+	case err != nil:
+		return nil, err.Error()
+	case exit != 0 && len(found) == 0:
+		return nil, "govulncheck exited " + fmt.Sprint(exit) + ": " + strings.Join(tail(out), " ")
+	}
+	return found, ""
+}
+
+// baseVulns audits base when the task has a security gate and may change a dependency, so a
+// finding already there is not charged to the task. nil when it did not or could not run.
+func (r *runCtx) baseVulns(g gateTask, list []gates.Gate) []string {
+	if !slices.ContainsFunc(list, func(gate gates.Gate) bool { return gate.Pass == gates.Security }) || !gates.MayChangeDependencies(g.task.Paths) {
+		return nil
+	}
+	found, why := r.govulncheck(g)
+	if why != "" {
+		return nil
+	}
+	ids := []string{}
+	for _, v := range found {
+		ids = append(ids, v.ID)
+	}
+	return ids
 }
