@@ -319,7 +319,7 @@ func (f *File) Apply(replies []Reply, grant, at string) error {
 		case !ok:
 			problems = append(problems, r.Card+" is not a card of "+f.Change)
 		case r.Skip:
-		case c.Answer != nil:
+		case c.Answer != nil && !resumes(c, r):
 			problems = append(problems, r.Card+" is already answered")
 		case r.Option != "" && !slices.ContainsFunc(c.Options, func(o Option) bool { return o.Key == r.Option }):
 			problems = append(problems, r.Card+" offers no option "+r.Option)
@@ -343,6 +343,32 @@ func (f *File) Apply(replies []Reply, grant, at string) error {
 		c.Answer = a
 	}
 	return nil
+}
+
+// Held lists the build cards answered "stop": each holds what it blocks, as an open card does,
+// until the developer answers it again with another option ("Athel writes nothing more … until
+// you answer again", ADR 040). Athel's stop options are the ones labelled "Stop …".
+func (f *File) Held() []*Card {
+	var out []*Card
+	for _, e := range f.Decisions {
+		if c := e.Card; c != nil && stopped(c) {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+func stopped(c *Card) bool {
+	if c.Step != "build" || c.Answer == nil {
+		return false
+	}
+	i := slices.IndexFunc(c.Options, func(o Option) bool { return o.Key == c.Answer.Option })
+	return i >= 0 && strings.HasPrefix(c.Options[i].Label, "Stop")
+}
+
+// resumes reports whether r answers a stopped card again with another option.
+func resumes(c *Card, r Reply) bool {
+	return stopped(c) && r.Option != "" && r.Option != c.Answer.Option
 }
 
 // Reminder and default windows after a card was presented (doc 05 edge case "User never

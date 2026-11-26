@@ -69,6 +69,8 @@ type gateBaseline struct {
 	Coverage *float64 `yaml:"coverage" json:"coverage"`
 	// Security is the gosec findings on base.
 	Security string `yaml:"security" json:"security"`
+	// Vulns is govulncheck's findings on base, by ID; nil when the audit did not run there.
+	Vulns []string `yaml:"vulns,omitempty" json:"vulns,omitempty"`
 }
 
 type gateFile struct {
@@ -265,6 +267,7 @@ func cmdGateBaseline(r *runCtx, args []string) (any, error) {
 		}
 		done()
 	}
+	b.Vulns = r.baseVulns(g, list)
 	f.Baseline = b
 	return f, r.saveGates(g, f)
 }

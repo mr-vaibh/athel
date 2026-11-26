@@ -43,8 +43,10 @@ func goGates(t *testing.T, plan ...string) (*harness, string) {
 	bin := t.TempDir()
 	lint := "#!/bin/sh\necho 'main.go:1:1: old finding (gosec)'\nif [ -f src/bad.go ]; then echo 'src/bad.go:3:1: new finding (revive)'; fi\n" +
 		"if [ -f src/unsafe.go ]; then echo 'src/unsafe.go:5:2: G404: weak random number generator (gosec)'; fi\nexit 1\n"
-	vuln := "#!/bin/sh\nif grep -q evil go.sum 2>/dev/null; then echo 'Vulnerability #1: GO-2026-0001'; exit 3; fi\n" +
-		"if grep -q broken go.sum 2>/dev/null; then echo 'network down' >&2; exit 1; fi\necho 'No vulnerabilities found.'\n"
+	vuln := "#!/bin/sh\nif grep -q broken go.sum 2>/dev/null; then echo 'network down' >&2; exit 1; fi\n" +
+		"if [ -f toolchain.vuln ]; then printf 'Vulnerability #1: GO-2026-0009\\n  Standard library\\n    Found in: net/http@go1.27.3\\n    Fixed in: net/http@go1.27.4\\n'; fi\n" +
+		"if grep -q evil go.sum 2>/dev/null; then printf 'Vulnerability #2: GO-2026-0001\\n  Module: example.com/evil\\n    Found in: example.com/evil@v1.0.0\\n    Fixed in: example.com/evil@v1.0.1\\n'; exit 3; fi\n" +
+		"if [ -f toolchain.vuln ]; then exit 3; fi\necho 'No vulnerabilities found.'\n"
 	for name, script := range map[string]string{"golangci-lint": lint, "govulncheck": vuln} {
 		if err := os.WriteFile(filepath.Join(bin, name), []byte(script), 0o700); err != nil {
 			t.Fatal(err)
@@ -490,7 +492,7 @@ func TestGateSecurityScan(t *testing.T) {
 		t.Fatalf("%v", env)
 	}
 	show := asJSON(t, h.mustOK("gate", "show", "CHG-001", "T-01"))
-	for _, want := range []string{"new SAST finding: src/unsafe.go:5:2: G404", "secret in the added lines of src/key.go (github-token)", "vulnerable dependency: Vulnerability #1: GO-2026-0001"} {
+	for _, want := range []string{"new SAST finding: src/unsafe.go:5:2: G404", "secret in the added lines of src/key.go (github-token)", "vulnerable dependency: GO-2026-0001 in example.com/evil@v1.0.0, fixed in example.com/evil@v1.0.1"} {
 		if !strings.Contains(show, want) {
 			t.Errorf("evidence lacks %q", want)
 		}
@@ -503,6 +505,43 @@ func TestGateSecurityScan(t *testing.T) {
 	}
 	if _, env := h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01"); !strings.Contains(asJSON(t, env), "security-scan unavailable: a dependency changed and the audit could not run") {
 		t.Errorf("an audit that cannot run is unavailable, never green: %v", env)
+	}
+}
+
+// TestGateVulnOnBase (M5 full eval 4, phone-e164): a vulnerability already on base, here one in
+// the Go toolchain, is not the task's when it adds a dependency; a new one still fails, named
+// with its fixed version. With no audit on base, every finding counts.
+func TestGateVulnOnBase(t *testing.T) {
+	tests := []struct {
+		name, plan, sum, want, not string
+	}{
+		{"toolchain finding on base", "", "example.com/ok v1.0.0 h1:abc=\n",
+			"already on base, not this change's: GO-2026-0009 in net/http@go1.27.3 (the Go toolchain), fixed in net/http@go1.27.4", "security-scan fail"},
+		{"new finding beside it", "", "example.com/evil v1.0.0 h1:abc=\n",
+			"vulnerable dependency: GO-2026-0001 in example.com/evil@v1.0.0, fixed in example.com/evil@v1.0.1", "vulnerable dependency: GO-2026-0009"},
+		{"no audit on base", "paths: [main.go, src/a_test.go]", "example.com/ok v1.0.0 h1:abc=\n",
+			"vulnerable dependency: GO-2026-0009", "already on base"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var plan []string
+			if tt.plan != "" {
+				plan = []string{"paths: [src/**]", tt.plan}
+			}
+			h, tree := goGates(t, plan...)
+			if out, err := commit(t, h, tree, "toolchain.vuln", "\n", goodMsg, "--no-verify"); err != nil {
+				t.Fatalf("%v %s", err, out)
+			}
+			h.mustOK("gate", "baseline", "CHG-001", "T-01")
+			if out, err := commit(t, h, tree, "go.sum", tt.sum, goodMsg, "--no-verify"); err != nil {
+				t.Fatalf("%v %s", err, out)
+			}
+			h.runJSON("gate", "run", "--stage", "full", "CHG-001", "T-01")
+			show := asJSON(t, h.mustOK("gate", "show", "CHG-001", "T-01"))
+			if !strings.Contains(show, tt.want) || strings.Contains(show, tt.not) {
+				t.Errorf("want %q and not %q: %s", tt.want, tt.not, show)
+			}
+		})
 	}
 }
 

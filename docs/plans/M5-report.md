@@ -1,12 +1,12 @@
 # M5 Multi-service: report
 
-Date: 2026-11-25 (session 5). Plan: `docs/plans/M5-plan.md`, approved 2026-11-23. Environment:
+Date: 2026-11-25, updated 2026-11-26 (session 5). Plan: `docs/plans/M5-plan.md`, approved 2026-11-23. Environment:
 macOS, Apple M3 Pro, Go 1.27.3, golangci-lint 2.15.0, Node 26.8.1, Claude Code 2.1.311.
 
-**Verdict: not yet accepted. EC-1 is not met: full eval run 3 had 3 of 9 runs valid. Every
-failure is explained. Four were Athel bugs, now fixed with tests (ADR 039); one was a network
-outage; one was the model missing a planted bug. EC-2 is met. The owner decides on a full run 4
-(§7).**
+**Verdict: not yet accepted. EC-1 is not met: full eval run 4 had 5 of 9 runs valid
+(`rename-now` 3 of 3, `users-v2-profile` 2 of 3, `phone-e164` 0 of 3). ADR 039's fixes all held.
+Every failure is explained, and all four came from three new Athel bugs, now fixed with tests
+(ADR 040). EC-2 is met. The owner decides on the next run (§7).**
 
 > **What M5 delivers, in plain words.** A change across several services is now one piece of
 > work. Athel works out which service must ship first, refuses plans that would break
@@ -22,8 +22,8 @@ outage; one was the model missing a planted bug. EC-2 is met. The owner decides 
 
 | # | Criterion | Proof | Result |
 |---|---|---|---|
-| EC-1 (doc 08) | A 3-service fixture change merges in order with every intermediate state compatible | `tests/evals/m5/set`: 3 PRDs (a 3-service v2 profile with a deferred removal; an E.164 phone field with a migration; a rename with no transition, a coordinated release) through real sessions; the grader re-runs every branch's gates, checks the linked PRs and the rehearsal, then merges in the stated order and runs the system check from main after each merge. Deterministically, `TestThreeRepoJourney` does the same with no model, in every `scripts/check.sh` and CI run | **Not met.** Full run 3: 3 of 9 valid (`rename-now` 3 of 3; `users-v2-profile` 0 of 3; `phone-e164` 0 of 3), every failure explained (§3). Smoke run 2: valid. `TestThreeRepoJourney`: passes locally and in CI |
-| EC-2 (owner) | Multi-service work costs about the same per repo as one-repo work | Median cost and time per changed repo ≤ 1.25 × M4's one-repo baseline ($7.69, 20 min); no question asked twice | **Met on cost and time**: full run 3 median $6.28 and 14.0 min per repo over the 8 runs that ran; smoke 2 $6.17 / 16.3 min. One repeated question (the PR-size card per repo), fixed (ADR 039) |
+| EC-1 (doc 08) | A 3-service fixture change merges in order with every intermediate state compatible | `tests/evals/m5/set`: 3 PRDs (a 3-service v2 profile with a deferred removal; an E.164 phone field with a migration; a rename with no transition, a coordinated release) through real sessions; the grader re-runs every branch's gates, checks the linked PRs and the rehearsal, then merges in the stated order and runs the system check from main after each merge. Deterministically, `TestThreeRepoJourney` does the same with no model, in every `scripts/check.sh` and CI run | **Not met.** Full run 4: 5 of 9 valid (`rename-now` 3 of 3; `users-v2-profile` 2 of 3; `phone-e164` 0 of 3), every failure explained (§3), all fixed (ADR 040). Full run 3: 3 of 9. `rename-now` is valid 6 of 6 across runs 3 and 4. Smoke run 2: valid. `TestThreeRepoJourney`: passes locally and in CI |
+| EC-2 (owner) | Multi-service work costs about the same per repo as one-repo work | Median cost and time per changed repo ≤ 1.25 × M4's one-repo baseline ($7.69, 20 min); no question asked twice | **Met on cost and time**: full run 4 median $6.85 and 16.1 min per repo over 9 runs; full run 3 $6.28 / 14.0 min. Repeated questions: in run 3 the PR-size card per repo (fixed, ADR 039, and asked once in run 4); in run 4 a round-limit card asked again after a "stop" answer, twice (fixed, ADR 040) |
 | Carried | M0–M4 gates | `scripts/check.sh`, red-team and allow-list suites, scenarios, hook latency | Green on every PR #114–#134; lint 0 issues; every package ≥ 90% (`cli` 90.3%) |
 
 ## 2. Eval runs
@@ -37,7 +37,8 @@ Details in `docs/plans/EVALS.md` (M5 section); raw results in `tests/evals/histo
 | Full 1 (3 × 3) | 7 runs lost to the network and the usage limit; 2 found the never-cloned repo bug (fixed, ADR 038) and the TypeScript gap | $32.91 |
 | Full 2 (3 × 3) | void: the account's session limit | $4.62 |
 | Full 3 (3 × 3) | 3 of 9 valid: `rename-now` 3 of 3; 4 runs hit Athel bugs (fixed, ADR 039), 1 lost to the network, 1 missed the planted bug | $108.84 |
-| **Total so far** | | **$180.44** of about $550 approved |
+| Full 4 (3 × 3) | 5 of 9 valid: `rename-now` 3 of 3, `users-v2-profile` 2 of 3; 4 runs hit Athel bugs (fixed, ADR 040) | $146.50 |
+| **Total so far** | | **$326.94** of about $550 approved |
 
 ## 3. What the trials found, and what was done
 
@@ -56,6 +57,9 @@ Details in `docs/plans/EVALS.md` (M5 section); raw results in `tests/evals/histo
 | Full 3 | The plan named a single-file migration; the migration gate needs an up and a down file | `plan set` requires the pair in the same task (ADR 039) |
 | Full 3 | The PR-size question was asked again for a second repo within the size already allowed | One answer covers every PR of the change (ADR 039) |
 | Full 3 | The eval sandbox did not link `govulncheck` (harness, not Athel) | Found in Go's install folder too |
+| Full 4 | The security gate charged a flaw in this machine's Go (1.27.3, fixed in 1.27.4) to a task that added a library, though the service had it before; its message named no module or fix, so five rounds went nowhere (`phone-e164` 1–3) | Only vulnerabilities not on base fail; each names where it is and what fixes it (ADR 040) |
+| Full 4 | After the developer answered "stop the task", Athel offered the task again and asked the same question twice (`users-v2-profile` 1, `phone-e164` 1) | A "stop" holds the task until the developer answers that card again (ADR 040) |
+| Full 4 | At the round limit the card recommended "stop" though every earlier finding was fixed and the last one was new and already fixed (`users-v2-profile` 1) | It recommends more rounds while the loop makes progress (ADR 040) |
 
 ## 4. What M5 delivered
 
@@ -73,7 +77,8 @@ JVM, .NET and Ruby test naming; command tables for the scout and the architect; 
 - ADR 035 (the CLI derives the set), 036 (rehearsal; the system check in its own config file,
   not `config@3`), 037 (coordinated release), 038 (repos never cloned), 039 (failures compared
   per gate stage; plans checked for testable criteria and migration pairs; one PR-size answer
-  per change).
+  per change), 040 (only new vulnerabilities fail the security gate; a "stop" answer holds its
+  task; round-limit advice follows progress).
 - `athel set derive` was not built: the set is derived at approval (plan updated).
 - `changeset/status.json` was not needed: the set records each PR's last state.
 - The `phone-e164` eval case has two services, not three; the 3-service exit criterion is
@@ -87,12 +92,14 @@ JVM, .NET and Ruby test naming; command tables for the scout and the architect; 
 
 ## 7. Decision for the owner
 
-M5 is built and the deterministic 3-repo journey proves the mechanics on every check. The paid
-runs keep finding real bugs, each now fixed, and `rename-now`, the hardest case (a coordinated
-release), was valid 3 of 3. EC-1 asks for every run valid, so M5 cannot be accepted yet.
+M5 is built and the deterministic 3-repo journey proves the mechanics on every check. Each paid
+run has found fewer and narrower bugs: run 4's failures came from three Athel bugs, none in the
+multi-service mechanics (ordering, rehearsal, linked PRs, merges), and all are fixed with tests.
+`rename-now`, the coordinated release, is valid 6 of 6. EC-1 asks for every run valid, so M5
+cannot be accepted yet. About $223 of the approved $550 is left.
 
 | Option | Cost | What it proves |
 |---|---|---|
-| **a. Full run 4, 3 × 3, after the fix PR merges (recommended)** | about $110–180 | The same bar as runs 1–3, with all fixes in; leaves about $190–260 of the approved budget |
-| b. Re-run only `users-v2-profile` and `phone-e164`, 2 × 3 | about $80–120 | The two cases that failed; `rename-now` already passed 3 of 3 on this code's parent |
-| c. Accept M5 now on the evidence so far | $0 | Leaves EC-1 unproven for the 3-service and migration cases |
+| **a. Re-run `users-v2-profile` and `phone-e164`, 2 × 3, after the fix PR merges (recommended)** | about $95–125 | The two cases that failed, on the fixed code; with `rename-now`'s 6 of 6, every case passes 3 runs in a row. Leaves about $100–130 |
+| b. Full run 5, 3 × 3 | about $120–150 | The same bar as runs 1–4 on one commit; leaves about $75–100 |
+| c. Accept M5 now on the evidence so far | $0 | Leaves `phone-e164` (the migration case) unproven end to end |

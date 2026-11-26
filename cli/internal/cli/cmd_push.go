@@ -140,11 +140,13 @@ func (r *runCtx) ownedBy(s *state.Store, c *state.Change, repo string) func(stri
 	}
 }
 
-// raiseOnce adds a card unless an unanswered card asks the same question; it returns its ID.
+// raiseOnce adds a card unless an unanswered card, or one answered "stop", asks the same
+// question; it returns its ID. A stop holds until the developer answers again, so asking again
+// would only repeat the question (ADR 040).
 func (r *runCtx) raiseOnce(id string, d decisions.Draft) (string, error) {
 	var card string
 	err := r.editDecisions(id, func(f *decisions.File) error {
-		for _, open := range f.Open("") {
+		for _, open := range append(f.Open(""), f.Held()...) {
 			if open.Question == d.Question {
 				card = open.ID
 				return nil

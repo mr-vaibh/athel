@@ -33,6 +33,9 @@ type buildStatus struct {
 	// cards hold, or ["build"] when a card holds the whole build (M5-plan G12).
 	Next    string   `json:"next"`
 	Blocked []string `json:"blocked"`
+	// Stopped names the cards the developer answered "stop", which hold their tasks until the
+	// developer answers them again (ADR 040).
+	Stopped []string `json:"stopped"`
 }
 
 // cmdBuildNext lists the tasks that may start now and where every task stands.
@@ -58,7 +61,10 @@ func cmdBuildNext(r *runCtx, args []string) (any, error) {
 		return nil, err
 	}
 	out := buildStatus{Ready: append([]string{}, build.Ready(p, c.Build)...), InProgress: []string{}, Done: []string{}, Tasks: append([]build.Task{}, c.Build...),
-		Blocked: []string{}}
+		Blocked: []string{}, Stopped: []string{}}
+	if out.Stopped, err = r.stopped(c.ID); err != nil {
+		return nil, err
+	}
 	for id := range blocked {
 		out.Blocked = append(out.Blocked, id)
 	}
@@ -394,19 +400,33 @@ func (r *runCtx) notDone(g gateTask, head string) ([]string, string, error) {
 	return problems, from, nil
 }
 
-// blockedTasks are the task IDs open cards block, and "build" when one blocks the whole build.
+// blockedTasks are the task IDs open cards, or cards answered "stop", block, and "build" when
+// one blocks the whole build (ADR 040).
 func (r *runCtx) blockedTasks(id string) (map[string]bool, error) {
 	dec, err := r.readDecisions(id)
 	if err != nil {
 		return nil, err
 	}
 	out := map[string]bool{}
-	for _, card := range dec.Open("") {
+	for _, card := range append(dec.Open(""), dec.Held()...) {
 		for _, b := range card.Blocks {
 			if b == "build" || strings.HasPrefix(b, "T-") {
 				out[b] = true
 			}
 		}
+	}
+	return out, nil
+}
+
+// stopped says, for each card answered "stop", what it holds and how the developer resumes it.
+func (r *runCtx) stopped(id string) ([]string, error) {
+	dec, err := r.readDecisions(id)
+	if err != nil {
+		return nil, err
+	}
+	out := []string{}
+	for _, card := range dec.Held() {
+		out = append(out, card.ID+" holds "+strings.Join(card.Blocks, ", ")+": you chose to stop; to resume, answer it again with /athel:decide "+id+" "+card.ID+"=<another option>")
 	}
 	return out, nil
 }
